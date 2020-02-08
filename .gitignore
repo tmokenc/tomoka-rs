@@ -1,0 +1,7 @@
+/target
+/tomoka-cache*/
+/temp
+/tomodb
+**/*.rs.bk
+run*
+*.env

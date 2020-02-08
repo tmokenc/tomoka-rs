@@ -1,0 +1,3 @@
+[workspace]
+members = ["bins", "discord", "db", "magic", "pokemon", "server" ]
+default-members = ["discord"]
