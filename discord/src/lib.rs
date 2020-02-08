@@ -63,34 +63,34 @@ pub fn start() -> Result<()> {
         e.event_handler(handler).raw_event_handler(raw_handler)
     })?;
 
+    // Disable the default message cache and use our own 
     client
         .cache_and_http
         .cache
         .write()
         .settings_mut()
         .max_messages(0);
-    {
-        let mut data = client.data.write();
 
-        let db = DbInstance::new(&read_config().db_path, None)?;
-        //let guilds_config = fetch_guild_config_from_db(&db)?;
+    let db = DbInstance::new(&read_config().db_path, None)?;
+    fetch_guild_config_from_db(&db)?;
+    
+    let mut data = client.data.write();
 
-        fetch_guild_config_from_db(&db)?;
+    data.insert::<CustomEventList>(custom_events_arc);
+    data.insert::<DatabaseKey>(Arc::new(db));
+    data.insert::<InforKey>(Information::init(&client.cache_and_http.http)?);
+    data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
+    data.insert::<MasterList>(rw_data(HashSet::new()));
+    data.insert::<VoiceManager>(client.voice_manager.clone());
+    data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
+    data.insert::<AIStore>(mutex_data(Eliza::new("brain.json")?));
 
-        data.insert::<CustomEventList>(custom_events_arc);
-        data.insert::<DatabaseKey>(Arc::new(db));
-        data.insert::<InforKey>(Information::init(&client.cache_and_http.http.clone())?);
-        data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
-        data.insert::<MasterList>(rw_data(HashSet::new()));
-        // data.insert::<GuildConfigList>(rw_data(guilds_config));
-        data.insert::<VoiceManager>(client.voice_manager.clone());
-        data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
-        data.insert::<AIStore>(mutex_data(Eliza::new("brain.json")?));
-
-        if has_external_command("ffmpeg") {
-            data.insert::<MusicManager>(mutex_data(HashMap::new()));
-        }
+    if has_external_command("ffmpeg") {
+        data.insert::<MusicManager>(mutex_data(HashMap::new()));
     }
+        
+    drop(data);
+        
     client.with_framework(get_framework());
 
     let voices = client.voice_manager.clone();

@@ -143,6 +143,10 @@ fn framwork_config<'a>(config: &'a mut Configuration) -> &'a mut Configuration {
     let mut disabled_commands = HashSet::new();
 
     owners.insert(UserId(239825449637642240));
+    
+    if !has_external_command("ffmpeg") {
+        disabled_commands.insert(String::from("touhou_music_quiz"));
+    }
 
     if !has_external_command("youtube-dl") {
         disabled_commands.insert(String::from("play"));
