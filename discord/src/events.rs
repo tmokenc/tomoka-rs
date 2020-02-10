@@ -9,7 +9,7 @@ use serenity::model::{
 
 use crate::cache::MessageCache;
 use crate::storages::{CacheStorage, MasterList};
-use crate::{constants::*, types::CustomEvents, utils::*, Result};
+use crate::{types::CustomEvents, utils::*, Result};
 
 use chrono::Utc;
 use colorful::RGB;
@@ -120,10 +120,15 @@ impl EventHandler for Handler {
         };
         
         send(&ctx.http, log_channel, to_say, |embed| {
+            embed.timestamp(now());
+            embed.fields(fields);
+            
+            {
+                let config = crate::read_config();
+                embed.color(config.color.message_update);
+            }
+            
             embed
-                .color(MESSAGE_UPDATE_COLOR)
-                .timestamp(Utc::now().to_rfc3339())
-                .fields(fields)
         });
     }
 
@@ -278,13 +283,18 @@ fn _process_deleted(
             .iter()
             .filter_map(|v| v.cached.as_ref())
             .for_each(|v| { message.add_file(v); });
+            
+        let color = {
+            let config = crate::read_config();
+            config.color.message_delete
+        };
 
         let typed = match is_empty_content {
             true => "file",
             false => {
                 message.embed(|embed| {
                     embed
-                        .color(MESSAGE_DELETE_COLOR)
+                        .color(color)
                         .timestamp(Utc::now().to_rfc3339())
                         .field("Deleted message", msg.content.to_owned(), false)
                 });

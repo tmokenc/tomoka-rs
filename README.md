@@ -60,13 +60,13 @@ cargo run --release --bin tomoka_rs
 The structure of this codebase (kind of mess though) <br>
 (*Navigate into each folder to read its README*) <br>
 (*Still nothing yet ~~thanks to my laziness~~*)
-+ [Discord](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/discord) (The main bot source code)
-+ [Server](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/server) (The web server for the bot, but nothing is there yet)
-+ [Db](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/db) (Database related stuff)
-+ [Magic](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/magic) (All the magic in one place)
-+ [Requester](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/requester) (Request to external API)
-+ [Pokemon](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/pokemon) (just there for the furute of Discord Pokemon Battle game)
-+ [Bins](https://gitlab.com/tmokenc/tomoka-rs/-/tree/master/bins) (useless binaries)
++ [Discord](discord) (The main bot source code)
++ [Server](server) (The web server for the bot, but nothing is there yet)
++ [Db](db) (Database related stuff)
++ [Magic](magic) (All the magic in one place)
++ [Requester](requester) (Request to external API)
++ [Pokemon](pokemon) (just there for the furute of Discord Pokemon Battle game)
++ [Bins](bins) (useless binaries)
 
 ## Todo
 
@@ -87,6 +87,7 @@ The structure of this codebase (kind of mess though) <br>
 - [ ] Utility
     - [ ] E-hentai
         - [ ] Gallery information
+        - [ ] Read
         - [ ] Downloader
     - [ ] Encode
     - [ ] Decode

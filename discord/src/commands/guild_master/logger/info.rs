@@ -9,14 +9,15 @@ fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
         None => return Ok(())
     };
     
-    let guild = crate::read_config()
+    let config = crate::read_config();
+    let guild = config
         .guilds
         .get(&guild_id);
 
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Logger information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         match guild {

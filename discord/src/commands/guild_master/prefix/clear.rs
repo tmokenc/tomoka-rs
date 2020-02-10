@@ -30,7 +30,7 @@ fn clear(ctx: &mut Context, msg: &Message) -> CommandResult {
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Prefix information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         embed.field("Current default prefix", &config.prefix, true);

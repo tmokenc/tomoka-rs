@@ -115,7 +115,9 @@ fn get_radio_stream<S: AsRef<str>>(s: S) -> Result<Box<dyn AudioSource>> {
 }
 
 fn parse_radio_file() -> Result<Vec<Radio>> {
-    let path = crate::read_config()
+    let config = crate::read_config();
+    let path = config
+        .etc
         .radio_stations
         .as_ref()
         .ok_or_else(|| IoError::new(ErrorKind::NotFound, "No radio station was set"))?;

@@ -11,7 +11,8 @@ fn disable(ctx: &mut Context, msg: &Message) -> CommandResult {
         None => return Ok(())
     };
     
-    let mut guild = crate::read_config()
+    let config = crate::read_config();
+    let mut guild = config
         .guilds
         .get_mut(&guild_id);
 
@@ -28,7 +29,7 @@ fn disable(ctx: &mut Context, msg: &Message) -> CommandResult {
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Logger information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         embed.description(mess);

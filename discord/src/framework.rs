@@ -17,7 +17,7 @@ use serenity::{
 
 use crate::{
     commands::*,
-    constants::{ERROR_COLOR, RGB_TU, SAUCE_EMOJI, SAUCE_WAIT_DURATION},
+    constants::{SAUCE_EMOJI, SAUCE_WAIT_DURATION},
     storages::{AIStore, CustomEventList, InforKey, MasterList},
     traits::ToEmbed,
     utils::*,
@@ -109,7 +109,8 @@ fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResult) {
         Err(why) => {
             error!("Couldn't execute the command {}\n{:#?}", cmd.magenta(), why);
             send_embed(&ctx.http, msg.channel_id, |embed| {
-                embed.color(ERROR_COLOR).description({
+                let config = crate::read_config();
+                embed.color(config.color.error).description({
                     format!("Cannot execute the command **__{}__**```{}```", cmd, why.0)
                 })
             });
@@ -211,7 +212,8 @@ fn repeat_words(ctx: &Context, msg: &Message) {
         None => return,
     };
 
-    let guild = match crate::read_config().guilds.get(&guild_id) {
+    let config = crate::read_config();
+    let guild = match config.guilds.get(&guild_id) {
         Some(d) => d,
         None => return,
     };
@@ -279,6 +281,12 @@ fn eliza_response(ctx: &Context, msg: &Message) {
 fn rgb_tu(ctx: &Context, msg: &Message) {
     use rand::prelude::*;
     use std::fs;
+    
+    let config = crate::read_config();
+    let rgb = match config.rgb.as_ref() {
+        Some(r) => r,
+        None => return
+    };
 
     if msg.guild_id.is_some()
         && msg.author.id.0 == 314444746959355905
@@ -286,7 +294,7 @@ fn rgb_tu(ctx: &Context, msg: &Message) {
             .content
             .to_lowercase()
             .split_whitespace()
-            .find(|v| RGB_TU.contains(v))
+            .find(|v| rgb.tu.contains(&v.to_string()))
             .is_some()
     {
         let mut rng = SmallRng::from_entropy();
@@ -301,9 +309,8 @@ fn rgb_tu(ctx: &Context, msg: &Message) {
         }))
         .ok();
 
-        let config = crate::read_config();
-        if config.rgb_evidence.is_some() && num < 0.05 {
-            let path = config.rgb_evidence.as_ref().unwrap();
+        if num < 0.05 {
+            let path = &rgb.evidence;
 
             let evi = fs::read_dir(path)
                 .unwrap()
@@ -336,9 +343,11 @@ lazy_static! {
 fn find_sauce(ctx: &Context, msg: &Message) {
     use magic::sauce::get_sauce;
 
+    let config = crate::read_config();
+    
     let is_watching_channel = msg
         .guild_id
-        .and_then(|v| crate::read_config().guilds.get(&v))
+        .and_then(|v| config.guilds.get(&v))
         .filter(|v| v.find_sauce.enable)
         .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id))
         .is_some();

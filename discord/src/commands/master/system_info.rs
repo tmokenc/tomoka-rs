@@ -1,5 +1,4 @@
 use crate::commands::prelude::*;
-use crate::constants::INFORMATION_COLOR;
 use crate::Result;
 use magic::report_kb;
 use sys_info::*;
@@ -37,10 +36,13 @@ fn system_info(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
 
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|embed| {
+            let config = crate::read_config();
+            embed.color(config.color.information);
+            drop(config);
+            embed.title("System Information");
+            embed.fields(fields);
+            
             embed
-                .title("System Information")
-                .color(INFORMATION_COLOR)
-                .fields(fields)
         })
     })?;
 

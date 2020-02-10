@@ -7,8 +7,13 @@ use crate::types::GuildConfig;
 #[bucket = "basic"]
 /// Toggle the logger on/off
 fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let guild_id = msg.guild_id.unwrap();
-    let mut guild_config = crate::read_config()
+    let guild_id = match msg.guild_id {
+        Some(id) => id,
+        None => return Ok(())
+    };
+    
+    let config = crate::read_config();
+    let mut guild_config = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));
@@ -20,7 +25,7 @@ fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     msg.channel_id.send_message(&ctx.http, |m| m.embed(|embed| {
         embed.title("Logger information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         embed.description(format!("**{}** logger", mess));

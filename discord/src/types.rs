@@ -89,7 +89,7 @@ impl CustomEvents {
 }
 
 pub struct Information {
-    pub uptime: DateTime<Utc>,
+    pub booted_on: DateTime<Utc>,
     pub user_id: UserId,
     pub executed: AtomicUsize,
 }
@@ -97,7 +97,7 @@ pub struct Information {
 impl Information {
     pub fn init(http: &Http) -> Result<Self> {
         let info = Self {
-            uptime: Utc::now(),
+            booted_on: Utc::now(),
             user_id: http.get_current_user()?.id,
             executed: AtomicUsize::new(0),
         };
@@ -114,9 +114,16 @@ impl Information {
     pub fn executed_one(&self) -> usize {
         self.executed.fetch_add(1, Ordering::SeqCst)
     }
+    
+    pub fn uptime(&self) -> Duration {
+        let current = Utc::now().timestamp_millis() as u64;
+        let since = self.booted_on.timestamp_millis() as u64;
+        
+        Duration::from_millis(current - since)
+    }
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct SimpleRole {
     pub name: String,
     pub id: RoleId,
@@ -133,13 +140,13 @@ impl From<Role> for SimpleRole {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct DiscordLogger {
     pub channel: Option<ChannelId>,
     pub enable: bool,
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FindSauce {
     pub channels: HashSet<ChannelId>,
     pub all: bool,
@@ -173,7 +180,7 @@ impl ToEmbed for FindSauce {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct RepeatWords {
     pub words: HashSet<String>,
     pub enable: bool,
@@ -203,7 +210,7 @@ impl ToEmbed for RepeatWords {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct GuildConfig {

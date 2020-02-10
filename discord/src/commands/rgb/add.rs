@@ -3,6 +3,7 @@ use crate::types::GuildConfig;
 
 #[command]
 #[only_in(guilds)]
+#[required_permissions(MANAGE_ROLES)]
 #[description = "Add roles to the almighty RGB databse"]
 fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
@@ -11,8 +12,13 @@ fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         return Ok(());
     }
 
-    let guild_id = msg.guild_id.unwrap();
-    let mut guild = crate::read_config()
+    let guild_id = match msg.guild_id {
+        Some(id) => id,
+        None => return Ok(())
+    };
+    
+    let config = crate::read_config();
+    let mut guild = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));

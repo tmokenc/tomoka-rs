@@ -20,7 +20,9 @@ fn add(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         None => return Ok(())
     };
     
-    let mut guild = crate::read_config()
+    let config = crate::read_config();
+    
+    let mut guild = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));
@@ -39,7 +41,7 @@ fn add(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Repeat-words information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         embed.description(description);

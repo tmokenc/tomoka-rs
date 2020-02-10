@@ -6,11 +6,12 @@ import_all! {
     clear_cache,
     system_info,
     save_config,
+    reload,
     restart,
     shutdown
 }
 
 #[group]
 #[owners_only]
-#[commands(set_cache_size, clear_cache, system_info, save_config, restart, shutdown)]
+#[commands(set_cache_size, clear_cache, system_info, save_config, reload, restart, shutdown)]
 struct Master;

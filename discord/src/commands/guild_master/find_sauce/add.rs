@@ -17,10 +17,10 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     let channels = extract_channel_ids(&msg.content);
     
     if channels.is_empty() {
-            msg.channel_id.send_message(ctx, |m| {
-                m.content("Please *mention* some channel to be watched")
-            })?;
-            return Ok(());
+        msg.channel_id.send_message(ctx, |m| {
+            m.content("Please *mention* some channel to be watched")
+        })?;
+        return Ok(());
     }
     
     let config = crate::read_config();
@@ -49,7 +49,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Saucing information");
         embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         let mess = match (channels.len(), added.len()) {

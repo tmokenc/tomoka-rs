@@ -71,7 +71,7 @@ pub fn start() -> Result<()> {
         .settings_mut()
         .max_messages(0);
 
-    let db = DbInstance::new(&read_config().db_path, None)?;
+    let db = DbInstance::new(&read_config().database.path, None)?;
     fetch_guild_config_from_db(&db)?;
     
     let mut data = client.data.write();
@@ -83,7 +83,7 @@ pub fn start() -> Result<()> {
     data.insert::<MasterList>(rw_data(HashSet::new()));
     data.insert::<VoiceManager>(client.voice_manager.clone());
     data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
-    data.insert::<AIStore>(mutex_data(Eliza::new("brain.json")?));
+    data.insert::<AIStore>(mutex_data(Eliza::new("assets/data/brain.json")?));
 
     if has_external_command("ffmpeg") {
         data.insert::<MusicManager>(mutex_data(HashMap::new()));
@@ -133,9 +133,15 @@ fn rw_data<T>(data: T) -> Arc<RwLock<T>> {
     Arc::new(RwLock::new(data))
 }
 
-#[inline(always)]
-fn read_config() -> &'static Config {
-    &global::CONFIG
+#[inline]
+fn read_config() -> parking_lot::RwLockReadGuard<'static, Config> {
+    global::CONFIG.read()
+}
+
+#[inline]
+#[allow(unused)]
+fn write_config() -> parking_lot::RwLockWriteGuard<'static, Config> {
+    global::CONFIG.write()
 }
 
 fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {

@@ -10,14 +10,15 @@ fn disable(ctx: &mut Context, msg: &Message) -> CommandResult {
         None => return Ok(())
     };
     
-    let mut guild_config = crate::read_config()
+    let config = crate::read_config();
+    let mut guild_config = config
         .guilds
         .get_mut(&guild_id);
         
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
         embed.title("Saucing information");
         embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         match guild_config {

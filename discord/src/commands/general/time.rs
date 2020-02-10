@@ -20,12 +20,15 @@ fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
         ("Vietnam", utc.with_timezone(&Asia::Ho_Chi_Minh)),
         ("Japan", utc.with_timezone(&Japan)),
     ];
+    
+    let config = crate::read_config();
+    let format = config.etc.time_format.to_owned();
+    drop(config);
 
     let response = times
         .into_iter()
         .map(|(name, time)| {
             let tz = &time.format("%:z").to_string()[..3];
-            let format = env::var("TIME_FORMAT").unwrap_or_else(|_| String::from(TIME_FORMAT));
             let embed_name = format!("{} (GMT{})", name, tz);
             let embed_value = time.format(&format);
             (embed_name.to_owned(), embed_value.to_string(), false)

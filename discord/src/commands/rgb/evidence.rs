@@ -7,15 +7,16 @@ use std::fs;
 #[aliases("evi")]
 #[description = "The evidence of RGB"]
 fn evidence(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let path = match crate::read_config().rgb_evidence {
-        Some(ref p) => p,
+    let config = crate::read_config();
+    let rgb = match config.rgb {
+        Some(ref rgb) => rgb,
         None => {
             error!("No evidence directory has been set...");
             return Ok(());
         }
     };
 
-    let evi = fs::read_dir(path)?
+    let evi = fs::read_dir(&rgb.evidence)?
         .filter_map(|v| v.ok())
         .choose(&mut SmallRng::from_entropy())
         .unwrap()

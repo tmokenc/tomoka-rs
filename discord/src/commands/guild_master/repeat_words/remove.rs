@@ -16,7 +16,8 @@ fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         None => return Ok(())
     };
     
-    let mut guild = crate::read_config().guilds.get_mut(&guild_id);
+    let config = crate::read_config();
+    let mut guild = config.guilds.get_mut(&guild_id);
     let description = match guild {
         Some(ref mut guild) => {
             let length = guild.remove_words(words);
@@ -36,7 +37,7 @@ fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
         embed.title("Repeat-words information");
-        embed.color(INFORMATION_COLOR);
+        embed.color(config.color.information);
         embed.timestamp(now());
         
         embed.description(description);

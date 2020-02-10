@@ -17,14 +17,19 @@ fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResul
     if strategies.is_empty() {
         msg.channel_id.send_message(&ctx, |m| {
             m.embed(|embed| {
+                embed.title(title);
+                embed.description(format!(
+                    "Not found any strategy for the pokemon **{}**",
+                    pokemon
+                ));
+                embed.timestamp(now());
+                
+                {
+                    let config = crate::read_config();
+                    embed.color(config.color.error);
+                }
+                
                 embed
-                    .title(title)
-                    .description(format!(
-                        "Not found any strategy for the pokemon **{}**",
-                        pokemon
-                    ))
-                    .color(ERROR_COLOR)
-                    .timestamp(now())
             })
         })?;
         return Ok(());
@@ -50,13 +55,18 @@ fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResul
 
     msg.channel_id.send_message(&ctx, |m| {
         m.embed(|embed| {
+            embed.title(title);
+            embed.description(description);
+            embed.fields(fields);
+            embed.thumbnail(sprite);
+            embed.timestamp(now());
+            
+            {
+                let config = crate::read_config();
+                embed.color(config.color.information);
+            }
+            
             embed
-                .title(title)
-                .description(description)
-                .fields(fields)
-                .thumbnail(sprite)
-                .color(INFORMATION_COLOR)
-                .timestamp(now())
         })
     })?;
 

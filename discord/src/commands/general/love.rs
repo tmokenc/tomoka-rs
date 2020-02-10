@@ -26,16 +26,21 @@ fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
 
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|embed| {
+            embed.title("Thước đo tình yêu");
+            embed.description(format!(
+                ":sparkling_heart: **{}**\n:sparkling_heart: **{}**",
+                person.name, person2.name
+            ));
+            embed.thumbnail(HEART_URL);
+            embed.field(&point_str, progress_bar(point, 18), false);
+            embed.field(&point_str, get_msg(point), false);
+            
+            {
+                let config = crate::read_config();
+                embed.color(config.color.lovely);
+            }
+            
             embed
-                .title("Thước đo tình yêu")
-                .description(format!(
-                    ":sparkling_heart: **{}**\n:sparkling_heart: **{}**",
-                    person.name, person2.name
-                ))
-                .thumbnail(HEART_URL)
-                .color(LOVELY_COLOR)
-                .field(&point_str, progress_bar(point, 18), false)
-                .field(&point_str, get_msg(point), false)
         })
     })?;
 

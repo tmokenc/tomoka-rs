@@ -2,6 +2,7 @@ use crate::commands::prelude::*;
 
 #[command]
 #[only_in(guilds)]
+#[required_permissions(MANAGE_ROLES)]
 #[description = "Remove roles from the almighty RGB database"]
 fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
@@ -10,8 +11,13 @@ fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         return Ok(());
     }
 
-    let guild_id = msg.guild_id.unwrap();
-    let mut guild = match crate::read_config().guilds.get_mut(&guild_id) {
+    let guild_id = match msg.guild_id {
+        Some(id) => id,
+        None => return Ok(())
+    };
+    
+    let config = crate::read_config();
+    let mut guild = match config.guilds.get_mut(&guild_id) {
         Some(v) => v,
         None => {
             msg.channel_id.say(&ctx, "This guild hasn't been rgblized yet...")?;
