@@ -57,12 +57,9 @@ pub fn flip(buf: impl AsRef<[u8]>, direction: FlipType) -> Result<Vec<u8>> {
 /// Get dominated colors from image
 pub fn get_dominanted_colors(buf: impl AsRef<[u8]>) -> Result<Vec<RGB>> {
     let image = image::load_from_memory(buf.as_ref())?;
-    let has_alpha = match image.color() {
-        image::ColorType::RGBA(8) => true,
-        _ => false,
-    };
+    let has_alpha = image.color() == image::ColorType::Rgba8;
 
-    let colors = dominant_color::get_colors(&image.raw_pixels(), has_alpha)
+    let colors = dominant_color::get_colors(&image.to_bytes(), has_alpha)
         .into_iter()
         .map(|v| (v.r, v.g, v.b))
         .collect();
@@ -82,7 +79,7 @@ fn get_output_format(format: ImageFormat) -> ImageOutputFormat {
     let output = ImageOutputFormat::from(format);
 
     match output {
-        ImageOutputFormat::Unsupported(_) => ImageOutputFormat::BMP,
+        ImageOutputFormat::Unsupported(_) => ImageOutputFormat::Bmp,
         v => v,
     }
 }

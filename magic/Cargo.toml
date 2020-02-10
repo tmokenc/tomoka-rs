@@ -31,5 +31,5 @@ reqwest = { version = "0.10", optional = true }
 tokio = { version = "0.2", optional = true }
 scraper = { version = "0.11", optional = true }
 libc = { version = "0.2", optional = true }
-image = { version = "0.22", optional = true }
+image = { version = "0.23", optional = true }
 dominant_color = { version = "0.2", optional = true }
