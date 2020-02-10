@@ -1,9 +1,9 @@
-use db::DbInstance;
-use magic::bytes_to_le_u64;
 use crate::types::GuildConfig;
 use crate::Result;
 use dashmap::DashMap;
+use db::DbInstance;
 use lib_config::{Config as LibConfig, Environment, File, FileFormat};
+use magic::bytes_to_le_u64;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{EmojiId, GuildId};
 use std::fs;
@@ -40,7 +40,7 @@ pub struct TouhouMusicQuest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Sauce {
     pub wait_duration: u16,
-    pub emoji: Option<EmojiId>
+    pub emoji: Option<EmojiId>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -55,7 +55,6 @@ pub struct Etc {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub discord_token: String,
     pub prefix: String,
     pub database: Database,
     pub color: Color,
@@ -73,15 +72,15 @@ impl Config {
     pub fn init() -> Result<Self> {
         let mut config = LibConfig::new();
         let default_config = include_str!("../../assets/data/default_config.toml");
-        
-        config.merge(File::from_str(default_config, FileFormat::Toml))?; 
+
+        config.merge(File::from_str(default_config, FileFormat::Toml))?;
         config.merge(File::with_name("./config.toml").required(false))?;
         config.merge(Environment::new())?;
 
         let res = config.try_into()?;
         Ok(res)
     }
-    
+
     /// Perform the same action as `init`, but replace self instead of create new
     /// for some reason, keeping the guilds config will make it crash
     /// that's why creating the new one instead and then fetch the guilds config
@@ -90,21 +89,21 @@ impl Config {
     pub fn reload(&mut self, db: &DbInstance) -> Result<()> {
         let mut config = LibConfig::new();
         let default_config = include_str!("../../assets/data/default_config.toml");
-        
-        config.merge(File::from_str(default_config, FileFormat::Toml))?; 
+
+        config.merge(File::from_str(default_config, FileFormat::Toml))?;
         config.merge(File::with_name("./config.toml"))?;
         config.merge(Environment::new())?;
-        
+
         *self = config.try_into()?;
-        
+
         let db_data = db.open("GuildConfig")?.get_all_json::<GuildConfig>()?;
         let guilds_config = &self.guilds;
-    
+
         for (k, v) in db_data {
             let key = bytes_to_le_u64(k).into();
             guilds_config.insert(key, v);
         }
-        
+
         Ok(())
     }
 

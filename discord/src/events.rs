@@ -80,7 +80,7 @@ impl EventHandler for Handler {
             Some(c) => c,
             None => return,
         };
-        
+
         let author = match event.author {
             Some(a) => a,
             None => return,
@@ -97,7 +97,6 @@ impl EventHandler for Handler {
             event.id.0, channel_id.0
         );
 
-
         let log_channel = match get_log_channel(guild_id) {
             Some(channel) => channel,
             None => return,
@@ -106,9 +105,7 @@ impl EventHandler for Handler {
         let mut fields = vec![("Updated message", content.clone(), false)];
         let mut to_say = format!(
             "A message by **{}**#{:04} on channel <#{}> has been edited.",
-            author.name,
-            author.discriminator,
-            channel_id.0,
+            author.name, author.discriminator, channel_id.0,
         );
 
         let cache = get_data::<CacheStorage>(&ctx).unwrap();
@@ -118,16 +115,16 @@ impl EventHandler for Handler {
             }
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
-        
+
         send(&ctx.http, log_channel, to_say, |embed| {
             embed.timestamp(now());
             embed.fields(fields);
-            
+
             {
                 let config = crate::read_config();
                 embed.color(config.color.message_update);
             }
-            
+
             embed
         });
     }
@@ -142,7 +139,7 @@ impl EventHandler for Handler {
             "OMG, there are {} messages has been killed by one slash",
             msgs.len()
         );
-        
+
         process_deleted_message(&ctx, channel_id, msgs.into_iter().rev())
     }
 
@@ -235,20 +232,20 @@ fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
 
 fn process_deleted_message<I>(ctx: &Context, channel_id: ChannelId, msgs: I)
 where
-    I: IntoIterator<Item = MessageId> 
+    I: IntoIterator<Item = MessageId>,
 {
     let guild_id = match get_guild_id_from_channel(&ctx, channel_id) {
         Some(id) => id,
-        None => return    
+        None => return,
     };
-    
+
     let log_channel = match get_log_channel(guild_id) {
         Some(c) => c,
-        None => return
+        None => return,
     };
-    
+
     let cache = get_data::<CacheStorage>(&ctx).unwrap();
-    
+
     msgs.into_iter()
         .filter_map(|v| cache.remove_message(v))
         .filter_map(|v| _process_deleted(&ctx, log_channel, channel_id, v).err())

@@ -22,9 +22,9 @@ use crate::{
     utils::*,
 };
 
-use core::time::Duration;
 use chrono::{DateTime, Utc};
 use colorful::Colorful;
+use core::time::Duration;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
 use log::{error, info};
@@ -144,7 +144,7 @@ fn framwork_config<'a>(config: &'a mut Configuration) -> &'a mut Configuration {
     let mut disabled_commands = HashSet::new();
 
     owners.insert(UserId(239825449637642240));
-    
+
     if !has_external_command("ffmpeg") {
         disabled_commands.insert(String::from("touhou_music_quiz"));
     }
@@ -281,11 +281,11 @@ fn eliza_response(ctx: &Context, msg: &Message) {
 fn rgb_tu(ctx: &Context, msg: &Message) {
     use rand::prelude::*;
     use std::fs;
-    
+
     let config = crate::read_config();
     let rgb = match config.rgb.as_ref() {
         Some(r) => r,
-        None => return
+        None => return,
     };
 
     if msg.guild_id.is_some()

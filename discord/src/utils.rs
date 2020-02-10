@@ -6,7 +6,7 @@ use bytes::Bytes;
 use lazy_static::lazy_static;
 use log::error;
 use magic::{number_to_le_bytes, number_to_rgb};
-use parking_lot::{RwLock};
+use parking_lot::RwLock;
 use regex::Regex;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -77,7 +77,7 @@ pub fn colored_name_user(user: &User) -> CString {
 pub fn split_message<S: AsRef<str>>(content: S, limit: u16, last: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut tmp = String::new();
-    
+
     for s in content.as_ref().split(last) {
         if tmp.len() + s.len() + last.len() > limit as usize {
             let data = tmp.drain(..).collect::<String>();

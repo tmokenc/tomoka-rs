@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 use std::fs;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::id::{AttachmentId, MessageId, UserId};
 
 use log::info;
-use tempdir::TempDir;
 use parking_lot::Mutex;
+use tempdir::TempDir;
 
 use crate::utils::save_file;
 use crate::Result;
@@ -130,14 +130,14 @@ impl MyCache {
 
         Ok((cache_length, cache_size))
     }
-    
+
     /// This will also delete the cache directory
     pub fn clean_up(&self) {
         if let Err(why) = fs::remove_dir_all(&self.tmp_dir) {
             error!("Cannot clean up the cache\n{:#?}", why);
         }
     }
- 
+
     /// Set new maximum message allow in the cache
     /// return the old value
     pub fn set_max_message(&self, value: usize) -> usize {
@@ -169,7 +169,7 @@ impl MyCache {
                 let config = crate::read_config();
                 config.etc.max_cache_file_size
             };
-            
+
             if i.size <= max_file_size {
                 let path = self.tmp_dir.join(i.filename());
                 save_file(i.url.to_owned(), path.to_owned());
@@ -179,17 +179,16 @@ impl MyCache {
 
         message.insert(id, cache_message);
     }
-    
+
     /// Update the message content, return the old cached content
     pub fn update_message(&self, id: MessageId, content: &str) -> Option<String> {
         let mut message = self.message.lock();
-        
-        message.get_mut(&id)
-            .map(|ref mut v| {
-                let old = v.content.to_owned();
-                v.content = content.to_owned();
-                old
-            })
+
+        message.get_mut(&id).map(|ref mut v| {
+            let old = v.content.to_owned();
+            v.content = content.to_owned();
+            old
+        })
     }
 
     /// Remove the message from cache by a given MessageId

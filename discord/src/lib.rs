@@ -43,6 +43,8 @@ use eliza::Eliza;
 pub fn start() -> Result<()> {
     dotenv().ok();
 
+    let token = env::var("DISCORD_TOKEN")?;
+
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
@@ -56,13 +58,13 @@ pub fn start() -> Result<()> {
 
     info!(
         "Login with the token:\n{}",
-        read_config().discord_token.to_owned().underlined().yellow()
+        token.to_owned().underlined().yellow()
     );
-    let mut client = Client::new_with_extras(&read_config().discord_token, |e| {
+    let mut client = Client::new_with_extras(&token, |e| {
         e.event_handler(handler).raw_event_handler(raw_handler)
     })?;
 
-    // Disable the default message cache and use our own 
+    // Disable the default message cache and use our own
     client
         .cache_and_http
         .cache
@@ -72,7 +74,7 @@ pub fn start() -> Result<()> {
 
     let db = DbInstance::new(&read_config().database.path, None)?;
     fetch_guild_config_from_db(&db)?;
-    
+
     let mut data = client.data.write();
 
     data.insert::<CustomEventList>(custom_events_arc);
@@ -87,9 +89,9 @@ pub fn start() -> Result<()> {
     if has_external_command("ffmpeg") {
         data.insert::<MusicManager>(mutex_data(HashMap::new()));
     }
-        
+
     drop(data);
-        
+
     client.with_framework(get_framework());
 
     let voices = client.voice_manager.clone();
@@ -108,7 +110,7 @@ pub fn start() -> Result<()> {
         for guild in guilds {
             manager.leave(guild);
         }
-        
+
         data.read().get::<CacheStorage>().unwrap().clean_up();
 
         info!("{}", "BYE".underlined().gradient(Color::Red));

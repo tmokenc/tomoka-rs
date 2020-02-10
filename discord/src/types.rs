@@ -114,11 +114,11 @@ impl Information {
     pub fn executed_one(&self) -> usize {
         self.executed.fetch_add(1, Ordering::SeqCst)
     }
-    
+
     pub fn uptime(&self) -> Duration {
         let current = Utc::now().timestamp_millis() as u64;
         let since = self.booted_on.timestamp_millis() as u64;
-        
+
         Duration::from_millis(current - since)
     }
 }
