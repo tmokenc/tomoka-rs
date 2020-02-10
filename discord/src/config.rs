@@ -5,7 +5,7 @@ use crate::Result;
 use dashmap::DashMap;
 use lib_config::{Config as LibConfig, Environment, File, FileFormat};
 use serde::{Deserialize, Serialize};
-use serenity::model::id::GuildId;
+use serenity::model::id::{EmojiId, GuildId};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -31,11 +31,25 @@ pub struct Rgb {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct TouhouMusicQuest {
+    pub duration: f32,
+    pub source: PathBuf,
+    pub emoji: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Sauce {
+    pub wait_duration: u16,
+    pub emoji: Option<EmojiId>
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Etc {
     pub radio_stations: Option<PathBuf>,
-    pub tmq_source: Option<PathBuf>,
-    pub tmq_emoji: Option<PathBuf>,
+    pub tmq: Option<TouhouMusicQuest>,
     pub time_format: String,
+    pub image_search_depth: u16,
+    pub sauce: Sauce,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

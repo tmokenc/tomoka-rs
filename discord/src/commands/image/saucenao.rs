@@ -8,14 +8,20 @@ use magic::sauce::SauceNao;
 #[description = "Find an anime image source."]
 fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx)?;
-    let img = match get_last_image_url(&ctx, &msg, IMAGE_SEARCH_DEPTH) {
+    
+    let depth = {
+        let config = crate::read_config();
+        config.etc.image_search_depth
+    };
+    
+    let img = match get_last_image_url(&ctx, &msg, depth) {
         Some(i) => i,
         None => {
             msg.channel_id.say(
                 ctx,
                 format!(
                     "Cannot find an image from last {} message",
-                    IMAGE_SEARCH_DEPTH
+                    depth
                 ),
             )?;
             return Ok(());

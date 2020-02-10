@@ -23,7 +23,9 @@ type TmqCollect = Mutex<HashMap<ChannelId, HashMap<UserId, TmqCollector>>>;
 
 lazy_static! {
     static ref TOUHOU_VERSION: HashMap<String, u64> = {
-        let file = File::open("tmq_emo.json").unwrap();
+        let config = crate::read_config();
+        let file = File::open(&config.etc.tmq.as_ref().unwrap().emoji).unwrap();
+        drop(config);
         let reader = BufReader::new(file);
 
         serde_json::from_reader(reader).unwrap()
@@ -90,11 +92,16 @@ fn touhou_music_quiz(ctx: &mut Context, msg: &Message, _args: Args) -> CommandRe
     loop {
         let (path, version) = get_quiz()?;
         info!("The answer is touhou {}", version.as_str().blue());
+        
+        let duration = {
+            let config = crate::read_config();
+            config.etc.tmq.as_ref().unwrap().duration
+        };
 
-        let audio = get_audio(path, TMQ_DURATION)?;
+        let audio = get_audio(path, duration)?;
         let _locked_audio = voice.play_only(audio);
 
-        thread::sleep(Duration::from_secs_f32(TMQ_DURATION - 2.0));
+        thread::sleep(Duration::from_secs_f32(duration - 2.0));
 
         let (winners_list, loosers_list): (Vec<_>, Vec<_>) = TMQ_COLLECTOR
             .lock()
@@ -179,13 +186,24 @@ fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<Box<dyn AudioSourc
 }
 
 fn get_quiz() -> Result<(PathBuf, String)> {
-    let path = env::var("TMQ_SOURCE")?;
+    use std::io::{Error, ErrorKind};
+    
+    let config = crate::read_config();
+    let tmq_config = config
+        .etc
+        .tmq
+        .as_ref()
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "tmq config notfound"))?;
+    
+    let path = &tmq_config.source;
     let mut rng = thread_rng();
 
     let touhou = fs::read_dir(path)?
         .filter_map(|v| v.ok().map(|v| v.path()).filter(|v| v.is_dir()))
         .choose(&mut rng)
         .unwrap();
+        
+    drop(config);
 
     let name = touhou.file_name().unwrap();
     let version = parse_touhou_version(name.to_str().unwrap()).unwrap();

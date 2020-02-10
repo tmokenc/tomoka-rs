@@ -17,12 +17,12 @@ use serenity::{
 
 use crate::{
     commands::*,
-    constants::{SAUCE_EMOJI, SAUCE_WAIT_DURATION},
     storages::{AIStore, CustomEventList, InforKey, MasterList},
     traits::ToEmbed,
     utils::*,
 };
 
+use core::time::Duration;
 use chrono::{DateTime, Utc};
 use colorful::Colorful;
 use dashmap::DashMap;
@@ -345,6 +345,10 @@ fn find_sauce(ctx: &Context, msg: &Message) {
 
     let config = crate::read_config();
     
+    if config.etc.sauce.emoji.is_none() {
+        return
+    }
+    
     let is_watching_channel = msg
         .guild_id
         .and_then(|v| config.guilds.get(&v))
@@ -373,8 +377,11 @@ fn find_sauce(ctx: &Context, msg: &Message) {
     let http = ctx.http.clone();
     let channel_id = msg.channel_id.0;
     let msg_id = msg.id.0;
+    let duration = Duration::from_secs(config.etc.sauce.wait_duration as u64);
     
-    let timer = crate::global::GLOBAL_POOL.execute_after(SAUCE_WAIT_DURATION, move || {
+    drop(config);
+    
+    let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
         let emoji = _sauce_emoji().into();
         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
             error!("Cannot delete the sauce reaction\n{:#?}", why);
@@ -419,7 +426,9 @@ fn sauce_event(ctx: &Context, ev: &Event) {
         Event::ReactionAdd(reaction) => {
             let reaction = &reaction.reaction;
             if let ReactionType::Custom { id, .. } = reaction.emoji {
-                if id != SAUCE_EMOJI {
+                let config = crate::read_config();
+                let watch_emoji = config.etc.sauce.emoji.filter(|&e| id == e);
+                if watch_emoji.is_none() {
                     return;
                 }
             }
@@ -461,8 +470,9 @@ fn sauce_event(ctx: &Context, ev: &Event) {
 
 #[inline]
 fn _sauce_emoji() -> EmojiIdentifier {
+    let config = crate::read_config();
     EmojiIdentifier {
-        id: SAUCE_EMOJI,
+        id: config.etc.sauce.emoji.unwrap(),
         name: "sauce".to_string(),
     }
 }

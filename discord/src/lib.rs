@@ -139,7 +139,6 @@ fn read_config() -> parking_lot::RwLockReadGuard<'static, Config> {
 }
 
 #[inline]
-#[allow(unused)]
 fn write_config() -> parking_lot::RwLockWriteGuard<'static, Config> {
     global::CONFIG.write()
 }

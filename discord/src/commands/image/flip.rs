@@ -6,7 +6,12 @@ use magic::image::{self, FlipType};
 #[description = "Flip the last image from last 20 messages on the channel"]
 fn flip(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx)?;
-    let buf = get_last_image_buf(&ctx, &msg, IMAGE_SEARCH_DEPTH);
+    let depth = {
+        let config = crate::read_config();
+        config.etc.image_search_depth
+    };
+    
+    let buf = get_last_image_buf(&ctx, &msg, depth);
 
     if buf.is_none() {
         msg.channel_id
