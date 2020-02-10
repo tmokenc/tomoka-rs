@@ -1,0 +1,15 @@
+[
+    {
+        "name": "Gensokyou",
+        "url": "http://stream.gensokyoradio.net:8000/stream/1/",
+        "scrap_info": {
+            "url": "https://gensokyoradio.net/music/playing/",
+            "title": "#player_title",
+            "artist": "#player_artist",
+            "album": "#player_album",
+            "albumArt": "#albumart",
+            "circle": "player_circle",
+            "year": "#player_year"
+        }
+    }
+]

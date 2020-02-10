@@ -1,0 +1,21 @@
+prefix = "tomo>"
+temp_dir = "./temp" # directory for temporary files
+
+[database]
+path = "./tomodb"
+
+[color]
+information = 10053375 # 0x9966ff
+error = 16711731 # 0xff0033
+message_update = 5167967 # 0x4edb5f
+message_delete = 14376782 # 0xdb5f4e
+lovely = 16524136 # 0xfc2368
+
+[etc]
+radio_stations = "./assets/data/radio.json"
+time_format = "%I:%M %p %d/%m/%Y"
+
+# [rgb]
+# evidence = "/path/to/evidence"
+# tu = ["girls", "girl"]
+
