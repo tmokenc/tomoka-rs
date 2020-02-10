@@ -10,7 +10,6 @@ use log::info;
 use tempdir::TempDir;
 use parking_lot::Mutex;
 
-use crate::constants::{MAX_CACHE_MESSAGE, MAX_FILE_SIZE};
 use crate::utils::save_file;
 use crate::Result;
 
@@ -102,25 +101,21 @@ impl AttachmentCache {
 }
 
 impl MyCache {
-    //Create a new custom cache, as well as a cache directory
+    /// Create a new custom cache, as well as a cache directory
+    /// Default max_message is 2000
     pub fn new() -> Result<Self> {
         let tmp_dir = create_tmp_dir(crate::read_config().temp_dir.as_ref(), "tomoka-cache")?;
         info!("the temp dir path:\n{:?}", tmp_dir.path());
 
         Ok(Self {
             message: Mutex::new(BTreeMap::new()),
-            max_message: MAX_CACHE_MESSAGE.into(),
+            max_message: AtomicUsize::new(2000),
             tmp_dir: tmp_dir.into_path(),
         })
     }
 
-    // #[inline]
-    // pub fn path(&self) -> PathBuf {
-    //     self.tmp_dir.to_owned()
-    // }
-
-    //Clear the cache
-    //Return the length of messages and cached size on disk
+    /// Clear the cache
+    /// Return the length of messages and cached size on disk
     pub fn clear(&self) -> Result<(usize, usize)> {
         let cache_size = fs::read_dir(self.tmp_dir.as_path())?
             .filter_map(|v| v.ok())
@@ -170,7 +165,12 @@ impl MyCache {
         let mut cache_message = MessageCache::from(msg);
 
         for i in cache_message.attachments.iter_mut() {
-            if i.size <= MAX_FILE_SIZE {
+            let max_file_size = {
+                let config = crate::read_config();
+                config.etc.max_cache_file_size
+            };
+            
+            if i.size <= max_file_size {
                 let path = self.tmp_dir.join(i.filename());
                 save_file(i.url.to_owned(), path.to_owned());
                 i.cached = Some(path);

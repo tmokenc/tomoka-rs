@@ -50,6 +50,7 @@ pub struct Etc {
     pub time_format: String,
     pub image_search_depth: u16,
     pub sauce: Sauce,
+    pub max_cache_file_size: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

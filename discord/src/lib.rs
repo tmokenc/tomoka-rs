@@ -8,7 +8,6 @@ extern crate config as lib_config;
 mod cache;
 mod commands;
 mod config;
-mod constants;
 mod events;
 mod framework;
 mod global;

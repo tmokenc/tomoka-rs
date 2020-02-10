@@ -4,6 +4,8 @@ use crate::commands::prelude::*;
 use magic::dark_magic::{number_to_rgb, progress_bar};
 use std::mem;
 
+pub const HEART_URL: &str = "https://i.imgur.com/YpRPxeS.png";
+
 #[command]
 #[usage = "?[@someone] ?[@another one]"]
 #[description = "Check love comparative"]
