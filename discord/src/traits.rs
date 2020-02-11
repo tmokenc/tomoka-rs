@@ -179,11 +179,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             }
         }
         
-        let tags = &[
-            ("Male", male),
-            ("Female", female),
-            ("Misc", misc),
-        ];
+        
         
         let mut title = String::new();
         
@@ -218,18 +214,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         let circle = (!group.is_empty())
             .then(|| format!("\n**Circle**: {}", group.join(", ")));
             
-        tags.into_iter()
-            .filter_map(|(k, v)| {
-                v.into_iter()
-                    .map(|v| (v, space_to_underscore(&v)))
-                    .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
-                    .join(" ")
-                    .to_option()
-                    .map(|v| (k, v))
-            })
-            .for_each(|(k, v)| {
-                embed.field(k, v, false);    
-            });
+        
             
         let description = format!(
             "{title} {language} {parody} {characters}
@@ -238,7 +223,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             **Total files**: {count} ({size})
             **Rating 👍**: {rating} / 5
             
-            ***TAGS***",
+            ***TAGs***",
             
             title = title,
             language = language.unwrap_or_default(),
@@ -254,12 +239,26 @@ impl ToEmbed for requester::ehentai::Gmetadata {
            
         embed.description(description);
         
+        &[("Male", male), ("Female", female), ("Misc", misc),]
+            .iter()
+            .filter_map(|(k, v)| {
+                v.into_iter()
+                    .map(|v| (v, space_to_underscore(&v)))
+                    .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
+                    .join(" ")
+                    .to_option()
+                    .map(|v| (k, v))
+            })
+            .for_each(|(k, v)| { embed.field(k, v, false); });
+            
         let time = self
             .posted
             .parse::<i64>()
-            .unwrap_or(Utc::now().timestamp_millis());
+            .map(|v| Utc.timestamp(v, 0))
+            .unwrap_or(Utc::now())
+            .to_rfc3339();
             
-        embed.timestamp(Utc.timestamp_millis(time).to_rfc3339());
+        embed.timestamp(time);
         // embed.author(|a| a.name(&self.uploader));
         embed.thumbnail(&self.thumb);
         
