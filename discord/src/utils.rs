@@ -74,6 +74,23 @@ pub fn space_to_underscore<S: AsRef<str>>(content: S) -> String {
     SPACE_RE.replace_all(content.as_ref(), "_").to_string()
 }
 
+pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
+    lazy_static! {
+        static ref KAEDE_REG: Regex = Regex::new(r"e(x|\-)hentai.org/g/(\d+)/([[:alnum:]]+)").unwrap();
+    }
+    
+    KAEDE_REG
+        .captures_iter(content)
+        .filter_map(|res| {
+            res.get(2)
+                .and_then(|v| v.as_str().parse::<u32>().ok())
+                .and_then(|v| res.get(3).map(|x| (v, x)))
+                .map(|(v, x)| (v, x.as_str().to_string()))
+        })
+        .collect()
+        
+}
+
 pub fn colored_name_user(user: &User) -> CString {
     let (r, g, b) = number_to_rgb(user.id.0);
     let color = RGB::new(r, g, b);

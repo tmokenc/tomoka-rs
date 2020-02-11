@@ -276,7 +276,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             _ => 0x8a8a8a,
         });
         
-        embed.footer(|f| f.text(format!("https://e-hentai.org/{}/{}", self.gid, self.token)));
+        embed.footer(|f| f.text(format!("https://e-hentai.org/g/{}/{}", self.gid, self.token)));
         
         embed
     }
