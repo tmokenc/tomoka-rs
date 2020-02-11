@@ -142,15 +142,15 @@ impl From<Role> for SimpleRole {
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct DiscordLogger {
-    pub channel: Option<ChannelId>,
     pub enable: bool,
+    pub channel: Option<ChannelId>,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FindSauce {
-    pub channels: HashSet<ChannelId>,
     pub all: bool,
     pub enable: bool,
+    pub channels: HashSet<ChannelId>,
 }
 
 impl ToEmbed for FindSauce {
@@ -182,8 +182,8 @@ impl ToEmbed for FindSauce {
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct RepeatWords {
-    pub words: HashSet<String>,
     pub enable: bool,
+    pub words: HashSet<String>,
 }
 
 impl ToEmbed for RepeatWords {
@@ -216,10 +216,10 @@ impl ToEmbed for RepeatWords {
 pub struct GuildConfig {
     pub id: GuildId,
     pub prefix: Option<String>,
+    pub rgblized: Option<Vec<SimpleRole>>,
     pub logger: DiscordLogger,
     pub find_sauce: FindSauce,
     pub repeat_words: RepeatWords,
-    pub rgblized: Option<Vec<SimpleRole>>,
 }
 
 impl GuildConfig {

@@ -66,6 +66,14 @@ pub fn remove_emote<S: AsRef<str>>(msg: S) -> String {
     EMOTE_RE.replace_all(msg.as_ref(), "").to_string()
 }
 
+/// `from this` ~> `to_this`
+pub fn space_to_underscore<S: AsRef<str>>(content: S) -> String {
+    lazy_static! {
+        static ref SPACE_RE: Regex = Regex::new(r" ").unwrap();
+    }
+    SPACE_RE.replace_all(content.as_ref(), "_").to_string()
+}
+
 pub fn colored_name_user(user: &User) -> CString {
     let (r, g, b) = number_to_rgb(user.id.0);
     let color = RGB::new(r, g, b);

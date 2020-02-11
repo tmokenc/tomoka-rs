@@ -54,3 +54,17 @@ impl MagicBool for bool {
         }
     }
 }
+
+pub trait MagicStr {
+    fn to_option(&self) -> Option<String>; 
+}
+
+impl MagicStr for str {
+    fn to_option(&self) -> Option<String> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self.to_owned())
+        }
+    }
+}

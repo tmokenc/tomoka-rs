@@ -69,7 +69,7 @@ pub fn get_framework() -> impl Framework {
         .group(&GENERAL_GROUP)
         .group(&GAME_GROUP)
         .group(&POKEMON_GROUP)
-        // .group(&UTILITY_GROUP)
+        .group(&UTILITY_GROUP)
         .group(&IMAGE_GROUP)
         .group(&RGB_GROUP)
         .help(&STOLEN_HELP)

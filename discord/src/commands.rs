@@ -12,5 +12,5 @@ pub_import_all! {
     music,
     pokemon,
     rgb,
-    // utility,
+    utility,
 }

@@ -1,10 +1,10 @@
 use serenity::framework::standard::macros::group;
+use magic::import_all;
 
+import_all! {
+    ehentai
+}
 
-group!({
-  name: "Utility",
-  options: {
-  
-  },
-  commands: [cache_size, clear_cache, system_info],
-});
+#[group]
+#[sub_groups(Ehentai)]
+struct Utility;
