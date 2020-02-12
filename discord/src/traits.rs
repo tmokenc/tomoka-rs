@@ -1,31 +1,22 @@
 #![allow(unstable_name_collisions)]
 
 use crate::commands::prelude::now;
+use crate::utils::space_to_underscore;
+use chrono::{TimeZone, Utc};
+use magic::report_bytes;
+use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
-use magic::traits::MagicBool as _;
-use std::fmt::Write as _;
-use magic::report_bytes;
 use serenity::builder::CreateEmbed;
-use chrono::{Utc, TimeZone};
-use crate::utils::space_to_underscore;
+use std::fmt::Write as _;
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
 pub trait ToEmbed {
-    fn to_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed;
-
-    /// This function do nothing
-    /// There is nowhere use this, so it can be deleted safely
-    /// Just for my own *bad* habit
-    fn into_embed(&self) -> CreateEmbed {
-        let mut embed = CreateEmbed::default();
-        self.to_embed(&mut embed);
-        embed
-    }
+    fn to_embed(&self, embed: &mut CreateEmbed);
 }
 
 impl ToEmbed for magic::sauce::SauceNao {
-    fn to_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
         let mut description = Vec::new();
         let mut fields = Vec::new();
 
@@ -143,12 +134,11 @@ impl ToEmbed for magic::sauce::SauceNao {
             .timestamp(now())
             .footer(|f| f.text("Powered by SauceNao"));
 
-        embed
     }
 }
 
 impl ToEmbed for requester::ehentai::Gmetadata {
-    fn to_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
         let mut artist = Vec::new();
         let mut character = Vec::new();
         let mut female = Vec::new();
@@ -157,13 +147,13 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         let mut male = Vec::new();
         let mut parody = Vec::new();
         let mut misc = Vec::new();
-        
+
         for tag in self.tags.iter() {
             if tag.contains(":") {
                 let mut iter = tag.split(":");
                 let namespace = iter.next().unwrap();
                 let value = iter.next().unwrap();
-                
+
                 match namespace.as_ref() {
                     "artist" => artist.push(value.to_owned()),
                     "character" => character.push(value.to_owned()),
@@ -172,96 +162,86 @@ impl ToEmbed for requester::ehentai::Gmetadata {
                     "male" => male.push(value.to_owned()),
                     "female" => female.push(value.to_owned()),
                     "parody" => parody.push(value.to_owned()),
-                    _ => ()
+                    _ => (),
                 }
             } else {
                 misc.push(tag.to_owned());
             }
         }
         
-        
-        
-        let mut title = String::new();
-        
-        if !self.title.is_empty() {
-            write!(&mut title, "**Title**: {}", &self.title).unwrap();
+        let mut info = String::new();
+
+        if let Some(ref title) = self.title {
+            writeln!(&mut info, "**Title**: {}", title).unwrap();
         }
         
-        if !self.title_jpn.is_empty() {
-            if !title.is_empty() {
-                title.push('\n');
-            }
-            write!(&mut title, "**Title Jpn**: {}", &self.title_jpn).unwrap();
+        if let Some(ref title_jpn) = self.title_jpn {
+            writeln!(&mut info, "**Title Jpn**: {}", title_jpn).unwrap();
         }
-         
-        let language = (!language.is_empty())
-            .then(|| format!("\n**Language**: {}", language.join(" ")));
-            
-        let parody = parody
+        
+        if !language.is_empty() {
+            writeln!(&mut info, "**Language**: {}", language.join(" ")).unwrap();
+        }
+        
+        if let Some(parody) = parody
             .into_iter()
             .map(|v| format!("`{}`", v))
             .join(" ")
-            .to_option()
-            .map(|v| format!("\n**Parody**: {}", v));
-            
-        let characters = character
+            .to_option() 
+        {
+            writeln!(&mut info, "**Parody**: {}", parody).unwrap();
+        }
+        
+
+        if let Some(characters) =  character
             .into_iter()
             .map(|v| format!("`{}`", v))
-            .join(" ")
+            .join(", ")
             .to_option()
-            .map(|v| format!("\n**Characters**: {}", v));
-            
-        let circle = (!group.is_empty())
-            .then(|| format!("\n**Circle**: {}", group.join(", ")));
-            
+        {
+            writeln!(&mut info, "**Characters**: {}", characters).unwrap();
+        }
         
-            
-        let description = format!(
-            "{title} {language} {parody} {characters}
-            **Artist**: {artist} {circle}
-            **Category**: {category}
-            **Total files**: {count} ({size})
-            **Rating 👍**: {rating} / 5
-            
-            ***TAGs***",
-            
-            title = title,
-            language = language.unwrap_or_default(),
-            parody = parody.unwrap_or_default(),
-            characters = characters.unwrap_or_default(),
-            artist = artist.into_iter().map(|v| format!("`{}`", v)).join(" "),
-            circle = circle.unwrap_or_default(),
-            category = &self.category,
-            count = &self.filecount,
-            size = report_bytes(self.filesize),
-            rating = &self.rating,
-        );
-           
-        embed.description(description);
+        let artist = artist.into_iter().map(|v| format!("`{}`", v)).join(", ");
+        writeln!(&mut info, "**Artist**: {}", artist).unwrap();
         
-        &[("Male", male), ("Female", female), ("Misc", misc),]
+        if !group.is_empty() {
+            writeln!(&mut info, "**Circle**: {}", group.join(", ")).unwrap()
+        }
+        
+        writeln!(&mut info, "**Gallery type**: {}", &self.category).unwrap();
+        writeln!(&mut info, "**Total files**: {} ({})", &self.filecount, report_bytes(self.filesize)).unwrap();
+        writeln!(&mut info, "**Rating**: {} / 5", &self.rating).unwrap();
+        
+        info.push_str("\n***TAGs***");
+
+        embed.description(info);
+
+        &[("Male", male), ("Female", female), ("Misc", misc)]
             .iter()
             .filter_map(|(k, v)| {
                 v.into_iter()
                     .map(|v| (v, space_to_underscore(&v)))
                     .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
-                    .join(" ")
+                    .join(", ")
                     .to_option()
                     .map(|v| (k, v))
             })
-            .for_each(|(k, v)| { embed.field(k, v, false); });
-            
+            .for_each(|(k, v)| {
+                embed.field(k, v, false);
+            });
+
         let time = self
             .posted
             .parse::<i64>()
             .map(|v| Utc.timestamp(v, 0))
             .unwrap_or(Utc::now())
             .to_rfc3339();
-            
+
         embed.timestamp(time);
         // embed.author(|a| a.name(&self.uploader));
         embed.thumbnail(&self.thumb);
-        
+
         embed.color(match self.category.as_str() {
             "Doujinshi" => 0xf66258,
             "Manga" => 0xf5a718,
@@ -274,9 +254,12 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             "Asian Porn" => 0xf188ef,
             _ => 0x8a8a8a,
         });
-        
-        embed.footer(|f| f.text(format!("https://e-hentai.org/g/{}/{}", self.gid, self.token)));
-        
-        embed
+
+        embed.footer(|f| {
+            f.text(format!(
+                "https://e-hentai.org/g/{}/{}",
+                self.gid, self.token
+            ))
+        });
     }
 }

@@ -154,7 +154,7 @@ pub struct FindSauce {
 }
 
 impl ToEmbed for FindSauce {
-    fn to_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
         use magic::traits::MagicIter as _;
 
         if !self.enable || self.channels.is_empty() {
@@ -175,10 +175,51 @@ impl ToEmbed for FindSauce {
             embed.description(mess);
             embed.field("Saucing channels", s, true);
         }
-
-        embed
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FindSadKaede {
+    pub all: bool,
+    pub enable: bool,
+    pub channels: HashSet<ChannelId>,
+}
+
+impl Default for FindSadKaede {
+    fn default() -> Self {
+        Self {
+            all: true,
+            enable: true,
+            channels: Default::default(),
+        }
+    } 
+}
+
+impl ToEmbed for FindSadKaede {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
+        use magic::traits::MagicIter as _;
+
+        if !self.enable || self.channels.is_empty() {
+            embed.description("The SadKaede-finder service is disabled for this server");
+        } else if self.all {
+            embed.description("The SadKaede-finder service is enabled for all channels on this server");
+        } else {
+            let mess = format!(
+                "The SadKaed-finder service is enabled for {} channels on this server",
+                self.channels.len()
+            );
+            let s = self
+                .channels
+                .iter()
+                .map(|v| format!("<#{}>", v.0))
+                .join(" ");
+
+            embed.description(mess);
+            embed.field("SadKaede channels", s, true);
+        }
+    }
+}
+
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct RepeatWords {
@@ -187,7 +228,7 @@ pub struct RepeatWords {
 }
 
 impl ToEmbed for RepeatWords {
-    fn to_embed<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
         use magic::traits::MagicIter as _;
 
         if !self.enable {
@@ -205,8 +246,6 @@ impl ToEmbed for RepeatWords {
             ));
             embed.field("Words", words, false);
         }
-
-        embed
     }
 }
 
@@ -219,6 +258,7 @@ pub struct GuildConfig {
     pub rgblized: Option<Vec<SimpleRole>>,
     pub logger: DiscordLogger,
     pub find_sauce: FindSauce,
+    pub find_sadkaede: FindSadKaede,
     pub repeat_words: RepeatWords,
 }
 
@@ -237,6 +277,8 @@ impl GuildConfig {
             && self.find_sauce.channels.is_empty()
             && !self.find_sauce.all
             && !self.find_sauce.enable
+            && self.find_sadkaede.all
+            && self.find_sadkaede.enable
             && self.rgblized.is_none()
             && self.repeat_words.words.is_empty()
             && !self.repeat_words.enable
@@ -291,6 +333,24 @@ impl GuildConfig {
     pub fn remove_sauce_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
         let channel = channel.into();
         self.find_sauce.channels.remove(&channel).then_some(channel)
+    }
+    
+    pub fn enable_find_sadkaede(&mut self) {
+        self.find_sadkaede.enable = true;
+    }
+
+    pub fn disable_find_sadkaede(&mut self) {
+        self.find_sadkaede.enable = false;
+    }
+
+    pub fn add_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) {
+        let channel = channel.into();
+        self.find_sadkaede.channels.insert(channel);
+    }
+
+    pub fn remove_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
+        let channel = channel.into();
+        self.find_sadkaede.channels.remove(&channel).then_some(channel)
     }
 
     /// Add roles to RGB, return the count of added roles

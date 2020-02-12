@@ -10,18 +10,20 @@ use serenity::{
     model::{
         channel::{Message, ReactionType},
         event::Event,
-        id::{ChannelId, MessageId, UserId},
+        id::{ChannelId, MessageId, UserId, EmojiId},
         misc::EmojiIdentifier,
     },
 };
+use serenity::builder::CreateEmbed;
 
 use crate::{
     commands::*,
-    storages::{AIStore, CustomEventList, InforKey, MasterList},
+    storages::{AIStore, CustomEventList, InforKey, MasterList, ReqwestClient},
     traits::ToEmbed,
     utils::*,
 };
 
+use requester::ehentai::{EhentaiApi, Gmetadata};
 use chrono::{DateTime, Utc};
 use colorful::Colorful;
 use core::time::Duration;
@@ -135,7 +137,8 @@ fn normal_message(ctx: &mut Context, msg: &Message) {
         respect,
         eliza_response,
         rgb_tu,
-        find_sauce
+        find_sauce,
+        find_sadkaede
     }
 }
 
@@ -324,19 +327,43 @@ fn rgb_tu(ctx: &Context, msg: &Message) {
     }
 }
 
-struct SchedulerSauce {
-    sauces: Vec<SauceNao>,
+struct SchedulerReact {
+    data: Vec<Embedable>,
     channel_id: ChannelId,
     timer: JobHandle,
+    emoji_id: EmojiId,
+}
+
+// A quick work around for the embed data because ToEmbed cannot be used as `dyn Trait`
+// TODO: Fix this by using a concrete type for the ToEmbed to enable the dynamic dispatch
+enum Embedable {
+    Sauce(SauceNao),
+    SadKaede(Gmetadata),
+}
+
+impl From<SauceNao> for Embedable {
+    fn from(s: SauceNao) -> Self {
+        Self::Sauce(s)
+    }
+}
+
+impl From<Gmetadata> for Embedable {
+    fn from(s: Gmetadata) -> Self {
+        Self::SadKaede(s)
+    }
+}
+
+impl Embedable {
+    fn to_embed(&self, embed: &mut CreateEmbed) {
+        match self {
+            Self::Sauce(s) => s.to_embed(embed),
+            Self::SadKaede(s) => s.to_embed(embed),
+        }
+    }
 }
 
 lazy_static! {
-    // The emoji :sauce: is from an private guild,
-    // that means only the bot can create this reaction
-    // That's why we don't have to check it first
-    // Mutex here because we always need its write access
-    // Consider using RwLock or DashMap when the bot grow
-    static ref SAUCE_REACT: Mutex<HashMap<MessageId, SchedulerSauce>> = Default::default();
+    static ref WATCHING_REACT: Mutex<HashMap<MessageId, SchedulerReact>> = Default::default();
 }
 
 #[rustfmt::skip]
@@ -345,9 +372,10 @@ fn find_sauce(ctx: &Context, msg: &Message) {
 
     let config = crate::read_config();
     
-    if config.etc.sauce.emoji.is_none() {
-        return
-    }
+    let emoji_id = match config.etc.sauce.emoji {
+        Some(e) => e,
+        None => return
+    };
     
     let is_watching_channel = msg
         .guild_id
@@ -360,7 +388,7 @@ fn find_sauce(ctx: &Context, msg: &Message) {
         return;
     }
     
-    let sauces: Vec<SauceNao> = msg
+    let sauces: Vec<_> = msg
         .attachments
         .iter()
         .filter(|v| v.width.is_some())
@@ -368,6 +396,7 @@ fn find_sauce(ctx: &Context, msg: &Message) {
         .filter_map(|v| get_sauce(&v.url, None).ok())
         .filter(|v| v.found())
         .filter(|_| msg.react(ctx, _sauce_emoji()).is_ok())
+        .map(Embedable::from)
         .collect();
         
     if sauces.is_empty() {
@@ -388,29 +417,134 @@ fn find_sauce(ctx: &Context, msg: &Message) {
         }
     });
     
-    let scheduler = SchedulerSauce {
+    let scheduler = SchedulerReact {
         timer,
-        sauces,
+        data: sauces,
         channel_id: msg.channel_id,
+        emoji_id,
     };
     
-    let mut sauce_r = SAUCE_REACT.lock();
+    let mut data_r = WATCHING_REACT.lock();
     
-    sauce_r.insert(msg.id, scheduler);
-    if sauce_r.len() == 1 {
-        get_data::<CustomEventList>(&ctx).unwrap().add("WatchingSauce", sauce_event);
+    data_r.insert(msg.id, scheduler);
+    if data_r.len() == 1 {
+        get_data::<CustomEventList>(&ctx).unwrap().add("WatchingEmo", watch_emo_event);
     }
 }
 
-fn sauce_event(ctx: &Context, ev: &Event) {
+#[inline]
+fn _sauce_emoji() -> EmojiIdentifier {
+    let config = crate::read_config();
+    EmojiIdentifier {
+        id: config.etc.sauce.emoji.unwrap(),
+        name: "sauce".to_string(),
+    }
+}
+
+// Simply a clone of the find_sauce due to similar functionality
+fn find_sadkaede(ctx: &Context, msg: &Message) {
+    if msg.content.len() < 20 {
+        return
+    }
+    
+    let is_nsfw_channel = msg
+        .channel_id
+        .to_channel(ctx)
+        .ok()
+        .and_then(|v| v.guild())
+        .filter(|v| v.read().nsfw)
+        .is_some();
+        
+    if !is_nsfw_channel {
+        return
+    }
+    
+    let config = crate::read_config();
+    
+    let emoji_id = match config.etc.sadkaede.emoji {
+        Some(e) => e,
+        None => return
+    };
+    
+    let is_watching_channel = msg
+        .guild_id
+        .and_then(|v| config.guilds.get(&v))
+        .filter(|v| v.find_sadkaede.enable)
+        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id))
+        .is_some();
+        
+    if !is_watching_channel || msg.is_own(&ctx) {
+        return;
+    }
+    
+    let req = get_data::<ReqwestClient>(&ctx).unwrap();
+    let gids = parse_eh_token(&msg.content);
+    
+    if gids.is_empty() {
+        return 
+    }
+
+    let data = match block_on(req.gmetadata(gids.into_iter().take(25))) {
+        Ok(d) => d,
+        Err(_) => return
+    };
+    
+    let data: Vec<_> = data
+        .into_iter()
+        .filter(|_| msg.react(ctx, _sadkaede_emoji()).is_ok())
+        .map(Embedable::from)
+        .collect();
+        
+    if data.is_empty() {
+        return
+    }
+    
+    let http = ctx.http.clone();
+    let channel_id = msg.channel_id.0;
+    let msg_id = msg.id.0;
+    let duration = Duration::from_secs(config.etc.sadkaede.wait_duration as u64);
+    
+    drop(config);
+    
+    let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
+        let emoji = _sadkaede_emoji().into();
+        if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
+            error!("Cannot delete the sadkaede reaction\n{:#?}", why);
+        }
+    });
+    
+    let scheduler = SchedulerReact {
+        timer,
+        data: data,
+        channel_id: msg.channel_id,
+        emoji_id,
+    };
+    
+    let mut data_r = WATCHING_REACT.lock();
+    
+    data_r.insert(msg.id, scheduler);
+    if data_r.len() == 1 {
+        get_data::<CustomEventList>(&ctx).unwrap().add("WatchingEmo", watch_emo_event);
+    }
+}
+
+fn _sadkaede_emoji() -> EmojiIdentifier {
+    let config = crate::read_config();
+    EmojiIdentifier {
+        id: config.etc.sadkaede.emoji.unwrap(),
+        name: "sadkaede".to_string(),
+    }
+}
+
+fn watch_emo_event(ctx: &Context, ev: &Event) {
     fn process_delete_message(ctx: &Context, id: &MessageId) {
-        let mut sauce_r = SAUCE_REACT.lock();
-        if let Some(s) = sauce_r.remove(id) {
+        let mut data_r = WATCHING_REACT.lock();
+        if let Some(s) = data_r.remove(id) {
             s.timer.cancel();
-            if sauce_r.is_empty() {
+            if data_r.is_empty() {
                 get_data::<CustomEventList>(ctx)
                     .unwrap()
-                    .done("WatchingSauce");
+                    .done("WatchingEmo");
             }
         }
     }
@@ -425,28 +559,36 @@ fn sauce_event(ctx: &Context, ev: &Event) {
 
         Event::ReactionAdd(reaction) => {
             let reaction = &reaction.reaction;
-            if let ReactionType::Custom { id, .. } = reaction.emoji {
-                let config = crate::read_config();
-                let watch_emoji = config.etc.sauce.emoji.filter(|&e| id == e);
-                if watch_emoji.is_none() {
-                    return;
-                }
-            }
-
+            
             if reaction.user_id == ctx.data.read().get::<InforKey>().unwrap().user_id {
                 return;
             }
 
-            let mut sauce_r = SAUCE_REACT.lock();
+            let mut data_r = WATCHING_REACT.lock();
+            
+            let watching = data_r
+                .get(&reaction.message_id)
+                .filter(|v| {
+                    if let ReactionType::Custom { id, .. } = reaction.emoji {
+                        v.emoji_id == id
+                    } else {
+                        false
+                    }
+                })
+                .is_some();
+                
+            if !watching {
+                return
+            }
 
-            if let Some(s) = sauce_r.remove(&reaction.message_id) {
+            if let Some(s) = data_r.remove(&reaction.message_id) {
                 s.timer.cancel();
                 reaction.delete(ctx).ok();
 
-                for sauce in s.sauces {
+                for d in s.data {
                     let sent = s.channel_id.send_message(&ctx, |m| {
                         m.embed(|mut embed| {
-                            sauce.to_embed(&mut embed);
+                            d.to_embed(&mut embed);
                             embed
                         })
                     });
@@ -456,23 +598,14 @@ fn sauce_event(ctx: &Context, ev: &Event) {
                     }
                 }
 
-                if sauce_r.is_empty() {
+                if data_r.is_empty() {
                     get_data::<CustomEventList>(&ctx)
                         .unwrap()
-                        .done("WatchingSauce");
+                        .done("WatchingEmo");
                 }
             }
         }
 
         _ => {}
-    }
-}
-
-#[inline]
-fn _sauce_emoji() -> EmojiIdentifier {
-    let config = crate::read_config();
-    EmojiIdentifier {
-        id: config.etc.sauce.emoji.unwrap(),
-        name: "sauce".to_string(),
     }
 }

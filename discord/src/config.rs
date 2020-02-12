@@ -44,6 +44,13 @@ pub struct Sauce {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct SadKaede {
+    pub cookie: Option<String>,
+    pub wait_duration: u16,
+    pub emoji: Option<EmojiId>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Etc {
     pub radio_stations: Option<PathBuf>,
     pub image_search_depth: u16,
@@ -51,6 +58,7 @@ pub struct Etc {
     pub time_format: String,
     pub tmq: Option<TouhouMusicQuest>,
     pub sauce: Sauce,
+    pub sadkaede: SadKaede,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -17,6 +17,12 @@ time_format = "%I:%M %p %d/%m/%Y"
 image_search_depth = 20
 max_cache_file_size = 7654321
 
+[etc.sauce]
+wait_duration = 30
+
+[etc.sadkaede]
+wait_duration = 30
+
 # [rgb]
 # evidence = "/path/to/evidence"
 # tu = ["girls", "girl"]

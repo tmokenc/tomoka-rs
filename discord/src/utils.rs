@@ -8,6 +8,7 @@ use log::error;
 use magic::{number_to_le_bytes, number_to_rgb};
 use parking_lot::RwLock;
 use regex::Regex;
+use magic::traits::MagicIter;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::runtime::Runtime;
@@ -68,10 +69,7 @@ pub fn remove_emote<S: AsRef<str>>(msg: S) -> String {
 
 /// `from this` ~> `to_this`
 pub fn space_to_underscore<S: AsRef<str>>(content: S) -> String {
-    lazy_static! {
-        static ref SPACE_RE: Regex = Regex::new(r" ").unwrap();
-    }
-    SPACE_RE.replace_all(content.as_ref(), "_").to_string()
+    content.as_ref().split(' ').join('_')
 }
 
 pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
