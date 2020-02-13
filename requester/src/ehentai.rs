@@ -1,8 +1,8 @@
 use crate::Reqwest;
 use crate::Result;
+use magic::traits::MagicOption;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use magic::traits::MagicOption;
 
 const API_ENDPOINT: &str = "https://api.e-hentai.org/api.php";
 
@@ -17,7 +17,6 @@ pub struct GmetadataRoot {
 pub struct GtokenRoot {
     pub token_list: Vec<Gtoken>,
 }
-
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -54,15 +53,14 @@ pub struct Tags {
     pub reclass: Option<String>,
 }
 
-
 impl Gmetadata {
     pub fn is_sfw(&self) -> bool {
         self.category.as_str() == "Non-H"
     }
-    
+
     pub fn parse_tags(&self) -> Tags {
         let mut tags = Tags::default();
-        
+
         for tag in self.tags.iter() {
             if tag.contains(':') {
                 let mut iter = tag.split(':');
@@ -88,7 +86,7 @@ impl Gmetadata {
                 tags.misc.extend_inner(tag.to_owned());
             }
         }
-        
+
         tags
     }
 }
@@ -102,9 +100,9 @@ pub struct Gtoken {
 #[async_trait]
 pub trait EhentaiApi {
     async fn gmetadata<I>(&self, g: I) -> Result<Vec<Gmetadata>>
-    where 
-        I: IntoIterator<Item=(u32, String)> + Send + 'async_trait;
-    
+    where
+        I: IntoIterator<Item = (u32, String)> + Send + 'async_trait;
+
     // async fn gtoken<T>(&self, id: u64, token: T, page: u16) -> Result<Vec<Gtoken>>
     // where
     //     T: AsRef<str> + Send + 'async_trait;
@@ -113,8 +111,8 @@ pub trait EhentaiApi {
 #[async_trait]
 impl EhentaiApi for Reqwest {
     async fn gmetadata<I>(&self, g: I) -> Result<Vec<Gmetadata>>
-    where 
-        I: IntoIterator<Item = (u32, String)> + Send + 'async_trait
+    where
+        I: IntoIterator<Item = (u32, String)> + Send + 'async_trait,
     {
         let galleries = g.into_iter().collect::<Vec<_>>();
         let body = json!({
@@ -123,10 +121,16 @@ impl EhentaiApi for Reqwest {
             "namespace": 1
         });
 
-        let data: GmetadataRoot = self.post(API_ENDPOINT).json(&body).send().await?.json().await?;
+        let data: GmetadataRoot = self
+            .post(API_ENDPOINT)
+            .json(&body)
+            .send()
+            .await?
+            .json()
+            .await?;
         Ok(data.gmetadata)
     }
-    
+
     // async fn gtoken<T, P>(&self, id: u64, token: T, page: u16) -> Result<Vec<Gtoken>>
     // where
     //     T: AsRef<str> + Send + 'async_trait,

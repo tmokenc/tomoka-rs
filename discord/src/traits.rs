@@ -1,11 +1,10 @@
 #![allow(unstable_name_collisions)]
 
 use crate::commands::prelude::now;
-use crate::utils::{split_message, space_to_underscore};
+use crate::utils::{space_to_underscore, split_message};
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
 use magic::traits::MagicIter as _;
-use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
 use std::fmt::Write as _;
 
@@ -132,7 +131,6 @@ impl ToEmbed for magic::sauce::SauceNao {
             .thumbnail(self.img_url())
             .timestamp(now())
             .footer(|f| f.text("Powered by SauceNao"));
-
     }
 }
 
@@ -145,15 +143,15 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             (Some(ref title), None) | (None, Some(ref title)) => {
                 embed.title(title);
             }
-            
+
             (Some(ref title), Some(ref title_jpn)) => {
                 embed.title(title);
                 writeln!(&mut info, "**Title Jpn:** {}", title_jpn).unwrap();
             }
-            
+
             _ => {}
         }
-        
+
         fn write_info(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
             if let Some(value) = data {
                 write!(&mut info, "**{}:**", key).unwrap();
@@ -164,7 +162,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
                 info.push('\n');
             }
         };
-        
+
         fn write_info_normal(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
             if let Some(value) = data {
                 write!(&mut info, "**{}:**", key).unwrap();
@@ -182,39 +180,49 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         write_info(&mut info, "Characters", tags.characters);
         write_info(&mut info, "Artist", tags.artist);
         write_info_normal(&mut info, "Circle", tags.group);
-        
+
         writeln!(&mut info, "**Gallery type**: {}", &self.category).unwrap();
-        writeln!(&mut info, "**Total files**: {} ({})", &self.filecount, report_bytes(self.filesize)).unwrap();
+        writeln!(
+            &mut info,
+            "**Total files**: {} ({})",
+            &self.filecount,
+            report_bytes(self.filesize)
+        )
+        .unwrap();
         write!(&mut info, "**Rating**: {} / 5", &self.rating).unwrap();
-        
+
         if !self.tags.is_empty() {
             info.push_str("\n\n***TAGs***");
         }
 
         embed.description(info);
 
-        &[("Male", tags.male), ("Female", tags.female), ("Misc", tags.misc)]
-            .iter()
-            .filter_map(|(k, v)| v.as_ref().map(|x| (k, x)))
-            .filter_map(|(k, v)| {
+        &[
+            ("Male", tags.male),
+            ("Female", tags.female),
+            ("Misc", tags.misc),
+        ]
+        .iter()
+        .filter_map(|(k, v)| {
+            v.as_ref().map(|v| {
                 v.iter()
                     .map(|v| (v, space_to_underscore(&v)))
                     .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
                     .join(" | ")
-                    .to_option()
-                    .map(|v| (k, v))
             })
-            .for_each(|(k, v)| {
-                if v.len() > 1024 {
-                    let mut splited = split_message(v, 1024, "|").into_iter();
-                    embed.field(k, splited.next().unwrap(), false);
-                    for later in splited {
-                        embed.field('\u{200B}', later, false);
-                    }
-                } else { 
-                    embed.field(k, v, false);
+            .map(|v| (k, v))
+        })
+        .for_each(|(k, v)| {
+            if v.len() > 1024 {
+                let mut splited = split_message(v, 1024, "|").into_iter();
+                embed.field(k, splited.next().unwrap(), false);
+                for later in splited {
+                    embed.field('\u{200B}', later, false);
                 }
-            });
+            } else {
+                embed.field(k, v, false);
+            }
+        });
 
         let time = self
             .posted
@@ -238,11 +246,13 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             "Asian Porn" => 0xf188ef,
             _ => 0x8a8a8a,
         });
-        
-        
+
         let url = format!("https://e-hentai.org/g/{}/{}", self.gid, self.token);
 
         embed.url(&url);
-        embed.footer(|f| f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png").text(url));
+        embed.footer(|f| {
+            f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")
+                .text(url)
+        });
     }
 }

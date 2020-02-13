@@ -56,7 +56,7 @@ impl MagicBool for bool {
 }
 
 pub trait MagicStr {
-    fn to_option(&self) -> Option<String>; 
+    fn to_option(&self) -> Option<String>;
 }
 
 impl MagicStr for str {
@@ -70,18 +70,23 @@ impl MagicStr for str {
 }
 
 pub trait MagicOption<T> {
-    fn extend_inner<U>(&mut self, value: U) where T: Default + Extend<U>;
+    fn extend_inner<U>(&mut self, value: U)
+    where
+        T: Default + Extend<U>;
 }
 
 impl<T> MagicOption<T> for Option<T> {
-    fn extend_inner<U>(&mut self, value: U) where T: Default + Extend<U> {
+    fn extend_inner<U>(&mut self, value: U)
+    where
+        T: Default + Extend<U>,
+    {
         match self {
             Some(ref mut v) => v.extend(Some(value)),
             None => {
                 let mut data = T::default();
                 data.extend(Some(value));
                 *self = Some(data);
-            },
+            }
         }
     }
 }

@@ -192,7 +192,7 @@ impl Default for FindSadKaede {
             enable: true,
             channels: Default::default(),
         }
-    } 
+    }
 }
 
 impl ToEmbed for FindSadKaede {
@@ -202,7 +202,9 @@ impl ToEmbed for FindSadKaede {
         if !self.enable || self.channels.is_empty() {
             embed.description("The SadKaede-finder service is disabled for this server");
         } else if self.all {
-            embed.description("The SadKaede-finder service is enabled for all channels on this server");
+            embed.description(
+                "The SadKaede-finder service is enabled for all channels on this server",
+            );
         } else {
             let mess = format!(
                 "The SadKaed-finder service is enabled for {} channels on this server",
@@ -219,7 +221,6 @@ impl ToEmbed for FindSadKaede {
         }
     }
 }
-
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct RepeatWords {
@@ -334,7 +335,7 @@ impl GuildConfig {
         let channel = channel.into();
         self.find_sauce.channels.remove(&channel).then_some(channel)
     }
-    
+
     pub fn enable_find_sadkaede(&mut self) {
         self.find_sadkaede.enable = true;
     }
@@ -350,7 +351,10 @@ impl GuildConfig {
 
     pub fn remove_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
         let channel = channel.into();
-        self.find_sadkaede.channels.remove(&channel).then_some(channel)
+        self.find_sadkaede
+            .channels
+            .remove(&channel)
+            .then_some(channel)
     }
 
     /// Add roles to RGB, return the count of added roles

@@ -1,3 +1,4 @@
+use serenity::builder::CreateEmbed;
 use serenity::{
     client::Context,
     framework::{
@@ -10,11 +11,10 @@ use serenity::{
     model::{
         channel::{Message, ReactionType},
         event::Event,
-        id::{ChannelId, MessageId, UserId, EmojiId},
+        id::{ChannelId, EmojiId, MessageId, UserId},
         misc::EmojiIdentifier,
     },
 };
-use serenity::builder::CreateEmbed;
 
 use crate::{
     commands::*,
@@ -23,7 +23,6 @@ use crate::{
     utils::*,
 };
 
-use requester::ehentai::{EhentaiApi, Gmetadata};
 use chrono::{DateTime, Utc};
 use colorful::Colorful;
 use core::time::Duration;
@@ -34,6 +33,7 @@ use magic::has_external_command;
 use magic::sauce::SauceNao;
 use magic::traits::MagicIter as _;
 use parking_lot::Mutex;
+use requester::ehentai::{EhentaiApi, Gmetadata};
 use scheduled_thread_pool::JobHandle;
 use std::collections::{HashMap, HashSet};
 
@@ -442,87 +442,89 @@ fn find_sauce(ctx: &Context, msg: &Message) {
 // Simply a clone of the find_sauce due to similar functionality
 fn find_sadkaede(ctx: &Context, msg: &Message) {
     if msg.content.len() < 20 {
-        return
+        return;
     }
-    
+
     let config = crate::read_config();
-    
+
     let emoji_id = match config.etc.sadkaede.emoji {
         Some(e) => e,
-        None => return
+        None => return,
     };
-    
+
     let is_watching_channel = msg
         .guild_id
         .and_then(|v| config.guilds.get(&v))
         .filter(|v| v.find_sadkaede.enable)
         .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id))
         .is_some();
-        
+
     if !is_watching_channel || msg.is_own(&ctx) {
         return;
     }
-    
+
     let req = get_data::<ReqwestClient>(&ctx).unwrap();
     let gids = parse_eh_token(&msg.content);
-    
+
     if gids.is_empty() {
-        return 
+        return;
     }
 
     let data = match block_on(req.gmetadata(gids.into_iter().take(25))) {
         Ok(d) => d,
-        Err(_) => return
+        Err(_) => return,
     };
-    
+
     let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
-    
+
     let data: Vec<_> = data
         .into_iter()
-        .filter(|data| is_channel_nsfw || data.is_sfw()) 
+        .filter(|data| is_channel_nsfw || data.is_sfw())
         .map(Embedable::from)
         .collect();
-        
+
     if data.is_empty() {
-        return
+        return;
     }
-    
+
     let reaction = EmojiIdentifier {
         id: emoji_id,
         name: String::from("sadkaede"),
     };
-    
+
     if let Err(why) = msg.react(ctx, reaction.clone()) {
         error!("Cannot reaction to the sadkaede\n{:#?}", why);
-        return
+        return;
     }
-    
+
     let http = ctx.http.clone();
     let channel_id = msg.channel_id.0;
     let msg_id = msg.id.0;
     let duration = Duration::from_secs(config.etc.sadkaede.wait_duration as u64);
-    
+
     drop(config);
-    
+
     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
         let emoji = reaction.into();
         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
             error!("Cannot delete the sadkaede reaction\n{:#?}", why);
         }
     });
-    
+
     let scheduler = SchedulerReact {
         timer,
         data,
         channel_id: msg.channel_id,
         emoji_id,
     };
-    
+
     let mut data_r = WATCHING_REACT.lock();
-    
+
     data_r.insert(msg.id, scheduler);
     if data_r.len() == 1 {
-        get_data::<CustomEventList>(&ctx).unwrap().add("WatchingEmo", watch_emo_event);
+        get_data::<CustomEventList>(&ctx)
+            .unwrap()
+            .add("WatchingEmo", watch_emo_event);
     }
 }
 
@@ -549,13 +551,13 @@ fn watch_emo_event(ctx: &Context, ev: &Event) {
 
         Event::ReactionAdd(reaction) => {
             let reaction = &reaction.reaction;
-            
+
             if reaction.user_id == ctx.data.read().get::<InforKey>().unwrap().user_id {
                 return;
             }
 
             let mut data_r = WATCHING_REACT.lock();
-            
+
             let watching = data_r
                 .get(&reaction.message_id)
                 .filter(|v| {
@@ -566,9 +568,9 @@ fn watch_emo_event(ctx: &Context, ev: &Event) {
                     }
                 })
                 .is_some();
-                
+
             if !watching {
-                return
+                return;
             }
 
             if let Some(s) = data_r.remove(&reaction.message_id) {

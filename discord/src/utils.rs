@@ -5,10 +5,10 @@ use std::sync::Arc;
 use bytes::Bytes;
 use lazy_static::lazy_static;
 use log::error;
+use magic::traits::MagicIter;
 use magic::{number_to_le_bytes, number_to_rgb};
 use parking_lot::RwLock;
 use regex::Regex;
-use magic::traits::MagicIter;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::runtime::Runtime;
@@ -85,9 +85,10 @@ pub fn space_to_underscore<S: AsRef<str>>(content: S) -> String {
 
 pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
     lazy_static! {
-        static ref KAEDE_REG: Regex = Regex::new(r"e(x|\-)hentai.org/g/(\d+)/([[:alnum:]]+)").unwrap();
+        static ref KAEDE_REG: Regex =
+            Regex::new(r"e(x|\-)hentai.org/g/(\d+)/([[:alnum:]]+)").unwrap();
     }
-    
+
     KAEDE_REG
         .captures_iter(content)
         .filter_map(|res| {
@@ -97,7 +98,6 @@ pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
                 .map(|(v, x)| (v, x.as_str().to_string()))
         })
         .collect()
-        
 }
 
 pub fn colored_name_user(user: &User) -> CString {

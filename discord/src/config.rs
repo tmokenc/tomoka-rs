@@ -73,21 +73,20 @@ pub struct Config {
     pub guilds: DashMap<GuildId, GuildConfig>,
 }
 
-
 //pub struct SaveOption {
 //    pub path: PathBuf,
-    // pub file_type: FileType,
+// pub file_type: FileType,
 //}
 
 // pub enum FileType { Json, Toml }
-// 
+//
 // impl fmt::Display for FileType {
-    // fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // match self {
-            // Self::Json => write!(f, "json"),
-            // Self::Toml => write!(f, "toml"),
-        // }
-    // }
+// fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+// match self {
+// Self::Json => write!(f, "json"),
+// Self::Toml => write!(f, "toml"),
+// }
+// }
 // }
 
 impl Config {
@@ -138,7 +137,7 @@ impl Config {
     /// Return the `PathBuf` of the saved file
     pub fn save_file<P: AsRef<Path>>(&self, path: P) -> Result<PathBuf> {
         let mut path = path.as_ref().to_path_buf();
-        
+
         if path.is_dir() {
             let time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
             path.push(format!("config_{}.json", time.as_millis()));
@@ -157,20 +156,20 @@ impl Config {
 
         let mut file = fs::File::create(&path)?;
         serde_json::to_writer_pretty(&mut file, self)?;
-        
+
         // match path.extension().and_then(|v| v.to_str()) {
-            // Some(v) if v == "json" => {
-                // serde_json::to_writer_pretty(&mut file, self)?
-            // }
-            // 
-            // Some(v) if v == "toml" => {
-            //    convert it to json value first and then convert back to toml
-            //    this is to avoid the `KeyNotString` error
-                // let value = serde_json::to_value(self)?;
-                // let data = toml::to_string_pretty(&value)?;
-                // file.write_all(data.as_bytes())?
-            // }
-            // _ => {}
+        // Some(v) if v == "json" => {
+        // serde_json::to_writer_pretty(&mut file, self)?
+        // }
+        //
+        // Some(v) if v == "toml" => {
+        //    convert it to json value first and then convert back to toml
+        //    this is to avoid the `KeyNotString` error
+        // let value = serde_json::to_value(self)?;
+        // let data = toml::to_string_pretty(&value)?;
+        // file.write_all(data.as_bytes())?
+        // }
+        // _ => {}
         // }
 
         Ok(path)
