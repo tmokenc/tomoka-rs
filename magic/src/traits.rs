@@ -68,3 +68,20 @@ impl MagicStr for str {
         }
     }
 }
+
+pub trait MagicOption<T> {
+    fn extend_inner<U>(&mut self, value: U) where T: Default + Extend<U>;
+}
+
+impl<T> MagicOption<T> for Option<T> {
+    fn extend_inner<U>(&mut self, value: U) where T: Default + Extend<U> {
+        match self {
+            Some(ref mut v) => v.extend(Some(value)),
+            None => {
+                let mut data = T::default();
+                data.extend(Some(value));
+                *self = Some(data);
+            },
+        }
+    }
+}

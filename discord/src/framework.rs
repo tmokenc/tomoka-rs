@@ -333,8 +333,7 @@ struct SchedulerReact {
     emoji_id: EmojiId,
 }
 
-// A quick work around for the embed data because ToEmbed cannot be used as `dyn Trait`
-// TODO: Fix this by using a concrete type for the ToEmbed to enable the dynamic dispatch
+// A quick workaround for the embed data because ToEmbed cannot be used as `dyn Trait`
 enum Embedable {
     Sauce(SauceNao),
     SadKaede(Gmetadata),
@@ -448,7 +447,7 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
     
     let config = crate::read_config();
     
-    let emoji_id = match config.etc.sauce.emoji {
+    let emoji_id = match config.etc.sadkaede.emoji {
         Some(e) => e,
         None => return
     };

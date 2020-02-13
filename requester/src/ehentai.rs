@@ -2,6 +2,7 @@ use crate::Reqwest;
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use magic::traits::MagicOption;
 
 const API_ENDPOINT: &str = "https://api.e-hentai.org/api.php";
 
@@ -38,9 +39,57 @@ pub struct Gmetadata {
     pub tags: Vec<String>,
 }
 
+type Tag = Option<Vec<String>>;
+
+#[derive(Default)]
+pub struct Tags {
+    pub artist: Tag,
+    pub characters: Tag,
+    pub group: Tag,
+    pub parody: Tag,
+    pub language: Tag,
+    pub male: Tag,
+    pub female: Tag,
+    pub misc: Tag,
+    pub reclass: Option<String>,
+}
+
+
 impl Gmetadata {
     pub fn is_sfw(&self) -> bool {
         self.category.as_str() == "Non-H"
+    }
+    
+    pub fn parse_tags(&self) -> Tags {
+        let mut tags = Tags::default();
+        
+        for tag in self.tags.iter() {
+            if tag.contains(':') {
+                let mut iter = tag.split(':');
+                let namespace = iter.next().unwrap();
+                let value = iter.next().unwrap().to_owned();
+
+                match namespace {
+                    "artist" => tags.artist.extend_inner(value),
+                    "character" => tags.characters.extend_inner(value),
+                    "group" => tags.group.extend_inner(value),
+                    "language" => tags.language.extend_inner(value),
+                    "male" => tags.male.extend_inner(value),
+                    "female" => tags.female.extend_inner(value),
+                    "parody" => tags.parody.extend_inner(value),
+                    "reclass" => {
+                        if tags.reclass.is_none() {
+                            tags.reclass = Some(value)
+                        }
+                    }
+                    _ => (),
+                }
+            } else {
+                tags.misc.extend_inner(tag.to_owned());
+            }
+        }
+        
+        tags
     }
 }
 
