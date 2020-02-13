@@ -394,11 +394,20 @@ fn find_sauce(ctx: &Context, msg: &Message) {
         .filter(|v| !v.url.ends_with(".gif"))
         .filter_map(|v| get_sauce(&v.url, None).ok())
         .filter(|v| v.found())
-        .filter(|_| msg.react(ctx, _sauce_emoji()).is_ok())
         .map(Embedable::from)
         .collect();
         
     if sauces.is_empty() {
+        return
+    }
+    
+    let reaction = EmojiIdentifier {
+        id: emoji_id,
+        name: String::from("sauce"),
+    };
+    
+    if let Err(why) = msg.react(ctx, reaction.clone()) {
+        error!("Cannot react for the sauce\n{:#?}", why);
         return
     }
     
@@ -410,7 +419,7 @@ fn find_sauce(ctx: &Context, msg: &Message) {
     drop(config);
     
     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
-        let emoji = _sauce_emoji().into();
+        let emoji = reaction.into();
         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
             error!("Cannot delete the sauce reaction\n{:#?}", why);
         }
@@ -431,36 +440,15 @@ fn find_sauce(ctx: &Context, msg: &Message) {
     }
 }
 
-#[inline]
-fn _sauce_emoji() -> EmojiIdentifier {
-    let config = crate::read_config();
-    EmojiIdentifier {
-        id: config.etc.sauce.emoji.unwrap(),
-        name: "sauce".to_string(),
-    }
-}
-
 // Simply a clone of the find_sauce due to similar functionality
 fn find_sadkaede(ctx: &Context, msg: &Message) {
     if msg.content.len() < 20 {
         return
     }
     
-    let is_nsfw_channel = msg
-        .channel_id
-        .to_channel(ctx)
-        .ok()
-        .and_then(|v| v.guild())
-        .filter(|v| v.read().nsfw)
-        .is_some();
-        
-    if !is_nsfw_channel {
-        return
-    }
-    
     let config = crate::read_config();
     
-    let emoji_id = match config.etc.sadkaede.emoji {
+    let emoji_id = match config.etc.sauce.emoji {
         Some(e) => e,
         None => return
     };
@@ -488,13 +476,25 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
         Err(_) => return
     };
     
+    let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
+    
     let data: Vec<_> = data
         .into_iter()
-        .filter(|_| msg.react(ctx, _sadkaede_emoji()).is_ok())
+        .filter(|data| is_channel_nsfw || data.is_sfw()) 
         .map(Embedable::from)
         .collect();
         
     if data.is_empty() {
+        return
+    }
+    
+    let reaction = EmojiIdentifier {
+        id: emoji_id,
+        name: String::from("sadkaede"),
+    };
+    
+    if let Err(why) = msg.react(ctx, reaction.clone()) {
+        error!("Cannot reaction to the sadkaede\n{:#?}", why);
         return
     }
     
@@ -506,7 +506,7 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
     drop(config);
     
     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
-        let emoji = _sadkaede_emoji().into();
+        let emoji = reaction.into();
         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
             error!("Cannot delete the sadkaede reaction\n{:#?}", why);
         }
@@ -524,14 +524,6 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
     data_r.insert(msg.id, scheduler);
     if data_r.len() == 1 {
         get_data::<CustomEventList>(&ctx).unwrap().add("WatchingEmo", watch_emo_event);
-    }
-}
-
-fn _sadkaede_emoji() -> EmojiIdentifier {
-    let config = crate::read_config();
-    EmojiIdentifier {
-        id: config.etc.sadkaede.emoji.unwrap(),
-        name: "sadkaede".to_string(),
     }
 }
 

@@ -39,6 +39,17 @@ lazy_static! {
     pub static ref TOKIO_RT: RwLock<Runtime> = RwLock::new(Runtime::new().unwrap());
 }
 
+/// Check if a (guild) channel is nsfw or not
+pub fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
+    channel
+        .into()
+        .to_channel(ctx)
+        .ok()
+        .and_then(|v| v.guild())
+        .filter(|v| v.read().nsfw)
+        .is_some()
+}
+
 //I have problem with the built-in method `parse_channel` of the serenity, so I decided to write my own function for this.
 pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
     lazy_static! {
