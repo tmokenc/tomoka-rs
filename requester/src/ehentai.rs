@@ -38,6 +38,12 @@ pub struct Gmetadata {
     pub tags: Vec<String>,
 }
 
+impl Gmetadata {
+    pub fn is_sfw(&self) -> bool {
+        self.category.as_str() == "Non-H"
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Gtoken {
     pub gid: u64,

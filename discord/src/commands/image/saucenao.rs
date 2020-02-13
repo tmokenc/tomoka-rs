@@ -29,7 +29,7 @@ fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let similarity = args.raw().find_map(|v| {
-        if v.ends_with("%") {
+        if v.ends_with('%') {
             v[..v.len() - 1].parse::<f32>().ok()
         } else {
             None

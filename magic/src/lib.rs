@@ -1,3 +1,5 @@
+#![allow(clippy::unreadable_literal)]
+
 #[cfg(feature = "ancient_magic")]
 pub mod ancient_magic;
 #[cfg(feature = "dark_magic")]

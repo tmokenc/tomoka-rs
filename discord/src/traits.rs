@@ -4,7 +4,6 @@ use crate::commands::prelude::now;
 use crate::utils::space_to_underscore;
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
-use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
@@ -149,12 +148,12 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         let mut misc = Vec::new();
 
         for tag in self.tags.iter() {
-            if tag.contains(":") {
-                let mut iter = tag.split(":");
+            if tag.contains(':') {
+                let mut iter = tag.split(':');
                 let namespace = iter.next().unwrap();
                 let value = iter.next().unwrap();
 
-                match namespace.as_ref() {
+                match namespace {
                     "artist" => artist.push(value.to_owned()),
                     "character" => character.push(value.to_owned()),
                     "group" => group.push(value.to_owned()),
@@ -171,14 +170,19 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         
         let mut info = String::new();
 
-        if let Some(ref title) = self.title {
-            writeln!(&mut info, "**Title**: {}", title).unwrap();
+        match (&self.title, &self.title_jpn) {
+            (Some(ref title), None) | (None, Some(ref title)) => {
+                embed.title(title);
+            }
+            
+            (Some(ref title), Some(ref title_jpn)) => {
+                embed.title(title);
+                writeln!(&mut info, "**Title Jpn**: {}", title_jpn).unwrap();
+            }
+            
+            _ => {}
         }
-        
-        if let Some(ref title_jpn) = self.title_jpn {
-            writeln!(&mut info, "**Title Jpn**: {}", title_jpn).unwrap();
-        }
-        
+
         if !language.is_empty() {
             writeln!(&mut info, "**Language**: {}", language.join(" ")).unwrap();
         }
@@ -191,7 +195,6 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         {
             writeln!(&mut info, "**Parody**: {}", parody).unwrap();
         }
-        
 
         if let Some(characters) =  character
             .into_iter()
@@ -220,7 +223,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         &[("Male", male), ("Female", female), ("Misc", misc)]
             .iter()
             .filter_map(|(k, v)| {
-                v.into_iter()
+                v.iter()
                     .map(|v| (v, space_to_underscore(&v)))
                     .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
                     .join(", ")
@@ -235,7 +238,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             .posted
             .parse::<i64>()
             .map(|v| Utc.timestamp(v, 0))
-            .unwrap_or(Utc::now())
+            .unwrap_or_else(|_| Utc::now())
             .to_rfc3339();
 
         embed.timestamp(time);
@@ -254,12 +257,10 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             "Asian Porn" => 0xf188ef,
             _ => 0x8a8a8a,
         });
+        
+        let url = format!("https://e-hentai.org/g/{}/{}", self.gid, self.token);
 
-        embed.footer(|f| {
-            f.text(format!(
-                "https://e-hentai.org/g/{}/{}",
-                self.gid, self.token
-            ))
-        });
+        embed.url(&url);
+        embed.footer(|f| f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png").text(url));
     }
 }

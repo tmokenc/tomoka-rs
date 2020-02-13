@@ -105,17 +105,12 @@ impl SauceNao {
     }
 
     pub fn not_found(&self) -> bool {
-        if self.title.is_none()
+        self.title.is_none()
             && self.creator.is_none()
             && self.parody.is_empty()
             && self.altenative_links.is_empty()
             && self.characters.is_empty()
             && self.sources.is_empty()
-        {
-            true
-        } else {
-            false
-        }
     }
 
     pub fn found(&self) -> bool {

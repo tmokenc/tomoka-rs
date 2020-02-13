@@ -170,7 +170,7 @@ impl EventHandler for Handler {
 
 fn is_watching_channel(ctx: &Context, channel: ChannelId) -> bool {
     get_guild_id_from_channel(ctx, channel)
-        .and_then(|v| get_log_channel(v))
+        .and_then(get_log_channel)
         .is_some()
 }
 
@@ -286,18 +286,15 @@ fn _process_deleted(
             config.color.message_delete
         };
 
-        let typed = match is_empty_content {
-            true => "file",
-            false => {
-                message.embed(|embed| {
-                    embed
-                        .color(color)
-                        .timestamp(Utc::now().to_rfc3339())
-                        .field("Deleted message", msg.content.to_owned(), false)
-                });
+        let typed = if is_empty_content { "file" } else {
+            message.embed(|embed| {
+                embed
+                    .color(color)
+                    .timestamp(Utc::now().to_rfc3339())
+                    .field("Deleted message", msg.content.to_owned(), false)
+            });
     
-                "message"
-            }
+            "message"
         };
 
         let content = format!(

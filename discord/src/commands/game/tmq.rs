@@ -222,7 +222,7 @@ fn get_quiz() -> Result<(PathBuf, String)> {
 
     info!("Choosed song for TMQ: {:?}", &file);
 
-    Ok((file.path(), version.to_string()))
+    Ok((file.path(), version))
 }
 
 fn parse_touhou_version<S: AsRef<str>>(s: S) -> Option<String> {

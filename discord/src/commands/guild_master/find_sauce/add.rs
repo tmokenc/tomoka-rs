@@ -72,7 +72,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
             (_, x) => format!("Added {} channels to be watching", x)
         };
 
-        if added.len() > 0 {
+        if !added.is_empty() {
             let added = added
                 .into_iter()
                 .map(|v| format!("<#{}>", v))

@@ -142,7 +142,7 @@ fn normal_message(ctx: &mut Context, msg: &Message) {
     }
 }
 
-fn framwork_config<'a>(config: &'a mut Configuration) -> &'a mut Configuration {
+fn framwork_config(config: &mut Configuration) -> &mut Configuration {
     let mut owners = HashSet::new();
     let mut disabled_commands = HashSet::new();
 
@@ -297,8 +297,7 @@ fn rgb_tu(ctx: &Context, msg: &Message) {
             .content
             .to_lowercase()
             .split_whitespace()
-            .find(|v| rgb.tu.contains(&v.to_string()))
-            .is_some()
+            .any(|v| rgb.tu.contains(&v.to_string()))
     {
         let mut rng = SmallRng::from_entropy();
         let num = rng.gen::<f32>();
@@ -515,7 +514,7 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
     
     let scheduler = SchedulerReact {
         timer,
-        data: data,
+        data,
         channel_id: msg.channel_id,
         emoji_id,
     };
@@ -537,9 +536,9 @@ fn _sadkaede_emoji() -> EmojiIdentifier {
 }
 
 fn watch_emo_event(ctx: &Context, ev: &Event) {
-    fn process_delete_message(ctx: &Context, id: &MessageId) {
+    fn process_delete_message(ctx: &Context, id: MessageId) {
         let mut data_r = WATCHING_REACT.lock();
-        if let Some(s) = data_r.remove(id) {
+        if let Some(s) = data_r.remove(&id) {
             s.timer.cancel();
             if data_r.is_empty() {
                 get_data::<CustomEventList>(ctx)
@@ -550,10 +549,10 @@ fn watch_emo_event(ctx: &Context, ev: &Event) {
     }
 
     match ev {
-        Event::MessageDelete(e) => process_delete_message(&ctx, &e.message_id),
+        Event::MessageDelete(e) => process_delete_message(&ctx, e.message_id),
         Event::MessageDeleteBulk(e) => {
             for id in &e.ids {
-                process_delete_message(&ctx, id);
+                process_delete_message(&ctx, *id);
             }
         }
 

@@ -15,7 +15,7 @@ fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let utc = UTC.timestamp(time, 0);
     let times = vec![
         ("Pacific", utc.with_timezone(&US::Pacific)),
-        ("UTC", utc.clone()),
+        ("UTC", utc),
         ("CET", utc.with_timezone(&CET)),
         ("Vietnam", utc.with_timezone(&Asia::Ho_Chi_Minh)),
         ("Japan", utc.with_timezone(&Japan)),
@@ -31,7 +31,7 @@ fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
             let tz = &time.format("%:z").to_string()[..3];
             let embed_name = format!("{} (GMT{})", name, tz);
             let embed_value = time.format(&format);
-            (embed_name.to_owned(), embed_value.to_string(), false)
+            (embed_name, embed_value.to_string(), false)
         })
         .collect::<Vec<_>>();
 

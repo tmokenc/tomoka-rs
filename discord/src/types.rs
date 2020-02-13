@@ -76,9 +76,9 @@ impl CustomEvents {
 
         if let Some(mut events) = self.events.try_write() {
             let mut pending = self.pending.lock();
-            let mut actions = pending.drain(..);
+            let actions = pending.drain(..);
 
-            while let Some(action) = actions.next() {
+            for action in actions {
                 match action {
                     Action::Add(name, f) => events.insert(name, f),
                     Action::Done(name) => events.remove(&name),
@@ -358,7 +358,7 @@ impl GuildConfig {
     where
         I: IntoIterator<Item = Role>,
     {
-        let rgb = self.rgblized.get_or_insert_with(|| Vec::new());
+        let rgb = self.rgblized.get_or_insert_with(Vec::new);
         let roles = roles
             .into_iter()
             .filter(|v| v.mentionable && rgb.iter().all(|x| v.id != x.id))
