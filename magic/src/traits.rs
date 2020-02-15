@@ -56,10 +56,26 @@ impl MagicBool for bool {
 }
 
 pub trait MagicStr {
+    /// A shortcut for `s.chars().nth(index)`
+    fn get(&self, index: usize) -> Option<char>;
+    /// A shortcut for `s.chars().count()`
+    /// This should be replacement for `s.len()` in mose case scenario
+    fn count(&self) -> usize;
+    /// return `None` if the string is empty
     fn to_option(&self) -> Option<String>;
 }
 
 impl MagicStr for str {
+    #[inline]
+    fn get(&self, index: usize) -> Option<char> {
+        self.chars().nth(index)    
+    }
+    
+    #[inline]
+    fn count(&self) -> usize {
+        self.chars().count()
+    }
+    
     fn to_option(&self) -> Option<String> {
         if self.is_empty() {
             None
