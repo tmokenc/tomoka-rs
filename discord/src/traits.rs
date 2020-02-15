@@ -15,22 +15,17 @@ pub trait ToEmbed {
 
 impl ToEmbed for magic::sauce::SauceNao {
     fn to_embed(&self, embed: &mut CreateEmbed) {
-        let mut description = Vec::new();
-        let mut fields = Vec::new();
-
-        if let Some(creator) = &self.creator {
-            description.push(format!("**Creator**: {}", creator));
-        }
+        let mut info = String::new();
 
         match self.characters.len() {
             0 => {}
             1 => {
                 let content = self.characters.iter().next().unwrap();
-                description.insert(0, format!("**Character**: {}", content));
+                writeln!(&mut info, "**Character**: {}", content).unwrap();
             }
             _ => {
                 let content = self.characters.iter().join("\n");
-                fields.push(("Characters", content, false));
+                embed.field("Characters", content, false);
             }
         }
 
@@ -38,12 +33,16 @@ impl ToEmbed for magic::sauce::SauceNao {
             0 => {}
             1 => {
                 let content = self.parody.iter().next().unwrap();
-                description.insert(0, format!("**Parody**: {}", content));
+                writeln!(&mut info, "**Parody**: {}", content).unwrap();
             }
             _ => {
                 let content = self.parody.iter().join("\n");
-                fields.push(("Parody", content, false));
+                embed.field("Parody", content, false);
             }
+        }
+
+        if let Some(creator) = &self.creator {
+            writeln!(&mut info, "**Creator**: {}", creator).unwrap();
         }
 
         match self.author.len() {
@@ -56,7 +55,7 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{} ({})]({})", k, v.name, v.url))
                     .unwrap();
 
-                description.push(format!("**Author**: {}", content));
+                writeln!(&mut info, "**Author**: {}", content).unwrap();
             }
             _ => {
                 let content = self
@@ -65,7 +64,7 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{} ({})]({})", k, v.name, v.url))
                     .join("\n");
 
-                fields.push(("Author", content, false));
+                embed.field("Author", content, false);
             }
         }
 
@@ -79,7 +78,7 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{}]({})", k, v))
                     .unwrap();
 
-                description.push(format!("**Source**: {}", content));
+                writeln!(&mut info, "**Source**: {}", content).unwrap();
             }
             _ => {
                 let content = self
@@ -88,7 +87,7 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{}]({})", k, v))
                     .join("\n");
 
-                fields.push(("Sources", content, false));
+                embed.field("Sources", content, false);
             }
         }
 
@@ -102,7 +101,7 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{}]({})", k, v))
                     .unwrap();
 
-                description.push(format!("**Altenative link**: {}", content));
+                writeln!(&mut info, "**Altenative link**: {}", content).unwrap();
             }
             _ => {
                 let content = self
@@ -111,23 +110,20 @@ impl ToEmbed for magic::sauce::SauceNao {
                     .map(|(k, v)| format!("[{}]({})", k, v))
                     .join("\n");
 
-                fields.push(("Altenative links", content, false));
+                embed.field("Altenative links", content, false);
             }
         }
 
         if let Some(n) = &self.note {
-            description.push(format!("**Note**: {}", n));
+            writeln!(&mut info, "**Note**: {}", n).unwrap();
         }
         if let Some(title) = &self.title {
             embed.title(title);
         }
 
-        let description = description.join("\n");
-
         embed
-            .description(description)
+            .description(info)
             .url(self.url())
-            .fields(fields)
             .thumbnail(self.img_url())
             .timestamp(now())
             .footer(|f| f.text("Powered by SauceNao"));
