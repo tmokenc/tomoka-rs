@@ -1,5 +1,6 @@
 prefix = "tomo>"
 temp_dir = "./temp" # directory for temporary files
+disable_auto_cmd = ["rgb_tu"]
 
 [database]
 path = "./tomodb"

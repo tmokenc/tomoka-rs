@@ -66,6 +66,7 @@ pub struct Config {
     pub prefix: String,
     pub temp_dir: Option<PathBuf>,
     pub database: Database,
+    pub disable_auto_cmd: Vec<String>,
     pub color: Color,
     pub etc: Etc,
     pub rgb: Option<Rgb>,
