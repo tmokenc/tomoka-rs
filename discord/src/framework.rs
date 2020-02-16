@@ -376,7 +376,7 @@ fn find_sauce(ctx: &Context, msg: &Message) {
 
     let config = crate::read_config();
     
-    let emoji_id = match config.etc.sauce.emoji {
+    let emoji_id = match config.sauce.emoji {
         Some(e) => e,
         None => return
     };
@@ -419,7 +419,7 @@ fn find_sauce(ctx: &Context, msg: &Message) {
     let http = ctx.http.clone();
     let channel_id = msg.channel_id.0;
     let msg_id = msg.id.0;
-    let duration = Duration::from_secs(config.etc.sauce.wait_duration as u64);
+    let duration = Duration::from_secs(config.sauce.wait_duration as u64);
     
     drop(config);
     
@@ -453,7 +453,7 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
 
     let config = crate::read_config();
 
-    let emoji_id = match config.etc.sadkaede.emoji {
+    let emoji_id = match config.sadkaede.emoji {
         Some(e) => e,
         None => return,
     };
@@ -506,7 +506,7 @@ fn find_sadkaede(ctx: &Context, msg: &Message) {
     let http = ctx.http.clone();
     let channel_id = msg.channel_id.0;
     let msg_id = msg.id.0;
-    let duration = Duration::from_secs(config.etc.sadkaede.wait_duration as u64);
+    let duration = Duration::from_secs(config.sadkaede.wait_duration as u64);
 
     drop(config);
 

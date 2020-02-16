@@ -6,10 +6,7 @@ use magic::image::{self, RotateAngle};
 #[description = "Rotate the last image from 20 most recent message on the channel"]
 fn rotate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx)?;
-    let depth = {
-        let config = crate::read_config();
-        config.etc.image_search_depth
-    };
+    let depth = crate::read_config().image_search_depth;
     
     let image_buf = get_last_image_buf(&ctx, &msg, depth);
 

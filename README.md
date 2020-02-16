@@ -75,6 +75,7 @@ The structure of this codebase (kind of mess though) <br>
     - [ ] Radio
 - [ ] Games
     - [x] TouhouMusicQuest
+    - [ ] TicTacToe
     - [ ] Chess
     - [ ] Tetris
     - [ ] PokemonBattle (maybe it never done though)
@@ -85,13 +86,19 @@ The structure of this codebase (kind of mess though) <br>
     - [ ] Nature
     - [ ] Move
 - [ ] Utility
+    - [ ] Time
+        - [x] Display time in multiple timezone
+        - [ ] Configurable timezones
+        - [ ] Lunar time
     - [ ] E-hentai
-        - [ ] Gallery information
+        - [x] Gallery information
         - [ ] Read
         - [ ] Downloader
     - [ ] Encode
     - [ ] Decode
 - [ ] Better guild option
+    - [ ] Option for sadkaede-finder
+    - [ ] Better overrall
 - [ ] Better documentation
 - [ ] Web server 
     - [ ] GitLab webhook

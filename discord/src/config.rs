@@ -51,25 +51,25 @@ pub struct SadKaede {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Etc {
-    pub radio_stations: Option<PathBuf>,
-    pub image_search_depth: u16,
-    pub max_cache_file_size: u32,
-    pub time_format: String,
-    pub tmq: Option<TouhouMusicQuest>,
-    pub sauce: Sauce,
-    pub sadkaede: SadKaede,
+pub struct Time {
+    pub format: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub prefix: String,
     pub temp_dir: Option<PathBuf>,
+    pub max_cache_file_size: u32,
+    pub image_search_depth: u16,
     pub database: Database,
     pub disable_auto_cmd: Vec<String>,
+    pub radio_stations: Option<PathBuf>,
     pub color: Color,
-    pub etc: Etc,
     pub rgb: Option<Rgb>,
+    pub tmq: Option<TouhouMusicQuest>,
+    pub time: Time,
+    pub sauce: Sauce,
+    pub sadkaede: SadKaede,
     #[serde(default)]
     pub guilds: DashMap<GuildId, GuildConfig>,
 }

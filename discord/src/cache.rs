@@ -167,7 +167,7 @@ impl MyCache {
         for i in cache_message.attachments.iter_mut() {
             let max_file_size = {
                 let config = crate::read_config();
-                config.etc.max_cache_file_size
+                config.max_cache_file_size
             };
 
             if i.size <= max_file_size {

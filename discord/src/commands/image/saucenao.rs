@@ -9,11 +9,7 @@ use magic::sauce::SauceNao;
 fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx)?;
     
-    let depth = {
-        let config = crate::read_config();
-        config.etc.image_search_depth
-    };
-    
+    let depth = crate::read_config().image_search_depth;
     let img = match get_last_image_url(&ctx, &msg, depth) {
         Some(i) => i,
         None => {

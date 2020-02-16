@@ -1,6 +1,9 @@
 prefix = "tomo>"
 temp_dir = "./temp" # directory for temporary files
 disable_auto_cmd = ["rgb_tu"]
+radio_stations = "./assets/data/radio.json"
+max_cache_file_size = 7654321
+image_search_depth = 20
 
 [database]
 path = "./tomodb"
@@ -12,16 +15,13 @@ message_update = 5167967 # 0x4edb5f
 message_delete = 14376782 # 0xdb5f4e
 lovely = 16524136 # 0xfc2368
 
-[etc]
-radio_stations = "./assets/data/radio.json"
-time_format = "%I:%M %p %d/%m/%Y"
-image_search_depth = 20
-max_cache_file_size = 7654321
+[time]
+format = "%I:%M %p %d/%m/%Y"
 
-[etc.sauce]
+[sauce]
 wait_duration = 30
 
-[etc.sadkaede]
+[sadkaede]
 wait_duration = 30
 
 # [rgb]

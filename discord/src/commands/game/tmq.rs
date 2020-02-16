@@ -24,7 +24,7 @@ type TmqCollect = Mutex<HashMap<ChannelId, HashMap<UserId, TmqCollector>>>;
 lazy_static! {
     static ref TOUHOU_VERSION: HashMap<String, u64> = {
         let config = crate::read_config();
-        let file = File::open(&config.etc.tmq.as_ref().unwrap().emoji).unwrap();
+        let file = File::open(&config.tmq.as_ref().unwrap().emoji).unwrap();
         drop(config);
         let reader = BufReader::new(file);
 
@@ -95,7 +95,7 @@ fn touhou_music_quiz(ctx: &mut Context, msg: &Message, _args: Args) -> CommandRe
         
         let duration = {
             let config = crate::read_config();
-            config.etc.tmq.as_ref().unwrap().duration
+            config.tmq.as_ref().unwrap().duration
         };
 
         let audio = get_audio(path, duration)?;
@@ -190,7 +190,6 @@ fn get_quiz() -> Result<(PathBuf, String)> {
     
     let config = crate::read_config();
     let tmq_config = config
-        .etc
         .tmq
         .as_ref()
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "tmq config notfound"))?;
