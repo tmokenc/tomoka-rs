@@ -55,12 +55,49 @@ impl MagicBool for bool {
     }
 }
 
+pub struct SplitAtLimit<'a> {
+    content: &'a str,
+    limit: usize,
+    last: &'a str,
+    current_index: usize,
+}
+
+impl<'a> Iterator for SplitAtLimit<'a> {
+    type Item = &'a str;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.content.len() == self.current_index {
+            return None
+        }
+        
+        let current_index = self.current_index;
+        let limit = current_index + self.limit;
+        
+        if self.content.len() <= limit {
+            self.current_index = self.content.len();
+            return Some(&self.content[current_index..])
+        }
+        
+        self.content[current_index..limit]
+            .rfind(self.last)
+            .map(|match_index| match_index + self.last.len())
+            .map(|end_index| {
+                self.current_index = end_index;
+                &self.content[current_index..end_index]
+            })
+    }
+}
+
 pub trait MagicStr {
     /// A shortcut for `s.chars().nth(index)`
     fn get(&self, index: usize) -> Option<char>;
     /// A shortcut for `s.chars().count()`
     /// This should be replacement for `s.len()` in mose case scenario
     fn count(&self) -> usize;
+    /// Split a content at a specific length limit
+    /// This will not remove the char like the `str::split` method
+    /// Will yield an iterator of String
+    fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
     /// return `None` if the string is empty
     fn to_option(&self) -> Option<String>;
 }
@@ -74,6 +111,15 @@ impl MagicStr for str {
     #[inline]
     fn count(&self) -> usize {
         self.chars().count()
+    }
+    
+    fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a> {
+        SplitAtLimit {
+            content: self,
+            current_index: 0,
+            limit,
+            last,
+        }
     }
     
     fn to_option(&self) -> Option<String> {

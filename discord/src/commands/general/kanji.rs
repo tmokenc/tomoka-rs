@@ -1,6 +1,7 @@
 use crate::commands::prelude::*;
 use crate::storages::ReqwestClient;
 use crate::MaziiRequester;
+use magic::traits::MagicStr;
 
 #[command]
 #[aliases("k")]
@@ -30,7 +31,7 @@ fn kanji(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
         let detail = kanji
             .normal_detail()
-            .and_then(|d| split_message(d, 1980, "\n").get(0).cloned())
+            .and_then(|d| d.split_at_limit(1980, "\n").next().map(String::from))
             .unwrap_or_default();
 
         fields.push((info, detail, false));

@@ -108,24 +108,24 @@ pub fn colored_name_user(user: &User) -> CString {
     name.color(color)
 }
 
-pub fn split_message<S: AsRef<str>>(content: S, limit: u16, last: &str) -> Vec<String> {
-    let mut result = Vec::new();
-    let mut tmp = String::new();
+// pub fn split_message<S: AsRef<str>>(content: S, limit: u16, last: &str) -> Vec<String> {
+//     let mut result = Vec::new();
+//     let mut tmp = String::new();
 
-    for s in content.as_ref().split(last) {
-        if tmp.len() + s.len() + last.len() > limit as usize {
-            let data = tmp.drain(..).collect::<String>();
-            result.push(data);
-            continue;
-        }
-        tmp.push_str(s);
-        tmp.push_str(last);
-    }
+//     for s in content.as_ref().split(last) {
+//         if tmp.len() + s.len() + last.len() > limit as usize {
+//             let data = tmp.drain(..).collect::<String>();
+//             result.push(data);
+//             continue;
+//         }
+//         tmp.push_str(s);
+//         tmp.push_str(last);
+//     }
 
-    tmp.truncate(tmp.len() - last.len());
-    result.push(tmp);
-    result
-}
+//     tmp.truncate(tmp.len() - last.len());
+//     result.push(tmp);
+//     result
+// }
 
 pub fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> Option<ChannelId> {
     guild_id

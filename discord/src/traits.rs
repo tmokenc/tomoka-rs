@@ -1,10 +1,11 @@
 #![allow(unstable_name_collisions)]
 
 use crate::commands::prelude::now;
-use crate::utils::{space_to_underscore, split_message};
+use crate::utils::{space_to_underscore};
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
 use magic::traits::MagicIter as _;
+use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
 use std::fmt::Write as _;
 
@@ -210,7 +211,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         })
         .for_each(|(k, v)| {
             if v.len() > 1024 {
-                let mut splited = split_message(v, 1024, "|").into_iter();
+                let mut splited = v.split_at_limit(1024, "|");
                 embed.field(k, splited.next().unwrap(), false);
                 for later in splited {
                     embed.field('\u{200B}', later, false);

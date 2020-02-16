@@ -31,11 +31,14 @@ use lazy_static::lazy_static;
 use log::{error, info};
 use magic::has_external_command;
 use magic::sauce::SauceNao;
-use magic::traits::MagicIter as _;
 use parking_lot::Mutex;
 use requester::ehentai::{EhentaiApi, Gmetadata};
 use scheduled_thread_pool::JobHandle;
 use std::collections::{HashMap, HashSet};
+
+use magic::traits::MagicIter as _;
+use magic::traits::MagicStr as _;
+use std::fmt::Write as _;
 
 lazy_static! {
     static ref EXECUTION_LIST: DashMap<MessageId, DateTime<Utc>> = DashMap::new();
@@ -125,8 +128,12 @@ fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResult) {
 fn normal_message(ctx: &mut Context, msg: &Message) {
     macro_rules! exec_func {
         ( $( $x:ident ),* ) => {
+            let config = crate::read_config();
+            
             $(
-                $x(&ctx, &msg);
+                if !config.disable_auto_cmd.contains(&stringify!($x).to_string()) {
+                    $x(&ctx, &msg);
+                }
             )*
         };
     }
@@ -195,15 +202,14 @@ fn mention_rgb(ctx: &Context, msg: &Message) {
 
     let to_say = crate::read_config().guilds.get(&guild_id).and_then(|v| {
         v.rgblized.as_ref().map(|v| {
-            v.iter()
-                .map(|x| format!("<@&{}>", x.id))
-                .collect::<String>()
+            let mut res = String::with_capacity(v.len() * 22);
+            v.iter().for_each(|x| write!(&mut res, "<@&{}>", x.id).unwrap());
+            res
         })
     });
 
     if let Some(m) = to_say {
-        split_message(&m, 1980, ">")
-            .into_iter()
+        m.split_at_limit(1980, ">")
             .filter_map(|s| msg.channel_id.say(&ctx, s).err())
             .for_each(|err| error!("Cannot mention rgb\n{}", err))
     }
@@ -253,7 +259,7 @@ fn respect(ctx: &Context, msg: &Message) {
     if msg.content.len() > 2 {
         let content = remove_emote(&msg.content[2..]);
         if !content.is_empty() {
-            message.push_str(&format!(" for **{}**", content.trim()));
+            write!(&mut message, " for **{}**", content.trim()).unwrap();
         }
     }
 
