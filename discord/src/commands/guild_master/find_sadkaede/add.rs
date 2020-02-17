@@ -1,6 +1,7 @@
 use crate::commands::prelude::*;
 use crate::types::GuildConfig;
 use magic::traits::MagicIter as _;
+use magic::traits::MagicStr as _;
 
 
 #[command]
@@ -45,7 +46,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     update_guild_config(&ctx, &guild)?;
 
-    msg.channel_id.send_message(ctx, |m| {
+    msg.channel_id.send_message(&ctx, |m| {
         m.embed(|embed| {
             embed.title("Sadkaede-finder information");
             embed.thumbnail(&config.sadkaede.thumbnail);
@@ -79,7 +80,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
             if !added.is_empty() {
                 let sfw_channels = added
                     .iter()
-                    .filter(|v| !is_nsfw_channel(&ctx, v))
+                    .filter(|v| !is_nsfw_channel(&ctx, **v))
                     .map(|v| format!("<#{}>", v))
                     .join(" ")
                     .to_option();

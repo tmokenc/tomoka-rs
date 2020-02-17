@@ -157,7 +157,7 @@ impl ToEmbed for FindSauce {
     fn to_embed(&self, embed: &mut CreateEmbed) {
         use magic::traits::MagicIter as _;
 
-        if !self.enable || self.channels.is_empty() {
+        if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The saucing service is disabled for this server");
         } else if self.all {
             embed.description("The saucing service is enabled for all channels on this server");
@@ -199,7 +199,7 @@ impl ToEmbed for FindSadKaede {
     fn to_embed(&self, embed: &mut CreateEmbed) {
         use magic::traits::MagicIter as _;
 
-        if !self.enable || self.channels.is_empty() {
+        if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The SadKaede-finder service is disabled for this server");
         } else if self.all {
             embed.description(

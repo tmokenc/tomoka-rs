@@ -13,7 +13,7 @@ import_all! {
 }
 
 #[group]
-#[prefixes("findsadkaede", "findeh", "findehentai" "sadkaede", "eh", "ehentai")]
+#[prefixes("findsadkaede", "findeh", "findehentai", "sadkaede", "eh", "ehentai")]
 #[commands(info, add, remove, enable, disable, all, disable_all, toggle)]
 #[default_command(info)]
 struct FindSadKaede;
