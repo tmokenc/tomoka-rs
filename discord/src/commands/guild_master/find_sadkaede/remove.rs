@@ -4,7 +4,7 @@ use magic::traits::MagicIter as _;
 #[command]
 #[only_in("guilds")]
 #[required_permissions(MANAGE_GUILD)]
-/// Remove channel(s) from the saucing list on this server
+/// Remove channel(s) from the SadKaede-finder list on this server
 fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
@@ -26,8 +26,8 @@ fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
         .get_mut(&guild_id);
         
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
+        embed.title("SadKaede-finder information");
+        embed.thumbnail(&config.sadkaede.thumbnail);
         embed.color(config.color.information);
         embed.timestamp(now());
         
@@ -35,7 +35,7 @@ fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
             Some(ref mut g) => {
                 let removed_channels = channels
                     .into_iter()
-                    .filter_map(|v| g.remove_sauce_channel(v))
+                    .filter_map(|v| g.remove_sadkaede_channel(v))
                     .collect::<Vec<_>>();
                 
                 if removed_channels.is_empty() {

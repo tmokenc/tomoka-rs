@@ -2,6 +2,7 @@ use crate::commands::prelude::*;
 use crate::types::GuildConfig;
 use magic::traits::MagicIter as _;
 
+
 #[command]
 #[aliases("channel", "channels")]
 #[only_in("guilds")]
@@ -47,9 +48,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(ctx, |m| {
         m.embed(|embed| {
             embed.title("Sadkaede-finder information");
-            embed.thumbnail(
-                "https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg",
-            );
+            embed.thumbnail(&config.sadkaede.thumbnail);
             embed.color(config.color.information);
             embed.timestamp(now());
 
@@ -88,11 +87,14 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
                 let added = added.into_iter().map(|v| format!("<#{}>", v)).join(" ");
 
                 embed.field("Added channels", added, true);
-                embed.field(
-                    "SFW channels (These channels will be watching for non-h content only)",
-                    sfw_channels,
-                    false,
-                );
+                
+                if let Some(sfw) = sfw_channels {
+                    embed.field(
+                        "SFW channels (These channels will be watching for non-h content only)",
+                        sfw,
+                        false,
+                    );
+                }
             }
 
             embed.description(mess);

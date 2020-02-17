@@ -41,6 +41,7 @@ pub struct TouhouMusicQuest {
 pub struct Sauce {
     pub wait_duration: u16,
     pub emoji: Option<EmojiId>,
+    pub thumbnail: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -48,6 +49,7 @@ pub struct SadKaede {
     pub cookie: Option<String>,
     pub wait_duration: u16,
     pub emoji: Option<EmojiId>,
+    pub thumbnail: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

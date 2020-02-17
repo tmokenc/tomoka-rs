@@ -21,18 +21,18 @@ fn all(ctx: &mut Context, msg: &Message) -> CommandResult {
         .or_insert_with(|| GuildConfig::new(&guild_id));
         
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
+        embed.title("SadKaede-finder information");
+        embed.thumbnail(&config.sadkaede.thumbnail);
         embed.color(config.color.information);
         embed.timestamp(now());
         
-        if guild_config.find_sauce.all {
-            embed.description("The saucing machine is already enabled for all channels");
+        if guild_config.find_sadkaede.all {
+            embed.description("The sadKaede-finder is already enabled for all channels");
         } else {
-            guild_config.find_sauce.all = true;
-            guild_config.enable_find_sauce();
+            guild_config.find_sadkaede.all = true;
+            guild_config.enable_find_sadkaede();
             update_guild_config(&ctx, &guild_config).ok();
-            embed.description("Enabled the saucing machine for **ALL** channels");
+            embed.description("Enabled the sadkaede-finder for **ALL** channels");
         }
         
         embed

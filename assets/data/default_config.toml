@@ -20,9 +20,11 @@ format = "%I:%M %p %d/%m/%Y"
 
 [sauce]
 wait_duration = 30
+thumbnail = "https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg"
 
 [sadkaede]
 wait_duration = 30
+thumbnail = "https://i.redd.it/4ghf7122u6721.jpg"
 
 # [rgb]
 # evidence = "/path/to/evidence"

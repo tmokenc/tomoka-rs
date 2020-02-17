@@ -98,6 +98,14 @@ The structure of this codebase (kind of mess though) <br>
     - [ ] Decode
 - [ ] Better guild option
     - [ ] Option for sadkaede-finder
+        - [x] Add
+        - [x] Remove
+        - [ ] Toggle
+        - [x] Enable
+        - [x] Disable
+        - [x] Info
+        - [x] All
+        - [x] Disable_all
     - [ ] Better overrall
 - [ ] Better documentation
 - [ ] Web server 

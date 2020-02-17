@@ -17,8 +17,8 @@ fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
         .get_mut(&guild_id);
         
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
+        embed.title("SadKaede-finder information");
+        embed.thumbnail(&config.sadkaede.thumbnail);
         embed.color(config.color.information);
         embed.timestamp(now());
         

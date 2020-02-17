@@ -4,7 +4,7 @@ use magic::traits::MagicIter as _;
 #[command]
 #[only_in("guilds")]
 #[required_permissions(MANAGE_GUILD)]
-/// Enable the saucing machine
+/// Enable the SadKaede-finder
 fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
@@ -17,24 +17,24 @@ fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
         .get_mut(&guild_id);
         
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail("https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg");
+        embed.title("SadKaede-finder information");
+        embed.thumbnail(&config.sadkaede.thumbnail);
         embed.color(config.color.information);
         embed.timestamp(now());
         
         match guild_config {
-            Some(ref mut g) if !g.find_sauce.channels.is_empty() || g.find_sauce.all => {
-                if g.find_sauce.enable {
-                    embed.description("The saucing machine already enabled");
+            Some(ref mut g) if !g.find_sadkaede.channels.is_empty() || g.find_sadkaede.all => {
+                if g.find_sadkaede.enable {
+                    embed.description("The SadKaede-finder already enabled");
                 } else {
-                    g.enable_find_sauce();
+                    g.enable_find_sadkaede();
                     update_guild_config(&ctx, &g).ok();
-                    embed.description("Enabled the saucing machine");
+                    embed.description("Enabled the SadKaede-finder");
                 }
                 
-                if !g.find_sauce.channels.is_empty() {
+                if !g.find_sadkaede.channels.is_empty() {
                     let channels = g
-                        .find_sauce
+                        .find_sadkaede
                         .channels
                         .iter()
                         .map(|v| format!("<#{}>", v))
@@ -47,9 +47,9 @@ fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
             
             _ => {
                 embed.description(
-                    "There isn't any activated channel for sauce yet.
-                    Consider adding the channel(s) using `option sauce add <channels>` command.
-                    The add command will automatically **enable** this saucing machine"
+                    "There isn't any activated channel for sadkaede yet.
+                    Consider adding the channel(s) using `option sadkaede add <channels>` command.
+                    The add command will automatically **enable** this SadKaede-finder"
                 );
             }
         };
