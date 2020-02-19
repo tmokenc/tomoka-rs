@@ -893,9 +893,9 @@ checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 
 [[package]]
 name = "eliza"
-version = "1.2.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc32f186cab0371970a45ccc76613ad9ad2b951429b710aa1c5b5a4bb53575d8"
+checksum = "291fd1efa65ced082108794d1b7047faa7df85e26c95d2ad25a46389362c527e"
 dependencies = [
  "env_logger",
  "log",

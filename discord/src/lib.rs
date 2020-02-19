@@ -85,7 +85,7 @@ pub fn start() -> Result<()> {
         data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
         data.insert::<VoiceManager>(client.voice_manager.clone());
         data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
-        data.insert::<AIStore>(mutex_data(Eliza::new(&config.eliza_brain)?));
+        data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain)?));
     
         if has_external_command("ffmpeg") {
             data.insert::<MusicManager>(mutex_data(HashMap::new()));
