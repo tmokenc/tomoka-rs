@@ -27,7 +27,7 @@ python install youtube-dl
 Then clone this repo, navigate into it and do  
 
 ```bash
-cargo build --release
+cargo build --release --bin tomoka_rs
 ```
 *You may see some warning about unused variable stuff due to the incomplete `radio` command*
  
