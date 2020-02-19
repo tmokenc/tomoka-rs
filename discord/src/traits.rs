@@ -136,7 +136,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         let tags = self.parse_tags();
         let mut info = String::new();
 
-        match (&self.title, &self.title_jpn) {
+        match (&self.title.to_option(), &self.title_jpn.to_option()) {
             (Some(ref title), None) | (None, Some(ref title)) => {
                 embed.title(title);
             }
