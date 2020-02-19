@@ -1,5 +1,4 @@
 use crate::commands::prelude::*;
-use magic::traits::MagicIter;
 use crate::traits::ToEmbed;
 
 #[command]

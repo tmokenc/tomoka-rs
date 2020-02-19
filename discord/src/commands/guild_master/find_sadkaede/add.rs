@@ -1,7 +1,6 @@
 use crate::commands::prelude::*;
 use crate::types::GuildConfig;
 use magic::traits::MagicIter as _;
-use magic::traits::MagicStr as _;
 
 
 #[command]
@@ -82,17 +81,16 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
                     .iter()
                     .filter(|v| !is_nsfw_channel(&ctx, **v))
                     .map(|v| format!("<#{}>", v))
-                    .join(" ")
-                    .to_option();
+                    .join(" ");
 
                 let added = added.into_iter().map(|v| format!("<#{}>", v)).join(" ");
 
                 embed.field("Added channels", added, true);
                 
-                if let Some(sfw) = sfw_channels {
+                if !sfw_channels.is_empty() {
                     embed.field(
                         "SFW channels (These channels will be watching for non-h content only)",
-                        sfw,
+                        sfw_channels,
                         false,
                     );
                 }
