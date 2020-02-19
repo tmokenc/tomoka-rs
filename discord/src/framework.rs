@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 use serenity::builder::CreateEmbed;
 use serenity::{
     client::Context,
@@ -18,7 +20,7 @@ use serenity::{
 
 use crate::{
     commands::*,
-    storages::{AIStore, CustomEventList, InforKey, MasterList, ReqwestClient},
+    storages::{AIStore, CustomEventList, InforKey, ReqwestClient},
     traits::ToEmbed,
     utils::*,
 };
@@ -38,6 +40,7 @@ use std::collections::{HashMap, HashSet};
 
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
+use magic::traits::MagicBool as _;
 use std::fmt::Write as _;
 
 lazy_static! {
@@ -181,10 +184,14 @@ fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .or_else(|| Some(config.prefix.to_owned()))
 }
 
-fn master_prefix(ctx: &mut Context, msg: &Message) -> Option<String> {
-    get_data::<MasterList>(ctx)
-        .filter(|v| v.read().iter().any(|&v| v == msg.author.id))
-        .map(|_| "%".to_string())
+fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
+    let config = crate::read_config();
+    
+    config 
+        .masters
+        .iter()
+        .any(|&v| v == msg.author.id)
+        .then(|| config.master_prefix.to_owned())
 }
 
 fn mention_rgb(ctx: &Context, msg: &Message) {

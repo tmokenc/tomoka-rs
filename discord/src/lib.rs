@@ -21,7 +21,7 @@ pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub use requester::*;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 
@@ -31,7 +31,7 @@ use db::DbInstance;
 use events::{Handler, RawHandler};
 use framework::get_framework;
 use magic::dark_magic::{bytes_to_le_u64, has_external_command};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 use serenity::Client;
 use storages::*;
 use types::*;
@@ -72,25 +72,25 @@ pub fn start() -> Result<()> {
         .settings_mut()
         .max_messages(0);
 
-    let db = DbInstance::new(&read_config().database.path, None)?;
-    fetch_guild_config_from_db(&db)?;
-
-    let mut data = client.data.write();
-
-    data.insert::<CustomEventList>(custom_events_arc);
-    data.insert::<DatabaseKey>(Arc::new(db));
-    data.insert::<InforKey>(Information::init(&client.cache_and_http.http)?);
-    data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
-    data.insert::<MasterList>(rw_data(HashSet::new()));
-    data.insert::<VoiceManager>(client.voice_manager.clone());
-    data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
-    data.insert::<AIStore>(mutex_data(Eliza::new("assets/data/brain.json")?));
-
-    if has_external_command("ffmpeg") {
-        data.insert::<MusicManager>(mutex_data(HashMap::new()));
+    {
+        let mut data = client.data.write();
+        let config = read_config();
+        
+        let db = DbInstance::new(&read_config().database.path, None)?;
+        fetch_guild_config_from_db(&db)?;
+    
+        data.insert::<CustomEventList>(custom_events_arc);
+        data.insert::<DatabaseKey>(Arc::new(db));
+        data.insert::<InforKey>(Information::init(&client.cache_and_http.http)?);
+        data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
+        data.insert::<VoiceManager>(client.voice_manager.clone());
+        data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
+        data.insert::<AIStore>(mutex_data(Eliza::new(&config.eliza_brain)?));
+    
+        if has_external_command("ffmpeg") {
+            data.insert::<MusicManager>(mutex_data(HashMap::new()));
+        }
     }
-
-    drop(data);
 
     client.with_framework(get_framework());
 
@@ -127,11 +127,6 @@ pub fn start() -> Result<()> {
 #[inline]
 fn mutex_data<T>(data: T) -> Arc<Mutex<T>> {
     Arc::new(Mutex::new(data))
-}
-
-#[inline]
-fn rw_data<T>(data: T) -> Arc<RwLock<T>> {
-    Arc::new(RwLock::new(data))
 }
 
 #[inline]

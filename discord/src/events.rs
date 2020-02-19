@@ -8,7 +8,7 @@ use serenity::model::{
 };
 
 use crate::cache::MessageCache;
-use crate::storages::{CacheStorage, MasterList};
+use crate::storages::{CacheStorage};
 use crate::{types::CustomEvents, utils::*, Result};
 
 use chrono::Utc;
@@ -157,9 +157,7 @@ impl EventHandler for Handler {
         ctx.set_presence(Some(activity), status);
 
         if let Ok(info) = ctx.http.get_current_application_info() {
-            let list = ctx.data.read().get::<MasterList>().cloned().unwrap();
-
-            list.write().insert(info.owner.id);
+            crate::write_config().masters.insert(info.owner.id);
         }
     }
 

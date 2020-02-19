@@ -38,4 +38,5 @@ ctrlc = { version = "3.1", features = ["termination"] }
 tokio = { version = "0.2", features = ["fs", "io-util", "rt-threaded"] }
 dashmap = { version = "3", features = ["serde"] }
 serenity = { version = "0.8", features = ["voice", "cache"] }
+# serenity = { path = "../../serenity", features = ["voice", "cache"] }
 parking_lot = { version = "0.10" }

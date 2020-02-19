@@ -5,9 +5,10 @@ use db::DbInstance;
 use lib_config::{Config as LibConfig, Environment, File, FileFormat};
 use magic::bytes_to_le_u64;
 use serde::{Deserialize, Serialize};
-use serenity::model::id::{EmojiId, GuildId};
+use serenity::model::id::{UserId, EmojiId, GuildId};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::collections::HashSet;
 use std::time::SystemTime;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -60,7 +61,11 @@ pub struct Time {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub prefix: String,
+    pub master_prefix: String,
+    #[serde(default)]
+    pub masters: HashSet<UserId>,
     pub temp_dir: Option<PathBuf>,
+    pub eliza_brain: String,
     pub max_cache_file_size: u32,
     pub image_search_depth: u16,
     pub disable_auto_cmd: Vec<String>,

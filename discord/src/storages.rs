@@ -2,19 +2,18 @@ use crate::cache::MyCache;
 use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 use requester::Reqwest;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use serenity::{
     client::bridge::voice::ClientVoiceManager,
-    model::id::{GuildId, UserId},
+    model::id::GuildId,
     prelude::TypeMapKey,
 };
 
 type MutexData<T> = Arc<Mutex<T>>;
-type RwData<T> = Arc<RwLock<T>>;
 
 pub struct CustomEventList;
 impl TypeMapKey for CustomEventList {
@@ -34,10 +33,6 @@ impl TypeMapKey for ReqwestClient {
 pub struct DatabaseKey;
 impl TypeMapKey for DatabaseKey {
     type Value = Arc<DbInstance>;
-}
-pub struct MasterList;
-impl TypeMapKey for MasterList {
-    type Value = RwData<HashSet<UserId>>;
 }
 
 pub struct VoiceManager;
