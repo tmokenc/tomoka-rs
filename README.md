@@ -29,6 +29,7 @@ Then clone this repo, navigate into it and do
 ```bash
 cargo build --release
 ```
+*You may see some warning about unused variable stuff due to the incomplete `radio` command*
  
 The whole process should be 
 ```bash
