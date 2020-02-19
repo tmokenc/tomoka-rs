@@ -129,7 +129,7 @@ fn normal_message(ctx: &mut Context, msg: &Message) {
     macro_rules! exec_func {
         ( $( $x:ident ),* ) => {
             let config = crate::read_config();
-            
+
             $(
                 if !config.disable_auto_cmd.contains(&stringify!($x).to_string()) {
                     $x(&ctx, &msg);
@@ -182,12 +182,9 @@ fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
 }
 
 fn master_prefix(ctx: &mut Context, msg: &Message) -> Option<String> {
-    get_data::<MasterList>(&ctx).and_then(|v| {
-        v.read()
-            .iter()
-            .find(|&&v| v == msg.author.id)
-            .map(|_| "%".to_string())
-    })
+    get_data::<MasterList>(ctx)
+        .filter(|v| v.read().iter().any(|&v| v == msg.author.id))
+        .map(|_| "%".to_string())
 }
 
 fn mention_rgb(ctx: &Context, msg: &Message) {
@@ -203,7 +200,8 @@ fn mention_rgb(ctx: &Context, msg: &Message) {
     let to_say = crate::read_config().guilds.get(&guild_id).and_then(|v| {
         v.rgblized.as_ref().map(|v| {
             let mut res = String::with_capacity(v.len() * 22);
-            v.iter().for_each(|x| write!(&mut res, "<@&{}>", x.id).unwrap());
+            v.iter()
+                .for_each(|x| write!(&mut res, "<@&{}>", x.id).unwrap());
             res
         })
     });

@@ -64,20 +64,20 @@ pub struct SplitAtLimit<'a> {
 
 impl<'a> Iterator for SplitAtLimit<'a> {
     type Item = &'a str;
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.content.len() == self.current_index {
-            return None
+            return None;
         }
-        
+
         let current_index = self.current_index;
         let limit = current_index + self.limit;
-        
+
         if self.content.len() <= limit {
             self.current_index = self.content.len();
-            return Some(&self.content[current_index..])
+            return Some(&self.content[current_index..]);
         }
-        
+
         self.content[current_index..limit]
             .rfind(self.last)
             .map(|match_index| match_index + self.last.len())
@@ -105,14 +105,14 @@ pub trait MagicStr {
 impl MagicStr for str {
     #[inline]
     fn get(&self, index: usize) -> Option<char> {
-        self.chars().nth(index)    
+        self.chars().nth(index)
     }
-    
+
     #[inline]
     fn count(&self) -> usize {
         self.chars().count()
     }
-    
+
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a> {
         SplitAtLimit {
             content: self,
@@ -121,7 +121,7 @@ impl MagicStr for str {
             last,
         }
     }
-    
+
     fn to_option(&self) -> Option<String> {
         if self.is_empty() {
             None

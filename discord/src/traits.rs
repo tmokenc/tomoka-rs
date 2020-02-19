@@ -1,7 +1,7 @@
 #![allow(unstable_name_collisions)]
 
 use crate::commands::prelude::now;
-use crate::utils::{space_to_underscore};
+use crate::utils::space_to_underscore;
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
 use magic::traits::MagicIter as _;
@@ -201,13 +201,14 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         ]
         .iter()
         .filter_map(|(k, v)| {
-            v.as_ref().map(|v| {
-                v.iter()
-                    .map(|v| (v, space_to_underscore(&v)))
-                    .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
-                    .join(" | ")
-            })
-            .map(|v| (k, v))
+            v.as_ref()
+                .map(|v| {
+                    v.iter()
+                        .map(|v| (v, space_to_underscore(&v)))
+                        .map(|(v, u)| format!("[{}](https://ehwiki.org/wiki/{})", v, u))
+                        .join(" | ")
+                })
+                .map(|v| (k, v))
         })
         .for_each(|(k, v)| {
             if v.len() > 1024 {
