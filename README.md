@@ -38,7 +38,7 @@ sudo pacman -S ffmpeg python # Change this to your package manager
 python install youtube-dl
 git clone https://gitlab.com/tmokenc/tomoka-rs
 cd tomoka-rs
-cargo build --release
+cargo build --release --bin tomoka_rs
 ```
 ## Usage
 
