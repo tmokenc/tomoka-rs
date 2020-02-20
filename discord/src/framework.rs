@@ -124,8 +124,10 @@ fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResult) {
             });
         }
     }
-
-    ctx.data.read().get::<InforKey>().unwrap().executed_one();
+    
+    if let Some(info) = ctx.data.read().get::<InforKey>() {
+        info.executed_one();
+    }
 }
 
 fn normal_message(ctx: &mut Context, msg: &Message) {

@@ -201,7 +201,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         ]
         .iter()
         .filter_map(|(k, v)| v.as_ref().map(|v| (k, v)))
-        .for_each(|(k, v)| {
+        .map(|(key, v)| {
             let mut content = String::with_capacity(45 * v.len());
             
             for tag in v {
@@ -210,13 +210,17 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             }
             
             content.truncate(content.len() - 3);
+            (key, content)
+        })
+        .for_each(|(k, v)| {
+            let mut splited = v.split_at_limit(1024, "|");
             
-            let mut splited = content.split_at_limit(1024, "|");
+            if let Some(data) = splited.next() {
+                embed.field(k, data, false);
             
-            embed.field(k, splited.next().unwrap(), false);
-            
-            for later in splited {
-                embed.field('\u{200B}', later, false);
+                for later in splited {
+                    embed.field('\u{200B}', later, false);
+                }
             }
         });
 

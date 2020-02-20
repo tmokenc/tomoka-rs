@@ -66,7 +66,7 @@ impl<'a> Iterator for SplitAtLimit<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.content.len() == self.current_index {
+        if self.content.count() == self.current_index {
             return None;
         }
 

@@ -20,6 +20,7 @@ fn info(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 {
                     let config = crate::read_config();
                     embed.color(config.color.error);
+                    embed.thumbnail(&config.sadkaede.thumbnail);
                 }
 
                 embed
@@ -45,6 +46,7 @@ fn info(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 {
                     let config = crate::read_config();
                     embed.color(config.color.error);
+                    embed.thumbnail(&config.sadkaede.thumbnail);
                 }
 
                 embed
