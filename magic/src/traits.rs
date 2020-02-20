@@ -76,8 +76,6 @@ impl<'a> Iterator for SplitAtLimit<'a> {
             .index_at_nth(self.limit)
             .map(|(limit, _)| current_index + limit)
             .map(|limit| {
-                dbg!(current_index, limit);
-                
                 self.content[current_index..limit]
                     .rfind(self.last)
                     .map(|match_index| current_index + match_index + self.last.len())
@@ -109,7 +107,8 @@ pub trait MagicStr {
     
     /// Split a content at a specific length limit
     /// This will not remove the char like the `str::split` method
-    /// Will yield an iterator of String
+    /// Will yield an iterator of &str, it will end when it reach the end of str
+    /// or cannot split the str with the desired limit.
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
     
     /// return `None` if the string is empty
