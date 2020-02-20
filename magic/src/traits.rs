@@ -113,7 +113,7 @@ pub trait MagicStr {
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
     
     /// return `None` if the string is empty
-    fn to_option<'a>(&'a self) -> Option<&'a str>;
+    fn to_option(&self) -> Option<&str>;
 }
 
 impl MagicStr for str {
@@ -141,7 +141,7 @@ impl MagicStr for str {
         }
     }
 
-    fn to_option<'a>(&'a self) -> Option<&'a str> {
+    fn to_option(&self) -> Option<&str> {
         if self.is_empty() {
             None
         } else {
