@@ -151,7 +151,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
 
         fn write_info(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
             if let Some(value) = data {
-                write!(&mut info, "**{}:**", key).unwrap();
+                write!(&mut info, "**{}:** ", key).unwrap();
                 for i in value {
                     write!(&mut info, "`{}` | ", i).unwrap();
                 }
@@ -162,7 +162,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
 
         fn write_info_normal(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
             if let Some(value) = data {
-                write!(&mut info, "**{}:**", key).unwrap();
+                write!(&mut info, "**{}:** ", key).unwrap();
                 for i in value {
                     info.push_str(&i);
                     info.push_str(" | ");
