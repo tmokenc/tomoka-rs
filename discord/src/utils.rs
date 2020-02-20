@@ -108,25 +108,6 @@ pub fn colored_name_user(user: &User) -> CString {
     name.color(color)
 }
 
-// pub fn split_message<S: AsRef<str>>(content: S, limit: u16, last: &str) -> Vec<String> {
-//     let mut result = Vec::new();
-//     let mut tmp = String::new();
-
-//     for s in content.as_ref().split(last) {
-//         if tmp.len() + s.len() + last.len() > limit as usize {
-//             let data = tmp.drain(..).collect::<String>();
-//             result.push(data);
-//             continue;
-//         }
-//         tmp.push_str(s);
-//         tmp.push_str(last);
-//     }
-
-//     tmp.truncate(tmp.len() - last.len());
-//     result.push(tmp);
-//     result
-// }
-
 pub fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> Option<ChannelId> {
     guild_id
         .to_guild_cached(&ctx)
@@ -171,7 +152,8 @@ where
     };
 }
 
-//where F: Into<AttachmentType<'a>>
+/// where F: Into<AttachmentType<'a>>
+/// gonna remove this soon because the newer serenity now supported this
 pub fn send_file<C: Into<ChannelId>, F: AsRef<str>>(http: impl AsRef<Http>, channel: C, file: F) {
     let mut to_send: Vec<AttachmentType> = Vec::new();
     let url = file.as_ref();

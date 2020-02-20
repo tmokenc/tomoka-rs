@@ -94,7 +94,7 @@ impl<'a> Iterator for SplitAtLimit<'a> {
 
 pub trait MagicStr {
     /// A shortcut for `s.chars().nth(index)`
-    fn get(&self, index: usize) -> Option<char>;
+    fn get_char(&self, nth: usize) -> Option<char>;
     
     /// A shortcut for `s.chars().count()`
     /// This should be replacement for `s.len()` in mose case scenario
@@ -117,8 +117,8 @@ pub trait MagicStr {
 
 impl MagicStr for str {
     #[inline]
-    fn get(&self, index: usize) -> Option<char> {
-        self.chars().nth(index)
+    fn get_char(&self, nth: usize) -> Option<char> {
+        self.chars().nth(nth)
     }
 
     #[inline]
@@ -140,12 +140,9 @@ impl MagicStr for str {
         }
     }
 
+    #[inline]
     fn to_option(&self) -> Option<&str> {
-        if self.is_empty() {
-            None
-        } else {
-            Some(self)
-        }
+        if self.is_empty() { None } else { Some(self) }
     }
 }
 
