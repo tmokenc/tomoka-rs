@@ -66,38 +66,52 @@ impl<'a> Iterator for SplitAtLimit<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.content.count() == self.current_index {
+        if self.content.len() == self.current_index {
             return None;
         }
 
         let current_index = self.current_index;
-        let limit = current_index + self.limit;
-
-        if self.content.len() <= limit {
-            self.current_index = self.content.len();
-            return Some(&self.content[current_index..]);
-        }
-
-        self.content[current_index..limit]
-            .rfind(self.last)
-            .map(|match_index| match_index + self.last.len())
-            .map(|end_index| {
-                self.current_index = end_index;
-                &self.content[current_index..end_index]
+        
+        self.content[current_index..]
+            .index_at_nth(self.limit)
+            .map(|(limit, _)| current_index + limit)
+            .map(|limit| {
+                dbg!(current_index, limit);
+                
+                self.content[current_index..limit]
+                    .rfind(self.last)
+                    .map(|match_index| current_index + match_index + self.last.len())
+                    .map(|end_index| {
+                        self.current_index = end_index;
+                        &self.content[current_index..end_index]
+                    })
             })
+            .unwrap_or_else(|| {
+                self.current_index = self.content.len();
+                Some(&self.content[current_index..])
+            })
+
     }
 }
 
 pub trait MagicStr {
     /// A shortcut for `s.chars().nth(index)`
     fn get(&self, index: usize) -> Option<char>;
+    
     /// A shortcut for `s.chars().count()`
     /// This should be replacement for `s.len()` in mose case scenario
     fn count(&self) -> usize;
+    
+    /// Get index at the nth char
+    /// Return the index of begin and end of that char
+    /// the different will be `1` unless that's some weird character e.g `漢字`
+    fn index_at_nth(&self, nth: usize) -> Option<(usize, usize)>;
+    
     /// Split a content at a specific length limit
     /// This will not remove the char like the `str::split` method
     /// Will yield an iterator of String
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
+    
     /// return `None` if the string is empty
     fn to_option<'a>(&'a self) -> Option<&'a str>;
 }
@@ -111,6 +125,11 @@ impl MagicStr for str {
     #[inline]
     fn count(&self) -> usize {
         self.chars().count()
+    }
+    
+    #[inline]
+    fn index_at_nth(&self, nth: usize) -> Option<(usize, usize)> {
+        self.char_indices().nth(nth).map(|(i, c)| (i, i + c.len_utf8()))
     }
 
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a> {
