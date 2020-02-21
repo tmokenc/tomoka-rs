@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 #[derive(Debug)]
 struct TicTacToe {
     board: [Option<Mark>; 9],
-    whose_move: u8,
+    move_count: u8,
 }
 
 #[derive(Debug)]
@@ -26,12 +26,12 @@ impl TicTacToe {
     fn new_game(p1: UserId, p2: UserId) -> Self {
         Self { 
             board: [None; 9],
-            whose_move: 0,
+            move_count: 0,
         }
     }
 
     fn whose_move(&self) -> Mark {
-        if self.whose_move % 2 == 0 {
+        if self.move_count % 2 == 0 {
             Mark::O
         } else {
             Mark::X
@@ -80,7 +80,7 @@ impl TicTacToe {
             }
         }
 
-        self.whose_move += 1;
+        self.move_count += 1;
         true
     }
 
@@ -90,6 +90,10 @@ impl TicTacToe {
     }
 
     fn is_game_over(&self) -> Option<GameOver> {
+        if self.move_count < 5 {
+            return None    
+        }
+        
         let winner_hang = self
             .board
             .windows(3)

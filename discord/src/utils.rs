@@ -119,8 +119,10 @@ pub fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> 
 }
 
 pub fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
-    let my_id = ctx.data.read().get::<InforKey>().unwrap().user_id;
-    get_user_voice_channel(ctx, guild_id, my_id)
+    ctx.data
+        .read()
+        .get::<InforKey>()
+        .and_then(|v| get_user_voice_channel(ctx, guild_id, v.user_id))
 }
 
 pub fn send<C: Into<ChannelId>, S: ToString, F>(
@@ -254,23 +256,6 @@ pub fn save_file<P: AsRef<Path> + Send + 'static>(url: String, name: P) {
         std::io::Result::<()>::Ok(())
     });
 }
-
-// pub fn save_file<P: AsRef<Path>>(url: &str, name: P) {
-//     let saving = block_on(async {
-//         let mut file = File::create(name).await?;
-//         let mut stream = requester::get(url).await?;
-
-//         while let Some(data) = stream.chunk().await? {
-//             file.write_all(&data).await?;
-//         }
-
-//         Result::<()>::Ok(())
-//     });
-
-//     if let Err(why) = saving {
-//         error!("Error while saving a file:\n{:#?}", why);
-//     }
-// }
 
 /// Get the dominant color from a url
 pub fn get_dominant_color(url: &str) -> Result<Color> {

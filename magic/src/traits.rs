@@ -28,11 +28,36 @@ pub trait MagicIter: Iterator {
 
 impl<T: ?Sized> MagicIter for T where T: Iterator {}
 
-/// Try to mimic the nightly feature on the std library
-/// This way we don't have to use nightly for this only feature
+/// This traits exist because I don't like the look of if/else syntax
+/// Make it higher order function looks somewhat better
+/// The only different is that it not return anything
+/// ```
+/// if some_bool { 
+///     do_something()
+/// } else {
+///     do_something_else()    
+/// }
+/// ```
+///
+/// ```
+/// some_bool
+///     .then_do(do_something)
+///     .else_do(do_something_else)
+/// ```
 pub trait MagicBool {
+    /// Try to mimic the nightly feature `bool_to_option` on the std library
+    /// This way we don't have to use nightly for this only feature
     fn then_some<T>(self, value: T) -> Option<T>;
+    
+    /// Try to mimic the nightly feature `bool_to_option` on the std library
+    /// This way we don't have to use nightly for this only feature
     fn then<T, F: FnOnce() -> T>(self, f: F) -> Option<T>;
+    
+    /// Run the `fn` if it true
+    fn then_do<T, F: FnOnce() -> T>(self, f: F) -> T;
+    
+    /// Run the `fn` if it false
+    fn else_do<F: FnOnce() -> ()>(self, f: F) -> T;
 }
 
 impl MagicBool for bool {
@@ -52,6 +77,16 @@ impl MagicBool for bool {
         } else {
             None
         }
+    }
+    
+    #[inline]
+    fn then_do<F: FnOnce() -> ()>(self, f: F) {
+        if self { f() }
+    }
+    
+    #[inline]
+    fn else_do<F: FnOnce() -> ()>(self, f: F) {
+        if !self { f() }
     }
 }
 
@@ -92,12 +127,16 @@ impl<'a> Iterator for SplitAtLimit<'a> {
     }
 }
 
+/// Magic on `&str` type and anything that `Defer` into `str`, e.g. String
 pub trait MagicStr {
-    /// A shortcut for `s.chars().nth(index)`
-    fn get_char(&self, nth: usize) -> Option<char>;
+    /// A shortcut for `str::chars().nth(index)`
+    fn get_char_at(&self, nth: usize) -> Option<char>;
     
-    /// A shortcut for `s.chars().count()`
-    /// This should be replacement for `s.len()` in mose case scenario
+    /// A shortcut for `str::chars().count()`
+    /// The different from `str::len` is this will count the number of `char`s
+    /// the represented in the str, while `str::len` just simply give us 
+    /// number of `byte`s stored in the memory.
+    /// This should be the replacement for `str::len` in most case scenario
     fn count(&self) -> usize;
     
     /// Get index at the nth char
@@ -111,13 +150,13 @@ pub trait MagicStr {
     /// or cannot split the str with the desired limit.
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
     
-    /// return `None` if the string is empty
+    /// return `None` if the str is empty
     fn to_option(&self) -> Option<&str>;
 }
 
 impl MagicStr for str {
     #[inline]
-    fn get_char(&self, nth: usize) -> Option<char> {
+    fn get_char_at(&self, nth: usize) -> Option<char> {
         self.chars().nth(nth)
     }
 
@@ -147,6 +186,9 @@ impl MagicStr for str {
 }
 
 pub trait MagicOption<T> {
+    /// Extern the inner value
+    /// Can be used on an Option of anything that implemented traits `Default` and `Extend`
+    /// e.g. Option<Vec<_>>, Option<HashSet<_>>, etc...
     fn extend_inner<U>(&mut self, value: U)
     where
         T: Default + Extend<U>;
