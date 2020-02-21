@@ -38,9 +38,9 @@ use requester::ehentai::{EhentaiApi, Gmetadata};
 use scheduled_thread_pool::JobHandle;
 use std::collections::{HashMap, HashSet};
 
+use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
-use magic::traits::MagicBool as _;
 use std::fmt::Write as _;
 
 lazy_static! {
@@ -124,7 +124,7 @@ fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResult) {
             });
         }
     }
-    
+
     if let Some(info) = ctx.data.read().get::<InforKey>() {
         info.executed_one();
     }
@@ -188,8 +188,8 @@ fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
 
 fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
     let config = crate::read_config();
-    
-    config 
+
+    config
         .masters
         .iter()
         .any(|&v| v == msg.author.id)
@@ -206,14 +206,18 @@ fn mention_rgb(ctx: &Context, msg: &Message) {
         return;
     }
 
-    let to_say = crate::read_config().guilds.get(&guild_id).and_then(|v| {
-        v.rgblized.as_ref().map(|v| {
+    let to_say = crate::read_config()
+        .guilds
+        .get(&guild_id)
+        .as_deref()
+        .and_then(|v| v.rgblized.as_ref())
+        .map(|v| {
             let mut res = String::with_capacity(v.len() * 22);
-            v.iter()
-                .for_each(|x| write!(&mut res, "<@&{}>", x.id).unwrap());
+            for role in v {
+                write!(&mut res, "<@&{}>", role.id).unwrap();
+            }
             res
-        })
-    });
+        });
 
     if let Some(m) = to_say {
         m.split_at_limit(1980, ">")

@@ -32,7 +32,7 @@ impl<T: ?Sized> MagicIter for T where T: Iterator {}
 /// Make it higher order function looks somewhat better
 /// The only different is that it not return anything
 /// ```
-/// if some_bool { 
+/// if some_bool {
 ///     do_something()
 /// } else {
 ///     do_something_else()    
@@ -48,16 +48,16 @@ pub trait MagicBool {
     /// Try to mimic the nightly feature `bool_to_option` on the std library
     /// This way we don't have to use nightly for this only feature
     fn then_some<T>(self, value: T) -> Option<T>;
-    
+
     /// Try to mimic the nightly feature `bool_to_option` on the std library
     /// This way we don't have to use nightly for this only feature
     fn then<T, F: FnOnce() -> T>(self, f: F) -> Option<T>;
-    
+
     /// Run the `fn` if it true
-    fn then_do<T, F: FnOnce() -> T>(self, f: F) -> T;
-    
+    fn then_do<F: FnOnce() -> ()>(self, f: F) -> bool;
+
     /// Run the `fn` if it false
-    fn else_do<F: FnOnce() -> ()>(self, f: F) -> T;
+    fn else_do<F: FnOnce() -> ()>(self, f: F) -> bool;
 }
 
 impl MagicBool for bool {
@@ -78,15 +78,21 @@ impl MagicBool for bool {
             None
         }
     }
-    
+
     #[inline]
-    fn then_do<F: FnOnce() -> ()>(self, f: F) {
-        if self { f() }
+    fn then_do<F: FnOnce() -> ()>(self, f: F) -> bool {
+        if self {
+            f()
+        }
+        self
     }
-    
+
     #[inline]
-    fn else_do<F: FnOnce() -> ()>(self, f: F) {
-        if !self { f() }
+    fn else_do<F: FnOnce() -> ()>(self, f: F) -> bool {
+        if !self {
+            f()
+        }
+        self
     }
 }
 
@@ -106,7 +112,7 @@ impl<'a> Iterator for SplitAtLimit<'a> {
         }
 
         let current_index = self.current_index;
-        
+
         self.content[current_index..]
             .index_at_nth(self.limit)
             .map(|(limit, _)| current_index + limit)
@@ -123,7 +129,6 @@ impl<'a> Iterator for SplitAtLimit<'a> {
                 self.current_index = self.content.len();
                 Some(&self.content[current_index..])
             })
-
     }
 }
 
@@ -131,25 +136,25 @@ impl<'a> Iterator for SplitAtLimit<'a> {
 pub trait MagicStr {
     /// A shortcut for `str::chars().nth(index)`
     fn get_char_at(&self, nth: usize) -> Option<char>;
-    
+
     /// A shortcut for `str::chars().count()`
     /// The different from `str::len` is this will count the number of `char`s
-    /// the represented in the str, while `str::len` just simply give us 
+    /// the represented in the str, while `str::len` just simply give us
     /// number of `byte`s stored in the memory.
     /// This should be the replacement for `str::len` in most case scenario
     fn count(&self) -> usize;
-    
+
     /// Get index at the nth char
     /// Return the index of begin and end of that char
     /// the different will be `1` unless that's some weird character e.g `漢字`
     fn index_at_nth(&self, nth: usize) -> Option<(usize, usize)>;
-    
+
     /// Split a content at a specific length limit
     /// This will not remove the char like the `str::split` method
     /// Will yield an iterator of &str, it will end when it reach the end of str
     /// or cannot split the str with the desired limit.
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a>;
-    
+
     /// return `None` if the str is empty
     fn to_option(&self) -> Option<&str>;
 }
@@ -164,10 +169,12 @@ impl MagicStr for str {
     fn count(&self) -> usize {
         self.chars().count()
     }
-    
+
     #[inline]
     fn index_at_nth(&self, nth: usize) -> Option<(usize, usize)> {
-        self.char_indices().nth(nth).map(|(i, c)| (i, i + c.len_utf8()))
+        self.char_indices()
+            .nth(nth)
+            .map(|(i, c)| (i, i + c.len_utf8()))
     }
 
     fn split_at_limit<'a>(&'a self, limit: usize, last: &'a str) -> SplitAtLimit<'a> {
@@ -181,7 +188,11 @@ impl MagicStr for str {
 
     #[inline]
     fn to_option(&self) -> Option<&str> {
-        if self.is_empty() { None } else { Some(self) }
+        if self.is_empty() {
+            None
+        } else {
+            Some(self)
+        }
     }
 }
 
