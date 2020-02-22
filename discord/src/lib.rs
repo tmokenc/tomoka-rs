@@ -75,10 +75,10 @@ pub fn start() -> Result<()> {
     {
         let mut data = client.data.write();
         let config = read_config();
-        
+
         let db = DbInstance::new(&read_config().database.path, None)?;
         fetch_guild_config_from_db(&db)?;
-    
+
         data.insert::<CustomEventList>(custom_events_arc);
         data.insert::<DatabaseKey>(Arc::new(db));
         data.insert::<InforKey>(Information::init(&client.cache_and_http.http)?);
@@ -86,7 +86,7 @@ pub fn start() -> Result<()> {
         data.insert::<VoiceManager>(client.voice_manager.clone());
         data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
         data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain)?));
-    
+
         if has_external_command("ffmpeg") {
             data.insert::<MusicManager>(mutex_data(HashMap::new()));
         }

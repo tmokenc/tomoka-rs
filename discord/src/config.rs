@@ -5,10 +5,10 @@ use db::DbInstance;
 use lib_config::{Config as LibConfig, Environment, File, FileFormat};
 use magic::bytes_to_le_u64;
 use serde::{Deserialize, Serialize};
-use serenity::model::id::{UserId, EmojiId, GuildId};
+use serenity::model::id::{EmojiId, GuildId, UserId};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::collections::HashSet;
 use std::time::SystemTime;
 
 #[derive(Debug, Deserialize, Serialize)]

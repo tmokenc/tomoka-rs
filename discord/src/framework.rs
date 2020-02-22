@@ -1,21 +1,18 @@
 #![allow(unstable_name_collisions)]
 
 use serenity::builder::CreateEmbed;
-use serenity::{
-    client::Context,
-    framework::{
-        standard::{
-            help_commands, macros::help, Args, CommandGroup, CommandResult, Configuration,
-            HelpOptions,
-        },
-        Framework, StandardFramework,
+use serenity::client::Context;
+use serenity::framework::{
+    standard::{
+        help_commands, macros::help, Args, CommandGroup, CommandResult, Configuration, HelpOptions,
     },
-    model::{
-        channel::{Message, ReactionType},
-        event::Event,
-        id::{ChannelId, EmojiId, MessageId, UserId},
-        misc::EmojiIdentifier,
-    },
+    Framework, StandardFramework,
+};
+use serenity::model::{
+    channel::{Message, ReactionType},
+    event::Event,
+    id::{ChannelId, EmojiId, MessageId, UserId},
+    misc::EmojiIdentifier,
 };
 
 use crate::{

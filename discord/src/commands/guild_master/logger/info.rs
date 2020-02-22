@@ -25,7 +25,6 @@ fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
 
             match log_channel {
                 Some(channel) => embed.description(format!("The logger is on in <#{}>", channel)),
-
                 _ => embed.description("The logger is disabled"),
             };
 

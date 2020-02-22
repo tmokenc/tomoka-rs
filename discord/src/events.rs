@@ -8,7 +8,7 @@ use serenity::model::{
 };
 
 use crate::cache::MessageCache;
-use crate::storages::{CacheStorage};
+use crate::storages::CacheStorage;
 use crate::{types::CustomEvents, utils::*, Result};
 
 use chrono::Utc;

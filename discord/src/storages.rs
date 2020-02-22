@@ -8,9 +8,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use serenity::{
-    client::bridge::voice::ClientVoiceManager,
-    model::id::GuildId,
-    prelude::TypeMapKey,
+    client::bridge::voice::ClientVoiceManager, model::id::GuildId, prelude::TypeMapKey,
 };
 
 type MutexData<T> = Arc<Mutex<T>>;

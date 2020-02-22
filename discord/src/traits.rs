@@ -203,21 +203,26 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         .filter_map(|(k, v)| v.as_ref().map(|v| (k, v)))
         .map(|(key, v)| {
             let mut content = String::with_capacity(45 * v.len());
-            
+
             for tag in v {
                 let tmp = space_to_underscore(&tag);
-                write!(&mut content, "[{}](https://ehwiki.org/wiki/{}) | ", tag, tmp).unwrap();
+                write!(
+                    &mut content,
+                    "[{}](https://ehwiki.org/wiki/{}) | ",
+                    tag, tmp
+                )
+                .unwrap();
             }
-            
+
             content.truncate(content.len() - 3);
             (key, content)
         })
         .for_each(|(k, v)| {
             let mut splited = v.split_at_limit(1024, "|");
-            
+
             if let Some(data) = splited.next() {
                 embed.field(k, data, false);
-            
+
                 for later in splited {
                     embed.field('\u{200B}', later, false);
                 }
