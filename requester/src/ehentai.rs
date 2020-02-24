@@ -1,6 +1,7 @@
 use crate::Reqwest;
 use crate::Result;
 use magic::traits::MagicOption;
+use escaper::decode_html;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -24,8 +25,8 @@ pub struct Gmetadata {
     pub gid: u64,
     pub token: String,
     pub archiver_key: String,
-    pub title: String,
-    pub title_jpn: String,
+    pub title: Option<String>,
+    pub title_jpn: Option<String>,
     pub category: String,
     pub thumb: String,
     pub uploader: String,
@@ -121,14 +122,28 @@ impl EhentaiApi for Reqwest {
             "namespace": 1
         });
 
-        let data: GmetadataRoot = self
+        let mut data: Vec<Gmetadata> = self
             .post(API_ENDPOINT)
             .json(&body)
             .send()
             .await?
-            .json()
-            .await?;
-        Ok(data.gmetadata)
+            .json::<GmetadataRoot>()
+            .await?
+            .gmetadata;
+        
+        for mut d in data.iter_mut() {
+            d.title = d.title
+                .as_ref()
+                .filter(|v| !v.is_empty())
+                .and_then(|v| decode_html(v).ok());
+                
+            d.title_jpn = d.title_jpn
+                .as_ref()
+                .filter(|v| !v.is_empty())
+                .and_then(|v| decode_html(v).ok());
+        }
+        
+        Ok(data)
     }
 
     // async fn gtoken<T, P>(&self, id: u64, token: T, page: u16) -> Result<Vec<Gtoken>>
