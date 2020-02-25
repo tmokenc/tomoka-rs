@@ -27,6 +27,7 @@ use colorful::Colorful;
 use core::time::Duration;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
+use smallstr::SmallString;
 use log::{error, info};
 use magic::has_external_command;
 use magic::sauce::SauceNao;
@@ -133,7 +134,7 @@ fn normal_message(ctx: &mut Context, msg: &Message) {
             let config = crate::read_config();
 
             $(
-                if !config.disable_auto_cmd.contains(&stringify!($x).to_string()) {
+                if !config.disable_auto_cmd.contains(&SmallString::from(stringify!($x))) {
                     $x(&ctx, &msg);
                 }
             )*
@@ -181,6 +182,7 @@ fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .and_then(|guild| config.guilds.get(&guild))
         .and_then(|guild| guild.prefix.to_owned())
         .or_else(|| Some(config.prefix.to_owned()))
+        .map(|v| v.to_string())
 }
 
 fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
@@ -190,7 +192,7 @@ fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .masters
         .iter()
         .any(|&v| v == msg.author.id)
-        .then(|| config.master_prefix.to_owned())
+        .then(|| config.master_prefix.to_string())
 }
 
 fn mention_rgb(ctx: &Context, msg: &Message) {
@@ -311,7 +313,8 @@ fn rgb_tu(ctx: &Context, msg: &Message) {
             .content
             .to_lowercase()
             .split_whitespace()
-            .any(|v| rgb.tu.contains(&v.to_string()))
+            .map(SmallString::from)
+            .any(|v| rgb.tu.contains(&v))
     {
         let mut rng = SmallRng::from_entropy();
         let num = rng.gen::<f32>();

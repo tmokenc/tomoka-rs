@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
+use smallstr::SmallString;
 
 use magic::traits::MagicBool as _;
 
@@ -125,7 +126,7 @@ impl Information {
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct SimpleRole {
-    pub name: String,
+    pub name: SmallString<[u8; 32]>,
     pub id: RoleId,
     pub color: (u8, u8, u8),
 }
@@ -134,7 +135,7 @@ impl From<Role> for SimpleRole {
     fn from(role: Role) -> Self {
         Self {
             id: role.id,
-            name: role.name,
+            name: SmallString::from(role.name),
             color: role.colour.tuple(),
         }
     }
@@ -255,7 +256,7 @@ impl ToEmbed for RepeatWords {
 #[serde(default)]
 pub struct GuildConfig {
     pub id: GuildId,
-    pub prefix: Option<String>,
+    pub prefix: Option<SmallString<[u8; 8]>>,
     pub rgblized: Option<Vec<SimpleRole>>,
     pub logger: DiscordLogger,
     pub find_sauce: FindSauce,
@@ -285,13 +286,13 @@ impl GuildConfig {
             && !self.repeat_words.enable
     }
 
-    pub fn set_prefix<S: ToString>(&mut self, prefix: S) -> Option<String> {
+    pub fn set_prefix<S: ToString>(&mut self, prefix: S) -> Option<SmallString<[u8; 8]>> {
         let old = self.prefix.clone();
-        self.prefix = Some(prefix.to_string());
+        self.prefix = Some(SmallString::from(prefix.to_string()));
         old
     }
 
-    pub fn remove_prefix(&mut self) -> Option<String> {
+    pub fn remove_prefix(&mut self) -> Option<SmallString<[u8; 8]>> {
         let old = self.prefix.clone();
         self.prefix = None;
         old

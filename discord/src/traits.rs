@@ -187,7 +187,11 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         )
         .unwrap();
         write!(&mut info, "**Rating**: {} / 5", &self.rating).unwrap();
-
+        
+        if self.expunged {
+            info.push_str("\n>>>>> ***EXPUNGED*** <<<<<");
+        }
+        
         if !self.tags.is_empty() {
             info.push_str("\n\n***TAGs***");
         }

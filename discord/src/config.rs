@@ -10,10 +10,11 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use smallstr::SmallString;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {
-    pub path: String,
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -28,7 +29,7 @@ pub struct Color {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Rgb {
     pub evidence: PathBuf,
-    pub tu: Vec<String>,
+    pub tu: Vec<SmallString<[u8; 8]>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -55,25 +56,25 @@ pub struct SadKaede {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Time {
-    pub format: String,
+    pub format: SmallString<[u8; 24]>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub prefix: String,
-    pub master_prefix: String,
-    #[serde(default)]
-    pub masters: HashSet<UserId>,
+    pub prefix: SmallString<[u8; 8]>,
+    pub master_prefix: SmallString<[u8; 8]>,
     pub temp_dir: Option<PathBuf>,
     pub eliza_brain: String,
     pub max_cache_file_size: u32,
     pub image_search_depth: u16,
-    pub disable_auto_cmd: Vec<String>,
     pub radio_stations: Option<PathBuf>,
-    pub database: Database,
-    pub color: Color,
+    pub disable_auto_cmd: Vec<SmallString<[u8; 14]>>,
+    #[serde(default)]
+    pub masters: HashSet<UserId>,
     pub rgb: Option<Rgb>,
     pub tmq: Option<TouhouMusicQuest>,
+    pub database: Database,
+    pub color: Color,
     pub time: Time,
     pub sauce: Sauce,
     pub sadkaede: SadKaede,
