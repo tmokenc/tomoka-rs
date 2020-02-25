@@ -100,19 +100,34 @@ impl Category {
     }
 }
 
-type Tag = Option<Vec<String>>;
+type TagList = Option<Vec<Tag>>;
+
+#[derive(Default)]
+pub struct Tag(pub String);
+
+impl fmt::Display for Tag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Tag {
+    pub fn wiki_url(&self) -> String {
+        format!("https://ehwiki.org/wiki/{}", self.0.replace(' ', "_"))
+    }
+}
 
 #[derive(Default)]
 pub struct Tags {
-    pub artist: Tag,
-    pub characters: Tag,
-    pub group: Tag,
-    pub parody: Tag,
-    pub language: Tag,
-    pub male: Tag,
-    pub female: Tag,
-    pub misc: Tag,
-    pub reclass: Option<String>,
+    pub artist: TagList,
+    pub characters: TagList,
+    pub group: TagList,
+    pub parody: TagList,
+    pub language: TagList,
+    pub male: TagList,
+    pub female: TagList,
+    pub misc: TagList,
+    pub reclass: Option<Tag>,
 }
 
 impl Gmetadata {
@@ -135,7 +150,7 @@ impl Gmetadata {
             if tag.contains(':') {
                 let mut iter = tag.split(':');
                 let namespace = iter.next().unwrap();
-                let value = iter.next().unwrap().to_owned();
+                let value = Tag(iter.next().unwrap().to_owned());
 
                 match namespace {
                     "artist" => tags.artist.extend_inner(value),
@@ -153,7 +168,7 @@ impl Gmetadata {
                     _ => (),
                 }
             } else {
-                tags.misc.extend_inner(tag.to_owned());
+                tags.misc.extend_inner(Tag(tag.to_owned()));
             }
         }
 

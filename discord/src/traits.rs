@@ -1,13 +1,12 @@
 #![allow(unstable_name_collisions)]
 
 use crate::commands::prelude::now;
-use crate::utils::space_to_underscore;
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
-use std::fmt::Write as _;
+use std::fmt::{Write as _, Display};
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
 pub trait ToEmbed {
@@ -149,7 +148,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             _ => {}
         }
 
-        fn write_info(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
+        fn write_info<D: Display>(mut info: &mut String, key: &str, data: Option<Vec<D>>) {
             if let Some(value) = data {
                 write!(&mut info, "**{}:** ", key).unwrap();
                 for i in value {
@@ -160,12 +159,11 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             }
         };
 
-        fn write_info_normal(mut info: &mut String, key: &str, data: Option<Vec<String>>) {
+        fn write_info_normal<D: Display>(mut info: &mut String, key: &str, data: Option<Vec<D>>) {
             if let Some(value) = data {
                 write!(&mut info, "**{}:** ", key).unwrap();
                 for i in value {
-                    info.push_str(&i);
-                    info.push_str(" | ");
+                    write!(&mut info, "{} | ", i).unwrap();
                 }
                 info.truncate(info.len() - 3);
                 info.push('\n');
@@ -209,13 +207,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             let mut content = String::with_capacity(45 * v.len());
 
             for tag in v {
-                let tmp = space_to_underscore(&tag);
-                write!(
-                    &mut content,
-                    "[{}](https://ehwiki.org/wiki/{}) | ",
-                    tag, tmp
-                )
-                .unwrap();
+                write!(&mut content, "[{}]({}) | ", tag, tag.wiki_url()).unwrap();
             }
 
             content.truncate(content.len() - 3);

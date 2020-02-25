@@ -78,11 +78,6 @@ pub fn remove_emote<S: AsRef<str>>(msg: S) -> String {
     EMOTE_RE.replace_all(msg.as_ref(), "").to_string()
 }
 
-/// `from this` ~> `to_this`
-pub fn space_to_underscore<S: AsRef<str>>(content: S) -> String {
-    content.as_ref().split(' ').join('_')
-}
-
 pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
     lazy_static! {
         static ref KAEDE_REG: Regex =
