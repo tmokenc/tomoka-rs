@@ -4,6 +4,7 @@ use magic::traits::MagicOption;
 use escaper::decode_html;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::fmt;
 
 const API_ENDPOINT: &str = "https://api.e-hentai.org/api.php";
 
@@ -27,7 +28,7 @@ pub struct Gmetadata {
     pub archiver_key: String,
     pub title: Option<String>,
     pub title_jpn: Option<String>,
-    pub category: String,
+    pub category: Category,
     pub thumb: String,
     pub uploader: String,
     pub posted: String,
@@ -37,6 +38,66 @@ pub struct Gmetadata {
     pub rating: String,
     pub torrentcount: String,
     pub tags: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub enum Category {
+    Doujinshi,
+    Manga,
+    #[serde(rename = "Artist CG")]
+    ArtistCG,
+    #[serde(rename = "Game CG")]
+    GameCG,
+    Western,
+    #[serde(rename = "Image Set")]
+    ImageSet,
+    #[serde(rename = "Non-H")]
+    NonH,
+    Cosplay,
+    AsianPorn,
+}
+
+impl Default for Category {
+    fn default() -> Self {
+        Self::Doujinshi
+    }
+}
+
+impl fmt::Display for Category {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Category::*;
+        
+        match self {
+            Doujinshi => write!(f, "Doujinshi"),
+            Manga => write!(f, "Manga"),
+            ArtistCG => write!(f, "Artist CG"),
+            GameCG => write!(f, "Game CG"),
+            Western => write!(f, "Western"),
+            ImageSet => write!(f, "Image Set"),
+            NonH => write!(f, "Non-H"),
+            Cosplay => write!(f, "Cosplay"),
+            AsianPorn => write!(f, "Asian Porn"),
+        }
+    }
+}
+
+impl Category {
+    /// Based on the color of the tag on e-h
+    pub fn color(&self) -> u32 {
+        use Category::*;
+        
+        match self {
+            Doujinshi => 0xf66258,
+            Manga => 0xf5a718,
+            ArtistCG => 0xd4d503,
+            GameCG => 0x09b60e,
+            Western => 0x2cdb2b,
+            ImageSet => 0x4f5ce7,
+            NonH => 0x0cbacf,
+            Cosplay => 0x902ede,
+            AsianPorn => 0xf188ef,
+        }
+    }
 }
 
 type Tag = Option<Vec<String>>;
@@ -56,7 +117,15 @@ pub struct Tags {
 
 impl Gmetadata {
     pub fn is_sfw(&self) -> bool {
-        self.category.as_str() == "Non-H"
+        self.category == Category::NonH 
+    }
+    
+    pub fn url(&self) -> String {
+        format!("https://e-hentai.org/g/{}/{}", self.gid, self. token)
+    }
+    
+    pub fn x_url(&self) -> String {
+        format!("https://exhentai.org/g/{}/{}", self.gid, self. token)
     }
 
     pub fn parse_tags(&self) -> Tags {

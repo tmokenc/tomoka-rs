@@ -243,21 +243,10 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         embed.timestamp(time);
         embed.thumbnail(&self.thumb);
 
-        embed.color(match self.category.as_str() {
-            "Doujinshi" => 0xf66258,
-            "Manga" => 0xf5a718,
-            "Artist CG" => 0xd4d503,
-            "Game CG" => 0x09b60e,
-            "Western" => 0x2cdb2b,
-            "Image Set" => 0x4f5ce7,
-            "Non-H" => 0x0cbacf,
-            "Cosplay" => 0x902ede,
-            "Asian Porn" => 0xf188ef,
-            _ => 0x8a8a8a,
-        });
+        embed.color(self.category.color());
 
-        let url = format!("https://e-hentai.org/g/{}/{}", self.gid, self.token);
-
+        let url = self.url();
+        
         embed.url(&url);
         embed.footer(|f| {
             f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")
