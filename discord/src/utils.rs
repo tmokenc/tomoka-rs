@@ -5,7 +5,6 @@ use std::sync::Arc;
 use bytes::Bytes;
 use lazy_static::lazy_static;
 use log::error;
-use magic::traits::MagicIter;
 use magic::{number_to_le_bytes, number_to_rgb};
 use parking_lot::RwLock;
 use regex::Regex;
