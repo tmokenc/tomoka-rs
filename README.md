@@ -84,7 +84,7 @@ The structure of this codebase (kind of mess though) <br>
     - [x] Smogon strategy
     - [ ] Pokemon info
     - [ ] Ability
-    - [ ] Nature
+    - [x] Nature
     - [ ] Move
 - [ ] Utility
     - [ ] Time
