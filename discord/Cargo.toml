@@ -32,6 +32,7 @@ scraper = "0.11"
 # crossbeam-utils = "0.7.0"
 db = { path = "../db" }
 requester = { path = "../requester" }
+pokemon = { git = "https://gitlab.com/tmokenc/pokemon_rs" }
 magic = { path = "../magic", features = ["full"] }
 rand = { version = "0.7", features = ["small_rng"] }
 ctrlc = { version = "3.1", features = ["termination"] }

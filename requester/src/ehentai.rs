@@ -9,15 +9,13 @@ use std::fmt;
 const API_ENDPOINT: &str = "https://api.e-hentai.org/api.php";
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GmetadataRoot {
     pub gmetadata: Vec<Gmetadata>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GtokenRoot {
-    pub token_list: Vec<Gtoken>,
+    pub tokenlist: Vec<Gtoken>,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
