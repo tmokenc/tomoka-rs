@@ -4,7 +4,14 @@ use lazy_static::lazy_static;
 #[derive(Debug)]
 struct TicTacToe {
     board: [Option<Mark>; 9],
-    move_count: u8,
+    move_played: Vec<Coordinate>,
+}
+
+type Coordinate = (u8, u8);
+
+enum GameState {
+    Playing,
+    GameOver(GameOver),
 }
 
 #[derive(Debug)]
@@ -15,23 +22,21 @@ enum Mark {
 
 #[derive(Debug)]
 enum GameOver {
-    Hoa,
-    Player1(Coordinate),
-    PlayerTheSecond(Coordinate),
+    Draw,
+    X(Coordinate),
+    O(Coordinate),
 }
-
-type Coordinate = (u8, u8);
 
 impl TicTacToe {
     fn new_game(p1: UserId, p2: UserId) -> Self {
         Self { 
             board: [None; 9],
-            move_count: 0,
+            move_played: Vec::new(),
         }
     }
 
     fn whose_move(&self) -> Mark {
-        if self.move_count % 2 == 0 {
+        if self.move_played.len() % 2 == 0 {
             Mark::O
         } else {
             Mark::X
@@ -45,9 +50,9 @@ impl TicTacToe {
 
         if let (Some(x), Some(y)) = (x, y) {
             let x = match x {
-                1 | 97 => 1,
-                2 | 98 => 2,
-                3 | 99 => 3,
+                1 | 97 => 0,
+                2 | 98 => 1,
+                3 | 99 => 2,
                 _ => return None,
             };
 
@@ -55,7 +60,7 @@ impl TicTacToe {
                 return None
             }
 
-            Some((x, y))
+            Some((x, y-1))
         } else {
             None
         }
@@ -80,7 +85,7 @@ impl TicTacToe {
             }
         }
 
-        self.move_count += 1;
+        self.move_played.push(coor);
         true
     }
 

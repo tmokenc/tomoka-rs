@@ -1,10 +1,11 @@
-use serenity::framework::standard::macros::group;
 use magic::import_all;
+use serenity::framework::standard::macros::group;
 
 import_all! {
-    strategy
+    strategy,
+    nature,
 }
 
 #[group]
-#[commands(smogon_strategy)]
+#[commands(nature, smogon_strategy)]
 struct Pokemon;
