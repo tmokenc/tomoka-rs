@@ -19,6 +19,9 @@ lovely = 16524136 # 0xfc2368
 
 [time]
 format = "%I:%M %p %d/%m/%Y"
+zones = [
+    { name = "Pacific", zone = "Pacific" }
+]
 
 [sauce]
 wait_duration = 30

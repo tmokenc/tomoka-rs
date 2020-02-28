@@ -3,17 +3,31 @@ use pokemon_core::{Flavor, Nature, Stat};
 use std::fmt::Write;
 use std::str::FromStr;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Filter {
     natures: Vec<Nature>,
     data: Vec<FilterData>,
 }
 
+#[derive(Debug)]
 pub enum FilterData {
     Increase(Stat),
     Decrease(Stat),
     Favorite(Flavor),
     Disliked(Flavor),
+}
+
+impl Filter {
+    pub fn can_pass(&self, nature: Nature) -> bool {
+        (self.natures.is_empty() && self.data.is_empty())
+        || !self.natures.is_empty() && self.natures.iter().any(|&v| v == nature)
+        || !self.data.is_empty() && self.data.iter().all(|v| match v {
+            FilterData::Increase(x) => nature.increase() == *x,
+            FilterData::Decrease(x) => nature.decrease() == *x,
+            FilterData::Favorite(x) => nature.favorite() == *x,
+            FilterData::Disliked(x) => nature.disliked() == *x,
+        })
+    }
 }
 
 impl From<&str> for Filter {
@@ -90,9 +104,9 @@ fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest();
     let filter = Filter::from(args);
     let mut data = String::new();
-
+    
     Nature::iter()
-        .filter(|&v| is_in_filter(v, &filter))
+        .filter(|&v| filter.can_pass(v))
         .for_each(|v| write_nature(&mut data, v));
 
     if data.is_empty() {
@@ -102,17 +116,6 @@ fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id.say(&ctx, data)?;
 
     Ok(())
-}
-
-fn is_in_filter(nature: Nature, filter: &Filter) -> bool {
-    (filter.natures.is_empty() && filter.data.is_empty())
-        || filter.natures.iter().any(|&v| v == nature)
-        || filter.data.iter().all(|v| match v {
-            FilterData::Increase(x) => nature.increase() == *x,
-            FilterData::Decrease(x) => nature.decrease() == *x,
-            FilterData::Favorite(x) => nature.favorite() == *x,
-            FilterData::Disliked(x) => nature.disliked() == *x,
-        })
 }
 
 fn write_nature(f: &mut String, nature: Nature) {

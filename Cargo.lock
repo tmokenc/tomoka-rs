@@ -2096,10 +2096,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pokemon"
-version = "0.1.0"
-
-[[package]]
 name = "pokemon_core"
 version = "0.1.0"
 source = "git+https://gitlab.com/tmokenc/pokemon_rs#b482f2b2c508707d5ce24b1cc0da50d0bc7d92be"

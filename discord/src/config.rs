@@ -6,11 +6,11 @@ use lib_config::{Config as LibConfig, Environment, File, FileFormat};
 use magic::bytes_to_le_u64;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{EmojiId, GuildId, UserId};
+use smallstr::SmallString;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use smallstr::SmallString;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {
@@ -57,6 +57,13 @@ pub struct SadKaede {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Time {
     pub format: SmallString<[u8; 24]>,
+    pub zones: Vec<TimeZone>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TimeZone {
+    pub name: Option<SmallString<[u8; 32]>>,
+    pub zone: SmallString<[u8; 32]>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
