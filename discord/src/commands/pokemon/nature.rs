@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use pokemon_core::{Nature, Stat, Flavor};
+use pokemon_core::{Flavor, Nature, Stat};
 use std::fmt::Write;
 use std::str::FromStr;
 
@@ -21,78 +21,70 @@ pub enum FilterData {
 fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest().split_whitespace();
     let mut filter = Filter::default();
-    
+
     for arg in args {
         if let Ok(nature) = Nature::from_str(&arg) {
             if !filter.natures.contains(&nature) {
                 filter.natures.push(nature);
             }
-            
-            continue
+
+            continue;
         }
-        
+
         let mut arg = arg;
         let mut plus = true;
-        
+
         if arg.starts_with('-') {
             arg = &arg[1..];
             plus = false;
         }
-        
+
         if arg.starts_with('+') {
             arg = &arg[1..];
         }
-        
+
         if let Ok(stat) = Stat::from_str(&arg) {
-            let has = filter.data.iter().any(|v| {
-                match v {
-                    FilterData::Increase(x)
-                    | FilterData::Decrease(x) => stat == *x,
-                    _ => false,
-                }
+            let has = filter.data.iter().any(|v| match v {
+                FilterData::Increase(x) | FilterData::Decrease(x) => stat == *x,
+                _ => false,
             });
-            
+
             if !has {
                 let data = match plus {
                     true => FilterData::Increase(stat),
                     false => FilterData::Decrease(stat),
                 };
-                
+
                 filter.data.push(data);
             }
-            
-            continue
+
+            continue;
         }
-        
+
         if let Ok(flavor) = Flavor::from_str(&arg) {
-            let has = filter.data.iter().any(|v| {
-                match v {
-                    FilterData::Favorite(x)
-                    | FilterData::Disliked(x) => flavor == *x,
-                    _ => false,
-                }
+            let has = filter.data.iter().any(|v| match v {
+                FilterData::Favorite(x) | FilterData::Disliked(x) => flavor == *x,
+                _ => false,
             });
-            
+
             if !has {
                 let data = if plus {
                     FilterData::Favorite(flavor)
                 } else {
                     FilterData::Disliked(flavor)
                 };
-                
+
                 filter.data.push(data);
             }
-            
-            continue
+
+            continue;
         }
     }
-        
+
     let mut data = String::new();
 
     for nature in Nature::iter() {
-        if (filter.natures.is_empty() && filter.data.is_empty())
-        || is_in_filter(nature, &filter) 
-        {
+        if is_in_filter(nature, &filter) {
             write_nature(&mut data, nature);
         }
     }
@@ -103,15 +95,14 @@ fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 fn is_in_filter(nature: Nature, filter: &Filter) -> bool {
-    filter.natures.iter().any(|&v| v == nature)
-    || filter.data.iter().any(|v| {
-        match v {
+    (filter.natures.is_empty() && filter.data.is_empty())
+        || filter.natures.iter().any(|&v| v == nature)
+        || filter.data.iter().all(|v| match v {
             FilterData::Increase(x) => nature.increase() == *x,
             FilterData::Decrease(x) => nature.decrease() == *x,
             FilterData::Favorite(x) => nature.favorite() == *x,
             FilterData::Disliked(x) => nature.disliked() == *x,
-        }
-    })
+        })
 }
 
 fn write_nature(f: &mut String, nature: Nature) {
