@@ -16,77 +16,87 @@ pub enum FilterData {
     Disliked(Flavor),
 }
 
+impl From<&str> for Filter {
+    fn from(s: &str) -> Self {
+        let mut filter = Self::default();
+        let args = s.split_whitespace();
+
+        for arg in args {
+            if let Ok(nature) = Nature::from_str(&arg) {
+                if !filter.natures.contains(&nature) {
+                    filter.natures.push(nature);
+                }
+
+                continue;
+            }
+
+            let mut arg = arg;
+            let mut plus = true;
+
+            if arg.starts_with('-') {
+                arg = &arg[1..];
+                plus = false;
+            }
+
+            if arg.starts_with('+') {
+                arg = &arg[1..];
+            }
+
+            if let Ok(stat) = Stat::from_str(&arg) {
+                let has = filter.data.iter().any(|v| match v {
+                    FilterData::Increase(x) | FilterData::Decrease(x) => stat == *x,
+                    _ => false,
+                });
+
+                if !has {
+                    let data = match plus {
+                        true => FilterData::Increase(stat),
+                        false => FilterData::Decrease(stat),
+                    };
+
+                    filter.data.push(data);
+                }
+
+                continue;
+            }
+
+            if let Ok(flavor) = Flavor::from_str(&arg) {
+                let has = filter.data.iter().any(|v| match v {
+                    FilterData::Favorite(x) | FilterData::Disliked(x) => flavor == *x,
+                    _ => false,
+                });
+
+                if !has {
+                    let data = if plus {
+                        FilterData::Favorite(flavor)
+                    } else {
+                        FilterData::Disliked(flavor)
+                    };
+
+                    filter.data.push(data);
+                }
+
+                continue;
+            }
+        }
+
+        filter
+    }
+}
+
 #[command]
 /// Get a pokemon nature information or get all of them
 fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let args = args.rest().split_whitespace();
-    let mut filter = Filter::default();
-
-    for arg in args {
-        if let Ok(nature) = Nature::from_str(&arg) {
-            if !filter.natures.contains(&nature) {
-                filter.natures.push(nature);
-            }
-
-            continue;
-        }
-
-        let mut arg = arg;
-        let mut plus = true;
-
-        if arg.starts_with('-') {
-            arg = &arg[1..];
-            plus = false;
-        }
-
-        if arg.starts_with('+') {
-            arg = &arg[1..];
-        }
-
-        if let Ok(stat) = Stat::from_str(&arg) {
-            let has = filter.data.iter().any(|v| match v {
-                FilterData::Increase(x) | FilterData::Decrease(x) => stat == *x,
-                _ => false,
-            });
-
-            if !has {
-                let data = match plus {
-                    true => FilterData::Increase(stat),
-                    false => FilterData::Decrease(stat),
-                };
-
-                filter.data.push(data);
-            }
-
-            continue;
-        }
-
-        if let Ok(flavor) = Flavor::from_str(&arg) {
-            let has = filter.data.iter().any(|v| match v {
-                FilterData::Favorite(x) | FilterData::Disliked(x) => flavor == *x,
-                _ => false,
-            });
-
-            if !has {
-                let data = if plus {
-                    FilterData::Favorite(flavor)
-                } else {
-                    FilterData::Disliked(flavor)
-                };
-
-                filter.data.push(data);
-            }
-
-            continue;
-        }
-    }
-
+    let args = args.rest();
+    let filter = Filter::from(args);
     let mut data = String::new();
 
-    for nature in Nature::iter() {
-        if is_in_filter(nature, &filter) {
-            write_nature(&mut data, nature);
-        }
+    Nature::iter()
+        .filter(|&v| is_in_filter(v, &filter))
+        .for_each(|v| write_nature(&mut data, v));
+
+    if data.is_empty() {
+        data = format!("Cannot find any nature with `{}`", args);
     }
 
     msg.channel_id.say(&ctx, data)?;
