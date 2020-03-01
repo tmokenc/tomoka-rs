@@ -20,7 +20,7 @@ pub enum FilterData {
 impl Filter {
     pub fn can_pass(&self, nature: Nature) -> bool {
         (self.natures.is_empty() && self.data.is_empty())
-        || !self.natures.is_empty() && self.natures.iter().any(|&v| v == nature)
+        || self.natures.iter().any(|&v| v == nature)
         || !self.data.is_empty() && self.data.iter().all(|v| match v {
             FilterData::Increase(x) => nature.increase() == *x,
             FilterData::Decrease(x) => nature.decrease() == *x,

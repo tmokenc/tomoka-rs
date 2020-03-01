@@ -104,8 +104,11 @@ impl EventHandler for Handler {
 
         let mut fields = vec![("Updated message", content.clone(), false)];
         let mut to_say = format!(
-            "A message by **{}**#{:04} on channel <#{}> has been edited.",
-            author.name, author.discriminator, channel_id.0,
+            "A [message]({}) by **{}**#{:04} on channel <#{}> has been edited.",
+            format_args!("https://discordapp.com/channels/{}/{}/{}", guild_id, channel_id,event.id),
+            author.name, 
+            author.discriminator, 
+            channel_id.0,
         );
 
         let cache = get_data::<CacheStorage>(&ctx).unwrap();
@@ -115,18 +118,31 @@ impl EventHandler for Handler {
             }
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
-
-        send(&ctx.http, log_channel, to_say, |embed| {
+        
+        log_channel.send_message(&ctx, |m| m.embed(|embed| {
+            embed.description(to_say);
             embed.timestamp(now());
             embed.fields(fields);
-
+            
             {
                 let config = crate::read_config();
                 embed.color(config.color.message_update);
             }
-
+            
             embed
-        });
+        })).ok();
+
+        // send(&ctx.http, log_channel, to_say, |embed| {
+        //     embed.timestamp(now());
+        //     embed.fields(fields);
+
+        //     {
+        //         let config = crate::read_config();
+        //         embed.color(config.color.message_update);
+        //     }
+
+        //     embed
+        // });
     }
 
     fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {
