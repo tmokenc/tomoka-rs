@@ -1,7 +1,7 @@
 use crate::Reqwest;
 use crate::Result;
-use magic::traits::MagicOption;
 use escaper::decode_html;
+use magic::traits::MagicOption;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt;
@@ -64,7 +64,7 @@ impl Default for Category {
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Category::*;
-        
+
         match self {
             Doujinshi => write!(f, "Doujinshi"),
             Manga => write!(f, "Manga"),
@@ -83,7 +83,7 @@ impl Category {
     /// Based on the color of the tag on e-h
     pub fn color(&self) -> u32 {
         use Category::*;
-        
+
         match self {
             Doujinshi => 0xf66258,
             Manga => 0xf5a718,
@@ -130,15 +130,15 @@ pub struct Tags {
 
 impl Gmetadata {
     pub fn is_sfw(&self) -> bool {
-        self.category == Category::NonH 
+        self.category == Category::NonH
     }
-    
+
     pub fn url(&self) -> String {
-        format!("https://e-hentai.org/g/{}/{}", self.gid, self. token)
+        format!("https://e-hentai.org/g/{}/{}", self.gid, self.token)
     }
-    
+
     pub fn x_url(&self) -> String {
-        format!("https://exhentai.org/g/{}/{}", self.gid, self. token)
+        format!("https://exhentai.org/g/{}/{}", self.gid, self.token)
     }
 
     pub fn parse_tags(&self) -> Tags {
@@ -212,19 +212,21 @@ impl EhentaiApi for Reqwest {
             .json::<GmetadataRoot>()
             .await?
             .gmetadata;
-        
+
         for mut d in data.iter_mut() {
-            d.title = d.title
+            d.title = d
+                .title
                 .as_ref()
                 .filter(|v| !v.is_empty())
                 .and_then(|v| decode_html(v).ok());
-                
-            d.title_jpn = d.title_jpn
+
+            d.title_jpn = d
+                .title_jpn
                 .as_ref()
                 .filter(|v| !v.is_empty())
                 .and_then(|v| decode_html(v).ok());
         }
-        
+
         Ok(data)
     }
 

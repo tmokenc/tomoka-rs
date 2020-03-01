@@ -12,11 +12,11 @@ use serenity::http::client::Http;
 use serenity::model::event::Event;
 use serenity::model::guild::Role;
 use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
+use smallstr::SmallString;
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use smallstr::SmallString;
 
 use magic::traits::MagicBool as _;
 

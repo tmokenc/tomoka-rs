@@ -74,6 +74,7 @@ pub struct Config {
     pub eliza_brain: String,
     pub max_cache_file_size: u32,
     pub image_search_depth: u16,
+    pub respect_emoji: Option<EmojiId>,
     pub radio_stations: Option<PathBuf>,
     pub disable_auto_cmd: Vec<SmallString<[u8; 14]>>,
     #[serde(default)]

@@ -6,7 +6,7 @@ use magic::report_bytes;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
-use std::fmt::{Write as _, Display};
+use std::fmt::{Display, Write as _};
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
 pub trait ToEmbed {
@@ -185,11 +185,11 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         )
         .unwrap();
         write!(&mut info, "**Rating**: {} / 5", &self.rating).unwrap();
-        
+
         if self.expunged {
             info.push_str("\n>>>>> ***EXPUNGED*** <<<<<");
         }
-        
+
         if !self.tags.is_empty() {
             info.push_str("\n\n***TAGs***");
         }
@@ -238,7 +238,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
         embed.color(self.category.color());
 
         let url = self.url();
-        
+
         embed.url(&url);
         embed.footer(|f| {
             f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")

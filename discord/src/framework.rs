@@ -27,13 +27,13 @@ use colorful::Colorful;
 use core::time::Duration;
 use dashmap::DashMap;
 use lazy_static::lazy_static;
-use smallstr::SmallString;
 use log::{error, info};
 use magic::has_external_command;
 use magic::sauce::SauceNao;
 use parking_lot::Mutex;
 use requester::ehentai::{EhentaiApi, Gmetadata};
 use scheduled_thread_pool::JobHandle;
+use smallstr::SmallString;
 use std::collections::{HashMap, HashSet};
 
 use magic::traits::MagicBool as _;
@@ -264,18 +264,34 @@ fn respect(ctx: &Context, msg: &Message) {
         return;
     }
 
-    let mut message = format!("**{}** has paid their respects", msg.author.name);
+    let mut content = format!("**{}** has paid their respects", msg.author.name);
 
     if msg.content.len() > 2 {
-        let content = remove_emote(&msg.content[2..]);
-        if !content.is_empty() {
-            write!(&mut message, " for **{}**", content.trim()).unwrap();
+        let arg = remove_emote(&msg.content[2..]);
+        if !arg.is_empty() {
+            write!(&mut content, " for **{}**", arg.trim()).unwrap();
         }
     }
 
-    message.push('.');
+    content.push('.');
 
-    if let Err(why) = msg.channel_id.say(ctx, message) {
+    let emoji = crate::read_config().respect_emoji.map_or_else(
+        || ReactionType::from('🇫'),
+        |id| {
+            ReactionType::from(EmojiIdentifier {
+                id,
+                name: "f_".to_string(),
+            })
+        },
+    );
+
+    let send = msg.channel_id.send_message(ctx, |message| {
+        message.content(content);
+        message.reactions(Some(emoji));
+        message
+    });
+
+    if let Err(why) = send {
         error!("Cannot pay respect:\n{:#?}", why);
     }
 }

@@ -11,7 +11,6 @@ use crate::cache::MessageCache;
 use crate::storages::CacheStorage;
 use crate::{types::CustomEvents, utils::*, Result};
 
-use chrono::Utc;
 use colorful::RGB;
 use colorful::{Color, Colorful};
 use magic::number_to_rgb;
@@ -105,9 +104,12 @@ impl EventHandler for Handler {
         let mut fields = vec![("Updated message", content.clone(), false)];
         let mut to_say = format!(
             "A [message]({}) by **{}**#{:04} on channel <#{}> has been edited.",
-            format_args!("https://discordapp.com/channels/{}/{}/{}", guild_id, channel_id,event.id),
-            author.name, 
-            author.discriminator, 
+            format_args!(
+                "https://discordapp.com/channels/{}/{}/{}",
+                guild_id, channel_id, event.id
+            ),
+            author.name,
+            author.discriminator,
             channel_id.0,
         );
 
@@ -118,19 +120,20 @@ impl EventHandler for Handler {
             }
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
-        
-        let send = log_channel.send_message(&ctx, |m| m.embed(|embed| {
-            embed.description(to_say);
-            embed.timestamp(now());
-            embed.fields(fields);
-            
-            {
-                let config = crate::read_config();
-                embed.color(config.color.message_update);
-            }
-            
-            embed
-        }));
+
+        let send = log_channel.send_message(&ctx, |m| {
+            m.embed(|embed| {
+                embed.description(to_say);
+                embed.timestamp(now());
+                embed.fields(fields);
+                embed.color({
+                    let config = crate::read_config();
+                    config.color.message_update
+                });
+
+                embed
+            })
+        });
 
         if let Err(why) = send {
             error!("Cannot send the message update log\n{:#?}", why);
@@ -282,24 +285,10 @@ fn _process_deleted(
     };
 
     log_channel.send_message(&ctx, |message| {
-        msg.attachments
-            .iter()
-            .filter_map(|v| v.cached.as_ref())
-            .for_each(|v| { message.add_file(v); });
-            
-        let color = {
-            let config = crate::read_config();
-            config.color.message_delete
-        };
-
+        let mut fields = Vec::new();
+           
         let typed = if is_empty_content { "file" } else {
-            message.embed(|embed| {
-                embed
-                    .color(color)
-                    .timestamp(Utc::now().to_rfc3339())
-                    .field("Deleted message", msg.content.to_owned(), false)
-            });
-    
+            fields.push(("Deleted message", msg.content.to_owned(), false));
             "message"
         };
 
@@ -311,8 +300,29 @@ fn _process_deleted(
             discriminator,
             channel_id.0
         );
-
-        message.content(content)
+        
+        message.embed(|embed| {
+            embed.description(content);
+            embed.timestamp(now());
+            embed.fields(fields);
+            embed.color({
+                let config = crate::read_config();
+                config.color.message_delete
+            });
+            
+            embed
+        });
+        
+        message
+    })?;
+    
+    log_channel.send_message(ctx, |message| {
+        msg.attachments
+            .iter()
+            .filter_map(|v| v.cached.as_ref())
+            .for_each(|v| { message.add_file(v); });
+        
+        message
     })?;
 
     Ok(())
