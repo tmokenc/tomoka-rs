@@ -119,7 +119,7 @@ impl EventHandler for Handler {
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
         
-        log_channel.send_message(&ctx, |m| m.embed(|embed| {
+        let send = log_channel.send_message(&ctx, |m| m.embed(|embed| {
             embed.description(to_say);
             embed.timestamp(now());
             embed.fields(fields);
@@ -130,19 +130,11 @@ impl EventHandler for Handler {
             }
             
             embed
-        })).ok();
+        }));
 
-        // send(&ctx.http, log_channel, to_say, |embed| {
-        //     embed.timestamp(now());
-        //     embed.fields(fields);
-
-        //     {
-        //         let config = crate::read_config();
-        //         embed.color(config.color.message_update);
-        //     }
-
-        //     embed
-        // });
+        if let Err(why) = send {
+            error!("Cannot send the message update log\n{:#?}", why);
+        }
     }
 
     fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {

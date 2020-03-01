@@ -119,23 +119,6 @@ pub fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
         .and_then(|v| get_user_voice_channel(ctx, guild_id, v.user_id))
 }
 
-pub fn send<C: Into<ChannelId>, S: ToString, F>(
-    http: impl AsRef<Http>,
-    channel: C,
-    content: S,
-    embed_f: F,
-) where
-    F: FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
-{
-    let message = channel
-        .into()
-        .send_message(http, |m| m.content(content.to_string()).embed(embed_f));
-
-    if let Err(why) = message {
-        error!("Error while sending message...\n{:#?}", why);
-    };
-}
-
 pub fn send_embed<C, F>(http: impl AsRef<Http>, channel: C, embed_f: F)
 where
     C: Into<ChannelId>,
