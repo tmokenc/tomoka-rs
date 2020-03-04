@@ -1,7 +1,8 @@
-use serenity::framework::standard::macros::group;
 use magic::import_all;
+use serenity::framework::standard::macros::group;
 
 import_all! {
+    say_in,
     set_cache_size,
     clear_cache,
     system_info,
@@ -13,5 +14,14 @@ import_all! {
 
 #[group]
 #[owners_only]
-#[commands(set_cache_size, clear_cache, system_info, save_config, reload, restart, shutdown)]
+#[commands(
+    say_in,
+    set_cache_size,
+    clear_cache,
+    system_info,
+    save_config,
+    reload,
+    restart,
+    shutdown
+)]
 struct Master;
