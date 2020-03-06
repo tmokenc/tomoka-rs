@@ -13,4 +13,5 @@ pub_import_all! {
     pokemon,
     rgb,
     utility,
+    corona,
 }

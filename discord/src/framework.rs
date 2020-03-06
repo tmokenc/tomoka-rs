@@ -72,6 +72,7 @@ pub fn get_framework() -> impl Framework {
         .group(&MASTER_GROUP)
         .group(&GUILDMASTER_GROUP)
         .group(&ADMINISTRATION_GROUP)
+        .group(&CORONA_GROUP)
         .group(&GENERAL_GROUP)
         .group(&GAME_GROUP)
         .group(&POKEMON_GROUP)
