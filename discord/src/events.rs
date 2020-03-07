@@ -162,7 +162,8 @@ impl EventHandler for Handler {
             ready.private_channels.len(),
         );
 
-        let activity = Activity::listening(&crate::read_config().prefix);
+        // let activity = Activity::listening(&crate::read_config().prefix);
+        let activity = Activity::listening("tomo>leaderboard");
         let status = OnlineStatus::DoNotDisturb;
 
         ctx.set_presence(Some(activity), status);

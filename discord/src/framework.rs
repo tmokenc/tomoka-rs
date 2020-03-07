@@ -278,12 +278,10 @@ fn respect(ctx: &Context, msg: &Message) {
 
     let emoji = match crate::read_config().respect_emoji {
         None => ReactionType::from('🇫'),
-        Some(id) => {
-            ReactionType::from(EmojiIdentifier {
-                id,
-                name: "f_".to_string(),
-            })
-        },
+        Some(id) => ReactionType::from(EmojiIdentifier {
+            id,
+            name: "f_".to_string(),
+        }),
     };
 
     let send = msg.channel_id.send_message(ctx, |message| {

@@ -1,6 +1,6 @@
 use crate::Reqwest;
 use crate::Result;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 
@@ -24,24 +24,16 @@ pub struct DumpBasics {
     pub items: Vec<Item>,
 }
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Pokemon {
-    
-}
+pub struct Pokemon {}
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Format {
-    
-}
+pub struct Format {}
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Nature {
-    
-}
+pub struct Nature {}
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Ability {
-    
-}
+pub struct Ability {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Move {
@@ -78,9 +70,7 @@ pub struct Item {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Generation {
-    
-}
+pub enum Generation {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SmogonDumpPokemon {
@@ -211,18 +201,31 @@ pub trait SmogonRequester {
         pokemon: &str,
         version: V,
     ) -> DumpPokemonResult;
-    
+
     /// Simple route for ability and move
-    async fn dump_common<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(&self, url: &str, data: &str, version: V) -> Result<SmogonCommon>;
-    
-    async fn dump_ability<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(&self, data: &str, version: V) -> Result<SmogonCommon> {
-        self.dump_common(ABILITY_ENDPOINT, data, version).await       
+    async fn dump_common<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(
+        &self,
+        url: &str,
+        data: &str,
+        version: V,
+    ) -> Result<SmogonCommon>;
+
+    async fn dump_ability<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(
+        &self,
+        data: &str,
+        version: V,
+    ) -> Result<SmogonCommon> {
+        self.dump_common(ABILITY_ENDPOINT, data, version).await
     }
-    
-    async fn dump_move<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(&self, data: &str, version: V) -> Result<SmogonCommon> {
+
+    async fn dump_move<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(
+        &self,
+        data: &str,
+        version: V,
+    ) -> Result<SmogonCommon> {
         self.dump_common(MOVE_ENDPOINT, data, version).await
     }
-    
+
     async fn strategy<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(
         &self,
         pokemon: &str,
@@ -236,11 +239,15 @@ pub trait SmogonRequester {
 #[async_trait]
 impl SmogonRequester for Reqwest {
     async fn dump_basics(&self, version: &str) -> Result<DumpBasics> {
-        let params = json!({
-            "gen": version
-        });
+        let params = json!({ "gen": version });
 
-        let res = self.post(BASICS_ENDPOINT).json(&params).send().await?.json().await?;
+        let res = self
+            .post(BASICS_ENDPOINT)
+            .json(&params)
+            .send()
+            .await?
+            .json()
+            .await?;
         Ok(res)
     }
 
@@ -265,14 +272,19 @@ impl SmogonRequester for Reqwest {
             .await?;
         Ok(res)
     }
-    
-    async fn dump_common<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(&self, url: &str, data: &str, version: V) -> Result<SmogonCommon> {
+
+    async fn dump_common<'a, V: Into<Option<&'a str>> + Send + 'async_trait>(
+        &self,
+        url: &str,
+        data: &str,
+        version: V,
+    ) -> Result<SmogonCommon> {
         let version = version.into().unwrap_or("ss");
         let params = json!({
             "gen": version,
             "alias": data
         });
-    
+
         let res = self.post(url).json(&params).send().await?.json().await?;
         Ok(res)
     }
