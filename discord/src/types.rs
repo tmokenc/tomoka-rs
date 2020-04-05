@@ -16,78 +16,8 @@ use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use tokio::sync::{Mutex, RwLock};
 
 use magic::traits::MagicBool as _;
-
-type EventHandler = dyn Fn(&Context, &Event) + Sync + Send;
-pub struct CustomEvents {
-    events: RwLock<HashMap<String, Box<EventHandler>>>,
-    pending: Mutex<Vec<Action>>,
-}
-
-enum Action {
-    Add(String, Box<EventHandler>),
-    Done(String),
-}
-
-impl CustomEvents {
-    pub fn new() -> Self {
-        Self {
-            events: RwLock::new(HashMap::new()),
-            pending: Mutex::new(Vec::new()),
-        }
-    }
-
-    //     /// There is a rare case where `add` and `done` method run at the same time
-    //     /// if the `done` method is running, then the `add` method will not be added
-    //     /// until being called again. That's why wait a few ms and check it again
-    //     /// will help us avoid this scenario.
-    //     /// 50ms would do unless an even rarer case happens where executing **a lot** of `done`
-    //     #[rustfmt::skip]
-    //     pub fn add<S: ToString, F>(&self, id: S, f: F)
-    //     where
-    //         F: Fn(&Context, &Event) + Sync + Send + 'static,
-    //     {
-    //         let id = id.to_string();
-    //         let f = Box::new(f);
-    //
-    //         match self.events.try_write_for(Duration::from_millis(50)) {
-    //             Some(mut events) => { events.insert(id, f); }
-    //             None => self.pending.lock().push(Action::Add(id, f)),
-    //         }
-    //     }
-    //
-    //     /// Do not need the extra work like `add` method since functions inside
-    //     /// the events map are executing fairly often.
-    //     #[rustfmt::skip]
-    //     pub fn done<S: AsRef<str>>(&self, id: S) {
-    //         let id = id.as_ref();
-    //
-    //         match self.events.try_write() {
-    //             Some(mut events) => { events.remove(id); }
-    //             None => self.pending.lock().push(Action::Done(id.to_string())),
-    //         };
-    //     }
-    //
-    //     pub fn execute(&self, ctx: &Context, ev: &Event) {
-    //         for f in self.events.read().values() {
-    //             f(&ctx, &ev);
-    //         }
-    //
-    //         if let Some(mut events) = self.events.try_write() {
-    //             let mut pending = self.pending.lock();
-    //             let actions = pending.drain(..);
-    //
-    //             for action in actions {
-    //                 match action {
-    //                     Action::Add(name, f) => events.insert(name, f),
-    //                     Action::Done(name) => events.remove(&name),
-    //                 };
-    //             }
-    //         }
-    //     }
-}
 
 pub struct Information {
     pub booted_on: DateTime<Utc>,

@@ -11,11 +11,6 @@ use tokio::sync::Mutex;
 
 type MutexData<T> = Arc<Mutex<T>>;
 
-pub struct CustomEventList;
-impl TypeMapKey for CustomEventList {
-    type Value = Arc<CustomEvents>;
-}
-
 pub struct InforKey;
 impl TypeMapKey for InforKey {
     type Value = Information;

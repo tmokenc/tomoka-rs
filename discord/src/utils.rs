@@ -34,16 +34,14 @@ pub type Color = (u8, u8, u8);
 
 /// Check if a (guild) channel is nsfw or not
 pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
-    let guild = channel
+    let channel = channel
         .into()
         .to_channel(ctx)
-        .await
-        .ok()
-        .and_then(|v| v.guild());
+        .await;
 
-    match guild {
-        Some(v) => v.read().await.nsfw,
-        None => false,
+    match channel {
+        Ok(v) => v.is_nsfw().await,
+        Err(_) => false,
     }
 }
 

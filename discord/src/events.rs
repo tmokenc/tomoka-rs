@@ -10,34 +10,12 @@ use serenity::model::{
 
 use crate::cache::MessageCache;
 use crate::storages::CacheStorage;
-use crate::{types::CustomEvents, utils::*, Result};
+use crate::{utils::*, Result};
 
 use colorful::RGB;
 use colorful::{Color, Colorful};
 use magic::number_to_rgb;
 use std::sync::Arc;
-
-pub struct RawHandler {
-    pub custom_events: Arc<CustomEvents>,
-}
-
-impl RawHandler {
-    pub fn new() -> Self {
-        Self {
-            custom_events: Arc::new(CustomEvents::new()),
-        }
-    }
-}
-
-// impl RawEventHandler for RawHandler {
-//     fn raw_event(&self, ctx: Context, ev: Event) {
-//         if let Event::Unknown(e) = &ev {
-//             dbg!(e);
-//         }
-//
-//         self.custom_events.execute(&ctx, &ev);
-//     }
-// }
 
 pub struct Handler;
 impl Handler {

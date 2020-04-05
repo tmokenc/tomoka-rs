@@ -810,16 +810,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a4ba686dff9fa4c1c9636ce1010b0cf98ceb421361b0bb3d6faeec43bd217a7"
-dependencies = [
- "nix",
- "winapi 0.3.8",
-]
-
-[[package]]
 name = "dashmap"
 version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1753,15 +1743,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mp3-duration"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda61ba6c266cd2c7bfcea9a2719837dc062869e24e101a93c1b0873d17c2d35"
-dependencies = [
- "failure",
-]
-
-[[package]]
 name = "native-tls"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1795,19 +1776,6 @@ name = "new_debug_unreachable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
-
-[[package]]
-name = "nix"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50e4785f2c3b7589a0d0c1dd60285e1188adac4006e8abd6dd578e1567027363"
-dependencies = [
- "bitflags",
- "cc",
- "cfg-if",
- "libc",
- "void",
-]
 
 [[package]]
 name = "nodrop"
@@ -3172,18 +3140,15 @@ dependencies = [
  "colorful",
  "config",
  "crappy_magic",
- "ctrlc",
  "dashmap",
  "db",
  "dotenv",
  "eliza",
  "env_logger",
- "failure",
  "futures",
  "humantime",
  "lazy_static",
  "log",
- "mp3-duration",
  "pokemon_core",
  "rand 0.7.3",
  "regex",
@@ -3445,12 +3410,6 @@ name = "version_check"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "078775d0255232fb988e6fccf26ddc9d1ac274299aaedcedce21c6f72cc533ce"
-
-[[package]]
-name = "void"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "want"

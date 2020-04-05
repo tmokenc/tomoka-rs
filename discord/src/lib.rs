@@ -29,7 +29,7 @@ use std::sync::Arc;
 use crate::config::Config;
 use cache::MyCache;
 use db::DbInstance;
-use events::{Handler, RawHandler};
+use events::Handler;
 use magic::dark_magic::{bytes_to_le_u64, has_external_command};
 use serenity::Client;
 use storages::*;
@@ -43,8 +43,6 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     logger::init();
 
     let handler = Handler::new();
-    // let raw_handler = RawHandler::new();
-    // let custom_events_arc = raw_handler.custom_events.clone();
 
     info!(
         "Login with the token:\n{}",
@@ -53,7 +51,6 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     let mut client = Client::new_with_extras(token.as_ref(), |event| {
         event
             .event_handler(handler)
-            // .raw_event_handler(raw_handler)
             .framework(framework::get_framework())
     })
     .await?;

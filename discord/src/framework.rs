@@ -18,7 +18,7 @@ use serenity::model::{
 
 use crate::{
     commands::*,
-    storages::{AIStore, CustomEventList, InforKey, ReqwestClient},
+    storages::{AIStore, InforKey, ReqwestClient},
     traits::ToEmbed,
     utils::*,
     Result,
