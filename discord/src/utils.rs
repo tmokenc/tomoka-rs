@@ -40,7 +40,7 @@ pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> b
         .await
         .ok()
         .and_then(|v| v.guild());
-        
+
     match guild {
         Some(v) => v.read().await.nsfw,
         None => false,
@@ -122,7 +122,7 @@ pub fn colored_name_user(user: &User) -> CString {
 // pub fn send_file<C: Into<ChannelId>, F: AsRef<str>>(http: impl AsRef<Http>, channel: C, file: F) {
 //     let mut to_send: Vec<AttachmentType> = Vec::new();
 //     let url = file.as_ref();
-// 
+//
 //     let bytes: Bytes;
 //     if url.starts_with("http") {
 //         if let Ok(b) = get_file_bytes(url) {
@@ -134,7 +134,7 @@ pub fn colored_name_user(user: &User) -> CString {
 //     } else {
 //         to_send.push(file.as_ref().into());
 //     }
-// 
+//
 //     if let Err(why) = channel.into().send_files(http, to_send, |m| m) {
 //         error!("Error while sending the file...\n{:#?}", why);
 //     }
@@ -150,7 +150,7 @@ pub async fn get_guild_id_from_channel<C: Into<ChannelId>>(
         .await
         .ok()
         .and_then(|v| v.guild());
-        
+
     match guild {
         Some(v) => Some(v.read().await.guild_id),
         None => None,
@@ -169,14 +169,19 @@ where
 // #[rustfmt_skip]
 pub async fn update_guild_config(ctx: &Context, new_config: &GuildConfig) -> Result<()> {
     let key = number_to_le_bytes(new_config.id);
-    let config_db = get_data::<DatabaseKey>(ctx).await.unwrap().open("GuildConfig")?;
-    
-    tokio::task::block_in_place(move || if new_config.is_default() {
-        config_db.delete(key)
-    } else {
-        config_db.put_json(key, new_config)
+    let config_db = get_data::<DatabaseKey>(ctx)
+        .await
+        .unwrap()
+        .open("GuildConfig")?;
+
+    tokio::task::block_in_place(move || {
+        if new_config.is_default() {
+            config_db.delete(key)
+        } else {
+            config_db.put_json(key, new_config)
+        }
     })?;
-    
+
     Ok(())
 }
 

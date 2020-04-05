@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use serenity::model::id::{EmojiId, GuildId, UserId};
 use smallstr::SmallString;
 use std::collections::HashSet;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+use tokio::fs;
+use tokio::io::{AsyncWrite as _, AsyncWriteExt as _};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {
@@ -152,7 +153,7 @@ impl Config {
     /// If the provided path is a directory, it will create a `config_{timestamp}.json` inside of that
     /// If the file exists, this will add a `.bak` to that file and do the work.
     /// Return the `PathBuf` of the saved file
-    pub fn save_file<P: AsRef<Path>>(&self, path: P) -> Result<PathBuf> {
+    pub async fn save_file<P: AsRef<Path>>(&self, path: P) -> Result<PathBuf> {
         let mut path = path.as_ref().to_path_buf();
 
         if path.is_dir() {
@@ -160,7 +161,7 @@ impl Config {
             path.push(format!("config_{}.json", time.as_millis()));
         }
 
-        if fs::metadata(&path).is_ok() {
+        if fs::metadata(&path).await.is_ok() {
             let mut file_name = path.file_name().unwrap_or_default().to_os_string();
 
             file_name.push(".bak");
@@ -168,11 +169,13 @@ impl Config {
             let mut new_path = path.clone();
             new_path.set_file_name(file_name);
 
-            fs::rename(&path, new_path)?;
+            fs::rename(&path, new_path).await?;
         }
 
-        let mut file = fs::File::create(&path)?;
-        serde_json::to_writer_pretty(&mut file, self)?;
+        let data = serde_json::to_vec_pretty(self)?;
+        let mut file = fs::File::create(&path).await?;
+
+        file.write_all(data.as_slice()).await?;
 
         // match path.extension().and_then(|v| v.to_str()) {
         // Some(v) if v == "json" => {

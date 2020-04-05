@@ -42,6 +42,8 @@ use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use std::fmt::Write as _;
 
+const TYPING_LIST: &[&str] = &["diancie", "say", "flip", "rotate", "saucenao", "info"];
+
 lazy_static! {
     static ref EXECUTION_LIST: DashMap<MessageId, DateTime<Utc>> = DashMap::new();
 }
@@ -71,17 +73,17 @@ pub fn get_framework() -> impl Framework {
     let mut framework = StandardFramework::new()
         // .bucket("basic", |b| b.delay(2).time_span(10).limit(3))
         // .await
-        // .group(&MASTER_GROUP)
+        .group(&MASTER_GROUP)
         // .group(&GUILDMASTER_GROUP)
         .group(&ADMINISTRATION_GROUP)
         // .group(&CORONA_GROUP)
         .group(&GENERAL_GROUP)
         // .group(&GAME_GROUP)
         // .group(&POKEMON_GROUP)
-        // .group(&UTILITY_GROUP)
-        // .group(&IMAGE_GROUP)
+        .group(&UTILITY_GROUP)
+        .group(&IMAGE_GROUP)
         // .group(&RGB_GROUP)
-        // .help(&STOLEN_HELP)
+        .help(&STOLEN_HELP)
         .configure(framwork_config)
         .before(before_cmd)
         .after(after_cmd)
@@ -95,8 +97,13 @@ pub fn get_framework() -> impl Framework {
 }
 
 #[hook]
-async fn before_cmd(_ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
+async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
+
+    if !TYPING_LIST.contains(&cmd_name) {
+        msg.channel_id.broadcast_typing(ctx).await.ok();
+    }
+
     EXECUTION_LIST.insert(msg.id, Utc::now());
     true
 }
@@ -123,11 +130,16 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
             let color = config.color.error;
             drop(config);
 
-            msg.channel_id.send_message(&ctx.http, |m| m.embed(|embed| {
-                embed.color(color).description({
-                    format!("Cannot execute the command **__{}__**```{}```", cmd, why.0)
+            msg.channel_id
+                .send_message(&ctx.http, |m| {
+                    m.embed(|embed| {
+                        embed.color(color).description({
+                            format!("Cannot execute the command **__{}__**```{}```", cmd, why.0)
+                        })
+                    })
                 })
-            })).await.ok();
+                .await
+                .ok();
         }
     }
 
@@ -141,16 +153,16 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
     macro_rules! exec_func {
         ( $( $x:ident ),* ) => {
             let config = crate::read_config().await;
- 
+
             $(
                 let func = SmallString::from(stringify!($x));
                 let mut futs = Vec::new();
-                
+
                 if !config.disable_auto_cmd.contains(&func) {
                     futs.push($x(&ctx, &msg));
                 }
             )*
-            
+
             futures::future::join_all(futs)
                 .await
                 .into_iter()
@@ -183,7 +195,7 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
     if !has_external_command("youtube-dl") {
         disabled_commands.insert(String::from("play"));
     }
-    
+
     config
         .owners(owners)
         .disabled_commands(disabled_commands)
@@ -191,7 +203,7 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
         .by_space(false)
         .no_dm_prefix(true)
         .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
-        // .dynamic_prefixes(&[normal_prefix, master_prefix]) doesn't work
+    // .dynamic_prefixes(&[normal_prefix, master_prefix]) doesn't work
 }
 
 #[hook]
@@ -245,8 +257,7 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
             msg.channel_id.say(&ctx, mess).await?;
         }
     }
-    
-    
+
     Ok(())
 }
 
@@ -274,7 +285,7 @@ async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
             msg.channel_id.say(ctx, mess).await?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -308,12 +319,14 @@ async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
         }),
     };
 
-    let send = msg.channel_id.send_message(ctx, |message| {
-        message.content(content);
-        message.reactions(Some(emoji));
-        message
-    }).await?;
-    
+    msg.channel_id
+        .send_message(ctx, |message| {
+            message.content(content);
+            message.reactions(Some(emoji));
+            message
+        })
+        .await?;
+
     Ok(())
 }
 
@@ -322,15 +335,19 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     let me = data.get::<InforKey>().unwrap();
 
     if msg.mentions_user_id(me.user_id) {
-        let brain = get_data::<AIStore>(&ctx).await.expect("Expected brain in ShareMap.");
-
         let input = remove_mention(&msg.content);
-        let mut eliza = brain.lock().await;
-        let response = eliza.respond(&input);
+        let response = get_data::<AIStore>(&ctx)
+            .await
+            .expect("Expected brain in ShareMap.")
+            .lock()
+            .await
+            .respond(&input);
+
+        drop(data);
 
         msg.channel_id.say(&ctx.http, response).await?;
     }
-    
+
     Ok(())
 }
 
@@ -367,7 +384,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
         if num < 0.05 {
             use tokio::fs;
             use tokio::stream::StreamExt;
-            
+
             let path = &rgb.evidence;
 
             let evi = fs::read_dir(path)
@@ -377,19 +394,21 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
                 .await
                 .choose(&mut rng)
                 .map(|v| v.path());
-                
+
             if let Some(evi) = evi {
-                msg.channel_id.send_message(&ctx, |m| m.add_file(&evi)).await?;
+                msg.channel_id
+                    .send_message(&ctx, |m| m.add_file(&evi))
+                    .await?;
             }
         }
     }
-    
+
     Ok(())
 }
 
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
-    use magic::sauce::get_sauce;
     use futures::future::{self, FutureExt};
+    use magic::sauce::get_sauce;
     use serenity::model::channel::ReactionType;
 
     let config = crate::read_config().await;
@@ -400,7 +419,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .filter(|v| v.find_sauce.enable)
         .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id))
         .is_some();
-        
+
     if !is_watching_channel || msg.is_own(&ctx).await {
         return Ok(());
     }
@@ -408,9 +427,9 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     let timeout = Duration::from_secs(config.sauce.wait_duration as u64);
     let emoji_id = match config.sauce.emoji {
         Some(e) => e,
-        None => return Ok(())
+        None => return Ok(()),
     };
-    
+
     drop(config);
 
     let sauces = msg
@@ -419,7 +438,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .filter(|v| v.width.is_some())
         .filter(|v| !v.url.ends_with(".gif"))
         .map(|v| async move { get_sauce(&v.url, None).await });
-        
+
     let sauces: Vec<_> = future::join_all(sauces)
         .await
         .into_iter()
@@ -428,14 +447,14 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .collect();
 
     if sauces.is_empty() {
-        return Ok(())
+        return Ok(());
     }
 
     let reaction = EmojiIdentifier {
         id: emoji_id,
         name: String::from("sauce"),
     };
-   
+
     msg.react(ctx, reaction).await?;
     let collector = msg
         .await_reaction(&ctx)
@@ -443,17 +462,22 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
         .removed(false)
         .await;
-        
+
     if let Some(reaction) = collector {
-        reaction.as_inner_ref().delete(ctx).await?;
+        let http = std::sync::Arc::clone(&ctx.http);
+        tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
         for sauce in sauces {
-            msg.channel_id.send_message(&ctx, |m| m.embed(|mut embed| {
-                sauce.to_embed(&mut embed);
-                embed
-            })).await?;
+            msg.channel_id
+                .send_message(&ctx, |m| {
+                    m.embed(|mut embed| {
+                        sauce.to_embed(&mut embed);
+                        embed
+                    })
+                })
+                .await?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -475,24 +499,27 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
     if !is_watching_channel || msg.is_own(&ctx).await {
         return Ok(());
     }
-        
+
     let gids = parse_eh_token(&msg.content);
     if gids.is_empty() {
         return Ok(());
     }
-    
+
     let emoji_id = match config.sadkaede.emoji {
         Some(e) => e,
         None => return Ok(()),
     };
-    
+
     let timeout = Duration::from_secs(config.sadkaede.wait_duration as u64);
 
     drop(config);
 
-    let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
-    let data = req.gmetadata(gids.into_iter().take(25)).await?;
-    
+    let data = get_data::<ReqwestClient>(&ctx)
+        .await
+        .unwrap()
+        .gmetadata(gids.into_iter().take(25))
+        .await?;
+
     let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id).await;
     let data: Vec<_> = data
         .into_iter()
@@ -508,24 +535,29 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         name: String::from("sadkaede"),
     };
 
-    msg.react(ctx, reaction.clone()).await?;
+    msg.react(ctx, reaction).await?;
     let collector = msg
         .await_reaction(&ctx)
         .timeout(timeout)
         .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
         .removed(false)
         .await;
-        
+
     if let Some(reaction) = collector {
-        reaction.as_inner_ref().delete(ctx).await?;
+        let http = std::sync::Arc::clone(&ctx.http);
+        tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
         for sadkaede in data {
-            msg.channel_id.send_message(&ctx, |m| m.embed(|mut embed| {
-                sadkaede.to_embed(&mut embed);
-                embed
-            })).await?;
+            msg.channel_id
+                .send_message(&ctx, |m| {
+                    m.embed(|mut embed| {
+                        sadkaede.to_embed(&mut embed);
+                        embed
+                    })
+                })
+                .await?;
         }
     }
-    
+
     Ok(())
 }
 

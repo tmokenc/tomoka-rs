@@ -458,7 +458,7 @@ name = "bins"
 version = "0.1.0"
 dependencies = [
  "dotenv",
- "serenity 0.8.1",
+ "serenity 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -620,8 +620,8 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 
 [[package]]
 name = "command_attr"
-version = "0.1.7"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#a42f1bbf946f483a1929328be01b96dc9a983ed7"
+version = "0.2.0"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#9c7562bcd84b1a6a143155a0dd9a3e2e3e17c967"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -701,7 +701,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "crappy_magic"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/crappy-magic#5ef6e59983587f52e4035cf2542325fa7b086874"
+source = "git+https://gitlab.com/tmokenc/crappy-magic#50a063a6317f107e66cbb770d844bcfe0abd7c58"
 dependencies = [
  "bytesize",
  "dominant_color",
@@ -2732,8 +2732,8 @@ dependencies = [
 
 [[package]]
 name = "serenity"
-version = "0.8.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#a42f1bbf946f483a1929328be01b96dc9a983ed7"
+version = "0.8.1"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#9c7562bcd84b1a6a143155a0dd9a3e2e3e17c967"
 dependencies = [
  "async-tls",
  "async-trait",
@@ -2742,7 +2742,7 @@ dependencies = [
  "bitflags",
  "bytes 0.5.4",
  "chrono",
- "command_attr 0.1.7",
+ "command_attr 0.2.0 (git+https://github.com/Lakelezz/serenity?branch=await)",
  "flate2",
  "futures",
  "log",
@@ -2769,7 +2769,7 @@ dependencies = [
  "base64 0.11.0",
  "bitflags",
  "chrono",
- "command_attr 0.2.0",
+ "command_attr 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2",
  "log",
  "parking_lot 0.9.0",
@@ -3191,7 +3191,7 @@ dependencies = [
  "scraper",
  "serde 1.0.106",
  "serde_json",
- "serenity 0.8.0",
+ "serenity 0.8.1 (git+https://github.com/Lakelezz/serenity?branch=await)",
  "smallstr",
  "sys-info",
  "tempdir",

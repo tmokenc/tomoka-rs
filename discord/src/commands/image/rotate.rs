@@ -3,18 +3,17 @@ use crate::commands::prelude::*;
 use magic::image::{self, RotateAngle};
 
 #[command]
-#[description = "Rotate the last image from 20 most recent message on the channel"]
-fn rotate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    msg.channel_id.broadcast_typing(&ctx)?;
-    let depth = crate::read_config().image_search_depth;
-    
-    let image_buf = get_last_image_buf(&ctx, &msg, depth);
-
-    if image_buf.is_none() {
-        msg.channel_id
-            .say(ctx, "Coudn't find a image in range of 10 messages")?;
-        return Ok(());
-    }
+/// Rotate the last image from 20 most recent message on the channel
+async fn rotate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+    let depth = crate::read_config().await.image_search_depth;
+    let image_buf = match get_last_image_buf(&ctx, &msg, depth).await {
+        Some(g) => g,
+        None => {
+            msg.channel_id
+                .say(ctx, "Coudn't find a image in range of 10 messages").await?;
+            return Ok(());
+        }
+    };
 
     let arg = args
         .single::<String>()
@@ -27,8 +26,7 @@ fn rotate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
         _ => RotateAngle::Right,
     };
 
-    let image = image::rotate(image_buf.unwrap(), angle)?;
-    msg.channel_id
-        .send_files(ctx, vec![(image.as_slice(), "res.png")], |m| m)?;
+    let image = tokio::task::spawn_blocking(|| image::rotate(image_buf, angle)).await??;
+    msg.channel_id.send_files(ctx, vec![(image.as_slice(), "res.png")], |m| m).await?;
     Ok(())
 }

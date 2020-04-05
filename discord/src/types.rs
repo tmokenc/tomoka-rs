@@ -39,54 +39,54 @@ impl CustomEvents {
         }
     }
 
-//     /// There is a rare case where `add` and `done` method run at the same time
-//     /// if the `done` method is running, then the `add` method will not be added
-//     /// until being called again. That's why wait a few ms and check it again
-//     /// will help us avoid this scenario.
-//     /// 50ms would do unless an even rarer case happens where executing **a lot** of `done`
-//     #[rustfmt::skip]
-//     pub fn add<S: ToString, F>(&self, id: S, f: F)
-//     where
-//         F: Fn(&Context, &Event) + Sync + Send + 'static,
-//     {
-//         let id = id.to_string();
-//         let f = Box::new(f);
-// 
-//         match self.events.try_write_for(Duration::from_millis(50)) {
-//             Some(mut events) => { events.insert(id, f); }
-//             None => self.pending.lock().push(Action::Add(id, f)),
-//         }
-//     }
-// 
-//     /// Do not need the extra work like `add` method since functions inside
-//     /// the events map are executing fairly often.
-//     #[rustfmt::skip]
-//     pub fn done<S: AsRef<str>>(&self, id: S) {
-//         let id = id.as_ref();
-// 
-//         match self.events.try_write() {
-//             Some(mut events) => { events.remove(id); }
-//             None => self.pending.lock().push(Action::Done(id.to_string())),
-//         };
-//     }
-// 
-//     pub fn execute(&self, ctx: &Context, ev: &Event) {
-//         for f in self.events.read().values() {
-//             f(&ctx, &ev);
-//         }
-// 
-//         if let Some(mut events) = self.events.try_write() {
-//             let mut pending = self.pending.lock();
-//             let actions = pending.drain(..);
-// 
-//             for action in actions {
-//                 match action {
-//                     Action::Add(name, f) => events.insert(name, f),
-//                     Action::Done(name) => events.remove(&name),
-//                 };
-//             }
-//         }
-//     }
+    //     /// There is a rare case where `add` and `done` method run at the same time
+    //     /// if the `done` method is running, then the `add` method will not be added
+    //     /// until being called again. That's why wait a few ms and check it again
+    //     /// will help us avoid this scenario.
+    //     /// 50ms would do unless an even rarer case happens where executing **a lot** of `done`
+    //     #[rustfmt::skip]
+    //     pub fn add<S: ToString, F>(&self, id: S, f: F)
+    //     where
+    //         F: Fn(&Context, &Event) + Sync + Send + 'static,
+    //     {
+    //         let id = id.to_string();
+    //         let f = Box::new(f);
+    //
+    //         match self.events.try_write_for(Duration::from_millis(50)) {
+    //             Some(mut events) => { events.insert(id, f); }
+    //             None => self.pending.lock().push(Action::Add(id, f)),
+    //         }
+    //     }
+    //
+    //     /// Do not need the extra work like `add` method since functions inside
+    //     /// the events map are executing fairly often.
+    //     #[rustfmt::skip]
+    //     pub fn done<S: AsRef<str>>(&self, id: S) {
+    //         let id = id.as_ref();
+    //
+    //         match self.events.try_write() {
+    //             Some(mut events) => { events.remove(id); }
+    //             None => self.pending.lock().push(Action::Done(id.to_string())),
+    //         };
+    //     }
+    //
+    //     pub fn execute(&self, ctx: &Context, ev: &Event) {
+    //         for f in self.events.read().values() {
+    //             f(&ctx, &ev);
+    //         }
+    //
+    //         if let Some(mut events) = self.events.try_write() {
+    //             let mut pending = self.pending.lock();
+    //             let actions = pending.drain(..);
+    //
+    //             for action in actions {
+    //                 match action {
+    //                     Action::Add(name, f) => events.insert(name, f),
+    //                     Action::Done(name) => events.remove(&name),
+    //                 };
+    //             }
+    //         }
+    //     }
 }
 
 pub struct Information {
@@ -457,83 +457,83 @@ impl GuildConfig {
     }
 }
 
-pub enum PlayingSignal {
-    Resume,
-    Pause,
-    Stop,
-    Skip,
-    Previous,
-    Shuffle,
-}
+// pub enum PlayingSignal {
+//     Resume,
+//     Pause,
+//     Stop,
+//     Skip,
+//     Previous,
+//     Shuffle,
+// }
 
-pub trait PlayOption: Send {
-    fn pause(&self);
-    fn resume(&self);
-    fn stop(&self);
-    fn skip(&self);
-    fn previous(&self);
-    fn shuffle(&self);
-}
+// pub trait PlayOption: Send {
+//     fn pause(&self);
+//     fn resume(&self);
+//     fn stop(&self);
+//     fn skip(&self);
+//     fn previous(&self);
+//     fn shuffle(&self);
+// }
 
-pub trait Playable: Send {
-    fn get_info(&self) -> Result<PlayingInfo>;
-    // fn play(&self, ctx: &Context, channel: ChannelId, signal: Receiver<PlayingSignal>);
-}
+// pub trait Playable: Send {
+//     fn get_info(&self) -> Result<PlayingInfo>;
+//     // fn play(&self, ctx: &Context, channel: ChannelId, signal: Receiver<PlayingSignal>);
+// }
 
-#[derive(Default)]
-pub struct PlayingInfo {
-    pub title: String,
-    pub album_art: Option<String>,
-    pub artist: Option<String>,
-    pub album: Option<String>,
-    pub year: Option<String>,
-    pub requested_by: Option<String>,
-}
+// #[derive(Default)]
+// pub struct PlayingInfo {
+//     pub title: String,
+//     pub album_art: Option<String>,
+//     pub artist: Option<String>,
+//     pub album: Option<String>,
+//     pub year: Option<String>,
+//     pub requested_by: Option<String>,
+// }
 
-pub struct Music {
-    sender: Sender<PlayingSignal>,
-    pub voice_channel: ChannelId,
-    pub music: Mutex<Box<dyn Playable>>,
-}
+// pub struct Music {
+//     sender: Sender<PlayingSignal>,
+//     pub voice_channel: ChannelId,
+//     pub music: Mutex<Box<dyn Playable>>,
+// }
 
-impl Music {
-    pub fn new<M: Playable + 'static>(
-        voice_channel: ChannelId,
-        music: M,
-    ) -> (Self, Receiver<PlayingSignal>) {
-        let (sender, receiver) = mpsc::channel();
-        let s = Self {
-            sender,
-            voice_channel,
-            music: Mutex::new(Box::new(music)),
-        };
+// impl Music {
+//     pub fn new<M: Playable + 'static>(
+//         voice_channel: ChannelId,
+//         music: M,
+//     ) -> (Self, Receiver<PlayingSignal>) {
+//         let (sender, receiver) = mpsc::channel();
+//         let s = Self {
+//             sender,
+//             voice_channel,
+//             music: Mutex::new(Box::new(music)),
+//         };
 
-        (s, receiver)
-    }
-}
+//         (s, receiver)
+//     }
+// }
 
-impl PlayOption for Music {
-    fn pause(&self) {
-        self.sender.send(PlayingSignal::Pause).ok();
-    }
+// impl PlayOption for Music {
+//     fn pause(&self) {
+//         self.sender.send(PlayingSignal::Pause).ok();
+//     }
 
-    fn resume(&self) {
-        self.sender.send(PlayingSignal::Resume).ok();
-    }
+//     fn resume(&self) {
+//         self.sender.send(PlayingSignal::Resume).ok();
+//     }
 
-    fn stop(&self) {
-        self.sender.send(PlayingSignal::Stop).ok();
-    }
+//     fn stop(&self) {
+//         self.sender.send(PlayingSignal::Stop).ok();
+//     }
 
-    fn skip(&self) {
-        self.sender.send(PlayingSignal::Skip).ok();
-    }
+//     fn skip(&self) {
+//         self.sender.send(PlayingSignal::Skip).ok();
+//     }
 
-    fn previous(&self) {
-        self.sender.send(PlayingSignal::Previous).ok();
-    }
+//     fn previous(&self) {
+//         self.sender.send(PlayingSignal::Previous).ok();
+//     }
 
-    fn shuffle(&self) {
-        self.sender.send(PlayingSignal::Shuffle).ok();
-    }
-}
+//     fn shuffle(&self) {
+//         self.sender.send(PlayingSignal::Shuffle).ok();
+//     }
+// }

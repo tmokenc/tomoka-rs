@@ -31,10 +31,10 @@ impl TypeMapKey for DatabaseKey {
     type Value = Arc<DbInstance>;
 }
 
-pub struct MusicManager;
-impl TypeMapKey for MusicManager {
-    type Value = MutexData<HashMap<GuildId, Music>>;
-}
+// pub struct MusicManager;
+// impl TypeMapKey for MusicManager {
+//     type Value = MutexData<HashMap<GuildId, Music>>;
+// }
 
 pub struct CacheStorage;
 impl TypeMapKey for CacheStorage {

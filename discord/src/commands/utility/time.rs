@@ -7,7 +7,7 @@ use std::env;
 /// Get time for various timezone
 /// Passing a timestamp (from 01/01/1970 in second) to get time for a specific time
 /// Will support other time parsing soon:tm:
-fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let time = args
         .find::<i64>()
         .unwrap_or_else(|_| msg.timestamp.timestamp());
@@ -21,7 +21,7 @@ fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
         ("Japan", utc.with_timezone(&Japan)),
     ];
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let format = config.time.format.to_owned();
     drop(config);
     
@@ -35,7 +35,7 @@ fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
         
         embed.timestamp(msg.timestamp.to_rfc3339());
         embed
-    }))?;
+    })).await?;
 
     Ok(())
 }

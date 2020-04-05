@@ -34,7 +34,7 @@ impl RawHandler {
 //         if let Event::Unknown(e) = &ev {
 //             dbg!(e);
 //         }
-// 
+//
 //         self.custom_events.execute(&ctx, &ev);
 //     }
 // }
@@ -122,7 +122,7 @@ impl EventHandler for Handler {
             }
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
-        
+
         let color = {
             let config = crate::read_config().await;
             config.color.message_update
@@ -204,7 +204,14 @@ async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
     match c.to_channel(ctx).await {
         Ok(Guild(c)) => {
             let channel = c.read().await;
-            let guild_name = channel.guild(&ctx.cache).await.unwrap().read().await.name.to_owned();
+            let guild_name = channel
+                .guild(&ctx.cache)
+                .await
+                .unwrap()
+                .read()
+                .await
+                .name
+                .to_owned();
 
             format!(
                 "channel {}({}) at server {}",
@@ -213,35 +220,7 @@ async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
                 guild_name.color(to_color(channel.guild_id.0))
             )
         }
-        Ok(Group(c)) => {
-            let channel = c.read().await;
-            let color = to_color(channel.channel_id.0);
 
-            let owner = channel
-                .owner_id
-                .to_user(ctx)
-                .await
-                .ok()
-                .map_or("Unknown".bold().underlined(), |user| {
-                    colored_name_user(&user)
-                });
-
-            if let Some(name) = channel.name.to_owned() {
-                format!(
-                    "the group {}({}) started by {}",
-                    name.color(color),
-                    channel.channel_id.0,
-                    owner
-                )
-            } else {
-                format!(
-                    "a {}({}) started by {}",
-                    "group".color(color),
-                    channel.channel_id.0,
-                    owner
-                )
-            }
-        }
         Ok(Private(_c)) => format!("private message ({})", c.0),
         Ok(Category(_c)) => format!("a category...? ({})", c.0),
         _ => String::from("Unknown"),
@@ -263,13 +242,13 @@ where
     };
 
     let cache = get_data::<CacheStorage>(&ctx).await.unwrap();
-    
+
     for msg in msgs {
         let mess = match cache.remove_message(msg).await {
             Some(v) => v,
             None => return,
         };
-        
+
         if let Err(why) = _process_deleted(&ctx, log_channel, channel_id, mess).await {
             error!("Cannot log deleted message\n{:#?}", why);
         }

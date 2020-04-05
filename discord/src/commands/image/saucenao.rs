@@ -5,12 +5,10 @@ use magic::sauce::SauceNao;
 
 #[command]
 #[aliases("sauce")]
-#[description = "Find an anime image source."]
-fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    msg.channel_id.broadcast_typing(&ctx)?;
-    
-    let depth = crate::read_config().image_search_depth;
-    let img = match get_last_image_url(&ctx, &msg, depth) {
+/// Find an anime image source.
+async fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let depth = crate::read_config().await.image_search_depth;
+    let img = match get_last_image_url(&ctx, &msg, depth).await {
         Some(i) => i,
         None => {
             msg.channel_id.say(
@@ -19,7 +17,7 @@ fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     "Cannot find an image from last {} message",
                     depth
                 ),
-            )?;
+            ).await?;
             return Ok(());
         }
     };
@@ -32,17 +30,17 @@ fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
     });
 
-    let data = SauceNao::get(&img, similarity)?;
+    let data = SauceNao::get(&img, similarity).await?;
 
     if data.not_found() {
-        msg.channel_id.say(ctx, "Error 404: No sauce found")?;
+        msg.channel_id.say(ctx, "Error 404: No sauce found").await?;
         return Ok(());
     }
     
     msg.channel_id.send_message(ctx, |m| m.embed(|mut embed| {
         data.to_embed(&mut embed);
         embed
-    }))?;
+    })).await?;
 
     Ok(())
 }

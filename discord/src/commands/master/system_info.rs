@@ -9,10 +9,10 @@ use sys_info::*;
 #[owners_only]
 #[example = "--all"]
 #[usage = "?[-a | --all]"]
-#[description = "Get the information of the system that I'm running on.\n\
-                 Passing __-a__ or __--all__ to show more information\n\
-                 **TODO**: show more useful information in *--all* mode"]
-fn system_info(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+/// Get the information of the system that I'm running on.
+/// Passing __-a__ or __--all__ to show more information
+/// **TODO**: show more useful information in *--all* mode
+async fn system_info(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let get_all = args
         .iter::<String>()
         .find(|v| v.as_ref().ok().map_or(false, |s| s == "-a" || s == "--all"));
@@ -33,18 +33,20 @@ fn system_info(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
 
         fields.extend(addition);
     }
+    
+    let config = crate::read_config().await;
+    let color = config.color.information;
+    drop(config);
 
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|embed| {
-            let config = crate::read_config();
-            embed.color(config.color.information);
-            drop(config);
             embed.title("System Information");
+            embed.color(color);
             embed.fields(fields);
             
             embed
         })
-    })?;
+    }).await?;
 
     Ok(())
 }

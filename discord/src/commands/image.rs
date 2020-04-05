@@ -18,23 +18,25 @@ struct Image;
 
 /// Get the last image buf from most recent message on the channel
 /// Max messages length is 100
-#[inline]
-pub fn get_last_image_buf(ctx: &Context, msg: &Message, limit: u16) -> Option<Bytes> {
-    get_last_image_url(ctx, msg, limit).and_then(|v| get_file_bytes(v).ok())
+pub async fn get_last_image_buf(ctx: &Context, msg: &Message, limit: u16) -> Option<Bytes> {
+    match get_last_image_url(ctx, msg, limit).await {
+        Some(v) => get_file_bytes(v).await.ok(),
+        None => None,
+    }
 }
 
-#[inline]
-pub fn get_last_image_url(ctx: &Context, msg: &Message, limit: u16) -> Option<String> {
-    get_image_url_from_message(&msg).or_else(|| {
-        let current_id = msg.id;
-        msg.channel_id
-            .messages(ctx, |m| m.limit(limit as u64).before(current_id))
+pub async fn get_last_image_url(ctx: &Context, msg: &Message, limit: u16) -> Option<String> {
+    match get_image_url_from_message(&msg) {
+        None => msg.channel_id
+            .messages(ctx, |m| m.limit(limit as u64).before(msg.id))
+            .await
             .ok()
             .and_then(|msgs| {
                 msgs.into_iter()
                     .find_map(|v| get_image_url_from_message(&v))
-            })
-    })
+            }),
+        v => v,
+    }
 }
 
 #[inline]

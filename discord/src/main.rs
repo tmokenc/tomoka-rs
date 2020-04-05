@@ -1,6 +1,6 @@
 use dotenv::dotenv;
-use tomoka_rs::Result;
 use std::env;
+use tomoka_rs::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

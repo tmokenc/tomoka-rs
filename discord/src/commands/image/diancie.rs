@@ -1,10 +1,8 @@
 use crate::commands::prelude::*;
-use crate::utils::send_file;
 
 #[command]
 /// Show an extremely cute Diancie (pokemon)
-fn diancie(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
-    send_file(&ctx.http, msg.channel_id, "./assets/img/Diancie.gif");
-
+async fn diancie(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+    msg.channel_id.send_files(ctx, vec!["./assets/img/Diancie.gif"], |m| m).await?;
     Ok(())
 }
