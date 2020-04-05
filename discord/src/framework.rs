@@ -388,6 +388,167 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
+    use magic::sauce::get_sauce;
+    use futures::future::{self, FutureExt};
+    use serenity::model::channel::ReactionType;
+
+    let config = crate::read_config().await;
+
+    let emoji_id = match config.sauce.emoji {
+        Some(e) => e,
+        None => return Ok(())
+    };
+    
+    let is_watching_channel = msg
+        .guild_id
+        .and_then(|v| config.guilds.get(&v))
+        .filter(|v| v.find_sauce.enable)
+        .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id))
+        .is_some();
+
+    if !is_watching_channel || msg.is_own(&ctx).await {
+        return Ok(());
+    }
+    
+    let timeout = Duration::from_secs(config.sauce.wait_duration as u64);
+    drop(config);
+
+    let sauces = msg
+        .attachments
+        .iter()
+        .filter(|v| v.width.is_some())
+        .filter(|v| !v.url.ends_with(".gif"))
+        .map(|v| async move { get_sauce(&v.url, None).await });
+        
+    let sauces: Vec<_> = future::join_all(sauces)
+        .await
+        .into_iter()
+        .filter_map(|v| v.ok())
+        .filter(|v| v.found())
+        .collect();
+
+    if sauces.is_empty() {
+        return Ok(())
+    }
+
+    let reaction = EmojiIdentifier {
+        id: emoji_id,
+        name: String::from("sauce"),
+    };
+   
+    msg.react(ctx, reaction).await?;
+    let collector = msg
+        .await_reaction(&ctx)
+        .timeout(timeout)
+        .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
+        .removed(false)
+        .await;
+        
+    if let Some(reaction) = collector {
+        reaction.as_inner_ref().delete(ctx).await?;
+        let futs = sauces.into_iter().map(|sauce| async move {
+            msg.channel_id.send_message(&ctx, |m| m.embed(|mut embed| {
+                sauce.to_embed(&mut embed);
+                embed
+            })).await
+        });
+        
+        future::try_join_all(futs).await?;
+    }
+    
+    Ok(())
+}
+//
+// // Simply a clone of the find_sauce due to similar functionality
+// async fn find_sadkaede(ctx: &Context, msg: &Message) {
+//     if msg.content.len() < 20 {
+//         return;
+//     }
+//
+//     let config = crate::read_config().await;
+//
+//     let emoji_id = match config.sadkaede.emoji {
+//         Some(e) => e,
+//         None => return,
+//     };
+//
+//     let is_watching_channel = msg
+//         .guild_id
+//         .and_then(|v| config.guilds.get(&v))
+//         .filter(|v| v.find_sadkaede.enable)
+//         .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id))
+//         .is_some();
+//
+//     if !is_watching_channel || msg.is_own(&ctx) {
+//         return;
+//     }
+//
+//     let req = get_data::<ReqwestClient>(&ctx).unwrap();
+//     let gids = parse_eh_token(&msg.content);
+//
+//     if gids.is_empty() {
+//         return;
+//     }
+//
+//     let data = match req.gmetadata(gids.into_iter().take(25)).await {
+//         Ok(d) => d,
+//         Err(_) => return,
+//     };
+//
+//     let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
+//
+//     let data: Vec<_> = data
+//         .into_iter()
+//         .filter(|data| is_channel_nsfw || data.is_sfw())
+//         .map(|v| Box::new(v) as Box<_>)
+//         .collect();
+//
+//     if data.is_empty() {
+//         return;
+//     }
+//
+//     let reaction = EmojiIdentifier {
+//         id: emoji_id,
+//         name: String::from("sadkaede"),
+//     };
+//
+//     if let Err(why) = msg.react(ctx, reaction.clone()) {
+//         error!("Cannot reaction to the sadkaede\n{:#?}", why);
+//         return;
+//     }
+//
+//     let http = ctx.http.clone();
+//     let channel_id = msg.channel_id.0;
+//     let msg_id = msg.id.0;
+//     let duration = Duration::from_secs(config.sadkaede.wait_duration as u64);
+//
+//     drop(config);
+//
+//     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
+//         let emoji = reaction.into();
+//         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
+//             error!("Cannot delete the sadkaede reaction\n{:#?}", why);
+//         }
+//     });
+//
+//     let scheduler = SchedulerReact {
+//         timer,
+//         data,
+//         channel_id: msg.channel_id,
+//         emoji_id,
+//     };
+//
+//     let mut data_r = WATCHING_REACT.lock();
+//
+//     data_r.insert(msg.id, scheduler);
+//     if data_r.len() == 1 {
+//         get_data::<CustomEventList>(&ctx)
+//             .unwrap()
+//             .add("WatchingEmo", watch_emo_event);
+//     }
+// }
+
 // struct SchedulerReact {
 //     data: Vec<Box<dyn ToEmbed>>,
 //     channel_id: ChannelId,

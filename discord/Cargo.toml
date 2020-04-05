@@ -41,6 +41,6 @@ dashmap = { version = "3", features = ["serde"] }
 smallstr = { version = "0.2", features = ["serde"] }
 # serenity = { version = "0.8", features = ["voice", "cache"] }
 # parking_lot = { version = "0.10" }
-serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await" }
+serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await", features = ["collector"] }
 futures = "0.3"
 async-trait = "0.1"
