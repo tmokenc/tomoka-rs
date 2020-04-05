@@ -7,12 +7,12 @@ use magic::traits::MagicStr;
 #[aliases("k")]
 #[usage = "<Kanji(s)>"]
 #[example = "智花"]
-#[description = "Get the details meaning of kanji(s)"]
-fn kanji(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    msg.channel_id.broadcast_typing(&ctx)?;
+/// Get the details meaning of kanji(s)
+async fn kanji(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    msg.channel_id.broadcast_typing(&ctx).await?;
     let content = args.rest();
-    let reqwest = get_data::<ReqwestClient>(&ctx).unwrap();
-    let kanjis = block_on(reqwest.kanji(&content))?;
+    let reqwest = get_data::<ReqwestClient>(&ctx).await.unwrap();
+    let kanjis = reqwest.kanji(&content).await?;
 
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.color(0x977df2);
@@ -39,7 +39,7 @@ fn kanji(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
    
         embed
-    }))?;
+    })).await?;
     
     Ok(())
 }

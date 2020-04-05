@@ -4,14 +4,14 @@ pub mod prelude;
 
 pub_import_all! {
     administration,
-    game,
+    //game,
     general,
-    guild_master,
-    image,
-    master,
-    music,
-    pokemon,
-    rgb,
-    utility,
-    corona,
+    //guild_master,
+    //image,
+    //master,
+    //music,
+    //pokemon,
+    //rgb,
+    //utility,
+    //corona,
 }

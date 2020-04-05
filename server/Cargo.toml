@@ -7,8 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15"
 actix-web = "2.0.0-rc"
 actix-rt = "1.0.0"
 actix-files = "0.2"
 rand = "0.7"
 env_logger = "0.7"
+# serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await" }

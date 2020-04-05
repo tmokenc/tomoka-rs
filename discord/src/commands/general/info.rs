@@ -2,10 +2,10 @@ use crate::commands::prelude::*;
 
 #[command]
 #[aliases("information")]
-fn info(ctx: &mut Context, msg: &Message, _arg: Args) -> CommandResult {
-    let data = ctx.data.read();
+async fn info(ctx: &mut Context, msg: &Message, _arg: Args) -> CommandResult {
+    let data = ctx.data.read().await;
     let user_info = data.get::<InforKey>().unwrap();
-    let my_info = ctx.http.get_current_application_info()?;
+    let my_info = ctx.http.get_current_application_info().await?;
 
     let description = format!(
         "Hi, I'm {}\nCreated by: {}#{:04}\n{}",
@@ -23,7 +23,7 @@ fn info(ctx: &mut Context, msg: &Message, _arg: Args) -> CommandResult {
                 true,
             )
         })
-    })?;
+    }).await?;
 
     Ok(())
 }

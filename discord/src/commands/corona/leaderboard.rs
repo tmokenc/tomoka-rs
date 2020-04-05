@@ -19,15 +19,13 @@ struct CoronaResult {
 }
 
 #[command]
-#[aliases("corona")]
+#[aliases("corona", "top")]
 /// Get corona leaderboard
 /// Add limit number to limit the result
 /// `tomo>leaderboard 10` < this will only show first 10 countries
-fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let req = get_data::<ReqwestClient>(&ctx).unwrap();
-    let res: Vec<CoronaResult> = block_on(async {
-        req.get(API).send().await?.json().await
-    })?;
+    let res: Vec<CoronaResult> = req.get(API).send().await?.json().await?;
     
     let (total_c, total_r, total_d) = res
         .iter()
@@ -60,7 +58,7 @@ fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
         
         let mut top = 20;
         
-        loop {
+        for _ in (0..8) {
             let d = data(iter.by_ref().take(10));
             
             if !d.is_empty() {
@@ -68,10 +66,12 @@ fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResul
                 embed.field(title, d, false);
                 top += 10;
             } else {
-                break embed;
+                break
             }
         }
-    }))?;
+        
+        embed
+    })).await?;
     
     Ok(())
 }

@@ -2,14 +2,12 @@ use crate::cache::MyCache;
 use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
-use parking_lot::Mutex;
 use requester::Reqwest;
+use serenity::model::id::GuildId;
+use serenity::prelude::TypeMapKey;
 use std::collections::HashMap;
 use std::sync::Arc;
-
-use serenity::{
-    client::bridge::voice::ClientVoiceManager, model::id::GuildId, prelude::TypeMapKey,
-};
+use tokio::sync::Mutex;
 
 type MutexData<T> = Arc<Mutex<T>>;
 
@@ -31,11 +29,6 @@ impl TypeMapKey for ReqwestClient {
 pub struct DatabaseKey;
 impl TypeMapKey for DatabaseKey {
     type Value = Arc<DbInstance>;
-}
-
-pub struct VoiceManager;
-impl TypeMapKey for VoiceManager {
-    type Value = Arc<serenity::prelude::Mutex<ClientVoiceManager>>;
 }
 
 pub struct MusicManager;

@@ -17,107 +17,94 @@ mod traits;
 mod types;
 mod utils;
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub use requester::*;
 
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use std::error::Error;
 
 use crate::config::Config;
 use cache::MyCache;
 use db::DbInstance;
 use events::{Handler, RawHandler};
-use framework::get_framework;
 use magic::dark_magic::{bytes_to_le_u64, has_external_command};
-use parking_lot::Mutex;
 use serenity::Client;
 use storages::*;
+use tokio::sync::Mutex;
 use types::*;
 
 use colorful::{Color, Colorful};
-use dotenv::dotenv;
 use eliza::Eliza;
 
-pub fn start() -> Result<()> {
-    dotenv().ok();
-
-    let token = env::var("DISCORD_TOKEN")?;
-
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
-    }
-
-    // env_logger::init();
+pub async fn start(token: impl AsRef<str>) -> Result<()> {
     logger::init();
 
     let handler = Handler::new();
-    let raw_handler = RawHandler::new();
-    let custom_events_arc = raw_handler.custom_events.clone();
+    // let raw_handler = RawHandler::new();
+    // let custom_events_arc = raw_handler.custom_events.clone();
 
     info!(
         "Login with the token:\n{}",
-        token.to_owned().underlined().yellow()
+        token.as_ref().to_owned().underlined().yellow()
     );
-    let mut client = Client::new_with_extras(&token, |e| {
-        e.event_handler(handler).raw_event_handler(raw_handler)
-    })?;
+    let mut client = Client::new_with_extras(token.as_ref(), |event| {
+        event
+            .event_handler(handler)
+            // .raw_event_handler(raw_handler)
+            .framework(framework::get_framework())
+    })
+    .await?;
 
     // Disable the default message cache and use our own
     client
         .cache_and_http
         .cache
         .write()
+        .await
         .settings_mut()
         .max_messages(0);
 
     {
-        let mut data = client.data.write();
-        let config = read_config();
+        let mut data = client.data.write().await;
+        let config = read_config().await;
 
-        let db = DbInstance::new(&read_config().database.path, None)?;
-        fetch_guild_config_from_db(&db)?;
+        let db = DbInstance::new(&config.database.path, None)?;
+        fetch_guild_config_from_db(&db).await?;
 
-        data.insert::<CustomEventList>(custom_events_arc);
+        // data.insert::<CustomEventList>(custom_events_arc);
         data.insert::<DatabaseKey>(Arc::new(db));
-        data.insert::<InforKey>(Information::init(&client.cache_and_http.http)?);
+        data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
         data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
-        data.insert::<VoiceManager>(client.voice_manager.clone());
-        data.insert::<CacheStorage>(Arc::new(MyCache::new()?));
-        data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain)?));
+        data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
+        data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
 
         if has_external_command("ffmpeg") {
             data.insert::<MusicManager>(mutex_data(HashMap::new()));
         }
     }
 
-    client.with_framework(get_framework());
-
-    let voices = client.voice_manager.clone();
-    let cache = client.cache_and_http.cache.clone();
     let data = client.data.clone();
     let shard_manager = client.shard_manager.clone();
 
-    ctrlc::set_handler(move || {
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
 
-        let cache_lock = cache.read();
-        let guilds = cache_lock.all_guilds();
-        let mut manager = voices.lock();
-
-        info!("Disconnecting from {} guilds before exit", guilds.len());
-        for guild in guilds {
-            manager.leave(guild);
-        }
-
-        data.read().get::<CacheStorage>().unwrap().clean_up();
+        data.read()
+            .await
+            .get::<CacheStorage>()
+            .unwrap()
+            .clean_up()
+            .await;
 
         info!("{}", "BYE".underlined().gradient(Color::Red));
-        shard_manager.lock().shutdown_all();
-    })?;
+        shard_manager.lock().await.shutdown_all().await;
+    });
 
-    client.start()?;
+    client.start().await?;
 
     println!("Bye");
 
@@ -130,18 +117,18 @@ fn mutex_data<T>(data: T) -> Arc<Mutex<T>> {
 }
 
 #[inline]
-fn read_config() -> parking_lot::RwLockReadGuard<'static, Config> {
-    global::CONFIG.read()
+async fn read_config() -> tokio::sync::RwLockReadGuard<'static, Config> {
+    global::CONFIG.read().await
 }
 
 #[inline]
-fn write_config() -> parking_lot::RwLockWriteGuard<'static, Config> {
-    global::CONFIG.write()
+async fn write_config() -> tokio::sync::RwLockWriteGuard<'static, Config> {
+    global::CONFIG.write().await
 }
 
-fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {
+async fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {
     let data = db.open("GuildConfig")?.get_all_json::<GuildConfig>()?;
-    let guilds_config = &crate::read_config().guilds;
+    let guilds_config = &crate::read_config().await.guilds;
 
     for (k, v) in data {
         let key = bytes_to_le_u64(k).into();

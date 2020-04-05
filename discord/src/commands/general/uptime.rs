@@ -4,15 +4,20 @@ use crate::storages::InforKey;
 use humantime::format_duration;
 
 #[command]
-#[description = "To see how long I have been up!"]
-fn uptime(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+/// To see how long I have been up!
+async fn uptime(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     let now = Utc::now();
     let uptime = ctx
         .data
         .read()
+        .await
         .get::<InforKey>()
         .unwrap()
         .uptime();
+        
+    let config = crate::read_config().await;
+    let color = config.color.information;
+    drop(config);
 
     let message = format!("I have been up for **{}**", format_duration(uptime));
     msg.channel_id.send_message(&ctx.http, |m| {
@@ -21,14 +26,11 @@ fn uptime(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             embed.description(message);
             embed.timestamp(now.to_rfc3339());
             
-            {
-                let config = crate::read_config();
-                embed.color(config.color.information);
-            }
+            embed.color(color);
             
             embed
         })
-    })?;
+    }).await?;
 
     Ok(())
 }

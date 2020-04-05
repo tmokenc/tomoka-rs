@@ -8,8 +8,8 @@ pub const HEART_URL: &str = "https://i.imgur.com/YpRPxeS.png";
 
 #[command]
 #[usage = "?[@someone] ?[@another one]"]
-#[description = "Check love comparative"]
-fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+/// Check love comparative
+async fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     let mut person = match msg.mentions.get(0) {
         Some(user) => user,
         None => &msg.author,
@@ -25,6 +25,10 @@ fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
     if !first {
         mem::swap(&mut person, &mut person2);
     }
+    
+    let config = crate::read_config().await;
+    let color = config.color.lovely;
+    drop(config);
 
     msg.channel_id.send_message(&ctx.http, |m| {
         m.embed(|embed| {
@@ -37,14 +41,11 @@ fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
             embed.field(&point_str, progress_bar(point, 18), false);
             embed.field(&point_str, get_msg(point), false);
             
-            {
-                let config = crate::read_config();
-                embed.color(config.color.lovely);
-            }
+            embed.color(color);
             
             embed
         })
-    })?;
+    }).await?;
 
     Ok(())
 }

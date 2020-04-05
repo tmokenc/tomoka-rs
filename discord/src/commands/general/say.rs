@@ -5,12 +5,12 @@ use crate::commands::prelude::*;
 #[bucket = "basic"]
 #[usage = "<what_to_say>"]
 #[example = "I'm tmokenc's waifu"]
-#[description = "Tell me to say something"]
-fn say(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+/// Tell me to say something
+async fn say(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let to_say = args.rest();
 
-    msg.delete(&ctx)?;
-    msg.channel_id.say(&ctx.http, to_say)?;
+    msg.delete(&ctx).await?;
+    msg.channel_id.say(&ctx.http, to_say).await?;
 
     Ok(())
 }

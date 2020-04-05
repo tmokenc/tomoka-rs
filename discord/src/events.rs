@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use serenity::client::{Context, EventHandler, RawEventHandler};
 use serenity::model::{
     channel::{Channel, Message},
@@ -28,15 +29,15 @@ impl RawHandler {
     }
 }
 
-impl RawEventHandler for RawHandler {
-    fn raw_event(&self, ctx: Context, ev: Event) {
-        if let Event::Unknown(e) = &ev {
-            dbg!(e);
-        }
-
-        self.custom_events.execute(&ctx, &ev);
-    }
-}
+// impl RawEventHandler for RawHandler {
+//     fn raw_event(&self, ctx: Context, ev: Event) {
+//         if let Event::Unknown(e) = &ev {
+//             dbg!(e);
+//         }
+// 
+//         self.custom_events.execute(&ctx, &ev);
+//     }
+// }
 
 pub struct Handler;
 impl Handler {
@@ -45,10 +46,11 @@ impl Handler {
     }
 }
 
+#[async_trait]
 impl EventHandler for Handler {
-    fn message(&self, ctx: Context, msg: Message) {
+    async fn message(&self, ctx: Context, msg: Message) {
         if !msg.author.bot {
-            let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id);
+            let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id).await;
 
             info!(
                 "A message on {}\n{}> {}",
@@ -58,17 +60,17 @@ impl EventHandler for Handler {
             );
         }
 
-        let will_be_cached = is_watching_channel(&ctx, msg.channel_id)
+        let will_be_cached = is_watching_channel(&ctx, msg.channel_id).await
             && (!msg.content.is_empty() || !msg.attachments.is_empty())
-            && !msg.is_own(&ctx);
+            && !msg.is_own(&ctx).await;
 
         if will_be_cached {
-            let cache = get_data::<CacheStorage>(&ctx).unwrap();
-            cache.insert_message(msg);
+            let cache = get_data::<CacheStorage>(&ctx).await.unwrap();
+            cache.insert_message(msg).await;
         }
     }
 
-    fn message_update(
+    async fn message_update(
         &self,
         ctx: Context,
         _old: Option<Message>,
@@ -86,8 +88,8 @@ impl EventHandler for Handler {
         };
 
         let channel_id = event.channel_id;
-        let guild_id = match ctx.cache.read().guild_channel(channel_id.0) {
-            Some(channel) => channel.read().guild_id,
+        let guild_id = match ctx.cache.read().await.guild_channel(channel_id.0) {
+            Some(channel) => channel.read().await.guild_id,
             None => return,
         };
 
@@ -96,7 +98,7 @@ impl EventHandler for Handler {
             event.id.0, channel_id.0
         );
 
-        let log_channel = match get_log_channel(guild_id) {
+        let log_channel = match get_log_channel(guild_id).await {
             Some(channel) => channel,
             None => return,
         };
@@ -113,12 +115,17 @@ impl EventHandler for Handler {
             channel_id.0,
         );
 
-        let cache = get_data::<CacheStorage>(&ctx).unwrap();
-        match cache.update_message(event.id, &content) {
+        let cache = get_data::<CacheStorage>(&ctx).await.unwrap();
+        match cache.update_message(event.id, &content).await {
             Some(old_message) => {
                 fields.insert(0, ("Original message", old_message, false));
             }
             None => to_say.push_str("\nBut I cannot remember how it was..."),
+        };
+        
+        let color = {
+            let config = crate::read_config().await;
+            config.color.message_update
         };
 
         let send = log_channel.send_message(&ctx, |m| {
@@ -126,35 +133,32 @@ impl EventHandler for Handler {
                 embed.description(to_say);
                 embed.timestamp(now());
                 embed.fields(fields);
-                embed.color({
-                    let config = crate::read_config();
-                    config.color.message_update
-                });
+                embed.color(color);
 
                 embed
             })
         });
 
-        if let Err(why) = send {
+        if let Err(why) = send.await {
             error!("Cannot send the message update log\n{:#?}", why);
         }
     }
 
-    fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {
+    async fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {
         info!("A message with id {} has been deleted", msg.0);
-        process_deleted_message(&ctx, channel, Some(msg)); // Option also an iterator
+        process_deleted_message(&ctx, channel, Some(msg)).await; // Option also an iterator
     }
 
-    fn message_delete_bulk(&self, ctx: Context, channel_id: ChannelId, msgs: Vec<MessageId>) {
+    async fn message_delete_bulk(&self, ctx: Context, channel_id: ChannelId, msgs: Vec<MessageId>) {
         info!(
             "OMG, there are {} messages has been killed by one slash",
             msgs.len()
         );
 
-        process_deleted_message(&ctx, channel_id, msgs.into_iter().rev())
+        process_deleted_message(&ctx, channel_id, msgs.into_iter().rev()).await
     }
 
-    fn ready(&self, ctx: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
         info!(
             "The bot is now available on {} servers and {} private channels",
@@ -166,38 +170,41 @@ impl EventHandler for Handler {
         let activity = Activity::listening("tomo>leaderboard");
         let status = OnlineStatus::DoNotDisturb;
 
-        ctx.set_presence(Some(activity), status);
+        ctx.set_presence(Some(activity), status).await;
 
-        if let Ok(info) = ctx.http.get_current_application_info() {
-            crate::write_config().masters.insert(info.owner.id);
+        if let Ok(info) = ctx.http.get_current_application_info().await {
+            crate::write_config().await.masters.insert(info.owner.id);
         }
     }
 
-    fn resume(&self, _: Context, resume: ResumedEvent) {
+    async fn resume(&self, _: Context, resume: ResumedEvent) {
         debug!("Resumed; trace: {:?}", resume.trace);
     }
 }
 
-fn is_watching_channel(ctx: &Context, channel: ChannelId) -> bool {
-    get_guild_id_from_channel(ctx, channel)
-        .and_then(get_log_channel)
-        .is_some()
+async fn is_watching_channel(ctx: &Context, channel: ChannelId) -> bool {
+    let guild_id = get_guild_id_from_channel(ctx, channel).await;
+    match guild_id {
+        Some(v) => get_log_channel(v).await.is_some(),
+        None => false,
+    }
 }
 
-fn get_log_channel(guild: GuildId) -> Option<ChannelId> {
+async fn get_log_channel(guild: GuildId) -> Option<ChannelId> {
     crate::read_config()
+        .await
         .guilds
         .get(&guild)
         .and_then(|config| config.logger.channel.filter(|_| config.logger.enable))
 }
 
-fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
+async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
     use Channel::*;
 
-    match c.to_channel(ctx) {
+    match c.to_channel(ctx).await {
         Ok(Guild(c)) => {
-            let channel = c.read();
-            let guild_name = channel.guild(&ctx.cache).unwrap().read().name.to_owned();
+            let channel = c.read().await;
+            let guild_name = channel.guild(&ctx.cache).await.unwrap().read().await.name.to_owned();
 
             format!(
                 "channel {}({}) at server {}",
@@ -207,12 +214,13 @@ fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
             )
         }
         Ok(Group(c)) => {
-            let channel = c.read();
+            let channel = c.read().await;
             let color = to_color(channel.channel_id.0);
 
             let owner = channel
                 .owner_id
                 .to_user(ctx)
+                .await
                 .ok()
                 .map_or("Unknown".bold().underlined(), |user| {
                     colored_name_user(&user)
@@ -240,30 +248,36 @@ fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
     }
 }
 
-fn process_deleted_message<I>(ctx: &Context, channel_id: ChannelId, msgs: I)
+async fn process_deleted_message<I>(ctx: &Context, channel_id: ChannelId, msgs: I)
 where
     I: IntoIterator<Item = MessageId>,
 {
-    let guild_id = match get_guild_id_from_channel(&ctx, channel_id) {
+    let guild_id = match get_guild_id_from_channel(&ctx, channel_id).await {
         Some(id) => id,
         None => return,
     };
 
-    let log_channel = match get_log_channel(guild_id) {
+    let log_channel = match get_log_channel(guild_id).await {
         Some(c) => c,
         None => return,
     };
 
-    let cache = get_data::<CacheStorage>(&ctx).unwrap();
-
-    msgs.into_iter()
-        .filter_map(|v| cache.remove_message(v))
-        .filter_map(|v| _process_deleted(&ctx, log_channel, channel_id, v).err())
-        .for_each(|err| error!("Cannot log deleted message\n{:#?}", err))
+    let cache = get_data::<CacheStorage>(&ctx).await.unwrap();
+    
+    for msg in msgs {
+        let mess = match cache.remove_message(msg).await {
+            Some(v) => v,
+            None => return,
+        };
+        
+        if let Err(why) = _process_deleted(&ctx, log_channel, channel_id, mess).await {
+            error!("Cannot log deleted message\n{:#?}", why);
+        }
+    }
 }
 
 #[rustfmt::skip]
-fn _process_deleted(
+async fn _process_deleted(
     ctx: &Context,
     log_channel: ChannelId,
     channel_id: ChannelId,
@@ -277,12 +291,17 @@ fn _process_deleted(
     
     info!("{}", msg.content.to_owned().dim());
     
-    let (name, discriminator, is_bot) = match ctx.cache.read().user(msg.author_id) {
+    let (name, discriminator, is_bot) = match ctx.cache.read().await.user(msg.author_id) {
         None => ("Unknown".to_string(), 0, false),
         Some(user) => {
-            let info = user.read();
+            let info = user.read().await;
             (info.name.to_owned(), info.discriminator, info.bot)
         }
+    };
+    
+    let color = {
+        let config = crate::read_config().await;
+        config.color.message_delete
     };
 
     log_channel.send_message(&ctx, |message| {
@@ -306,16 +325,13 @@ fn _process_deleted(
             embed.description(content);
             embed.timestamp(now());
             embed.fields(fields);
-            embed.color({
-                let config = crate::read_config();
-                config.color.message_delete
-            });
+            embed.color(color);
             
             embed
         });
         
         message
-    })?;
+    }).await?;
     
     log_channel.send_message(ctx, |message| {
         msg.attachments
@@ -324,7 +340,7 @@ fn _process_deleted(
             .for_each(|v| { message.add_file(v); });
         
         message
-    })?;
+    }).await?;
 
     Ok(())
 }

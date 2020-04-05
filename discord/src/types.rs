@@ -4,7 +4,6 @@ use crate::traits::ToEmbed;
 use crate::Result;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
-use parking_lot::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
@@ -17,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::{Mutex, RwLock};
 
 use magic::traits::MagicBool as _;
 
@@ -39,54 +39,54 @@ impl CustomEvents {
         }
     }
 
-    /// There is a rare case where `add` and `done` method run at the same time
-    /// if the `done` method is running, then the `add` method will not be added
-    /// until being called again. That's why wait a few ms and check it again
-    /// will help us avoid this scenario.
-    /// 50ms would do unless an even rarer case happens where executing **a lot** of `done`
-    #[rustfmt::skip]
-    pub fn add<S: ToString, F>(&self, id: S, f: F)
-    where
-        F: Fn(&Context, &Event) + Sync + Send + 'static,
-    {
-        let id = id.to_string();
-        let f = Box::new(f);
-
-        match self.events.try_write_for(Duration::from_millis(50)) {
-            Some(mut events) => { events.insert(id, f); }
-            None => self.pending.lock().push(Action::Add(id, f)),
-        }
-    }
-
-    /// Do not need the extra work like `add` method since functions inside
-    /// the events map are executing fairly often.
-    #[rustfmt::skip]
-    pub fn done<S: AsRef<str>>(&self, id: S) {
-        let id = id.as_ref();
-
-        match self.events.try_write() {
-            Some(mut events) => { events.remove(id); }
-            None => self.pending.lock().push(Action::Done(id.to_string())),
-        };
-    }
-
-    pub fn execute(&self, ctx: &Context, ev: &Event) {
-        for f in self.events.read().values() {
-            f(&ctx, &ev);
-        }
-
-        if let Some(mut events) = self.events.try_write() {
-            let mut pending = self.pending.lock();
-            let actions = pending.drain(..);
-
-            for action in actions {
-                match action {
-                    Action::Add(name, f) => events.insert(name, f),
-                    Action::Done(name) => events.remove(&name),
-                };
-            }
-        }
-    }
+//     /// There is a rare case where `add` and `done` method run at the same time
+//     /// if the `done` method is running, then the `add` method will not be added
+//     /// until being called again. That's why wait a few ms and check it again
+//     /// will help us avoid this scenario.
+//     /// 50ms would do unless an even rarer case happens where executing **a lot** of `done`
+//     #[rustfmt::skip]
+//     pub fn add<S: ToString, F>(&self, id: S, f: F)
+//     where
+//         F: Fn(&Context, &Event) + Sync + Send + 'static,
+//     {
+//         let id = id.to_string();
+//         let f = Box::new(f);
+// 
+//         match self.events.try_write_for(Duration::from_millis(50)) {
+//             Some(mut events) => { events.insert(id, f); }
+//             None => self.pending.lock().push(Action::Add(id, f)),
+//         }
+//     }
+// 
+//     /// Do not need the extra work like `add` method since functions inside
+//     /// the events map are executing fairly often.
+//     #[rustfmt::skip]
+//     pub fn done<S: AsRef<str>>(&self, id: S) {
+//         let id = id.as_ref();
+// 
+//         match self.events.try_write() {
+//             Some(mut events) => { events.remove(id); }
+//             None => self.pending.lock().push(Action::Done(id.to_string())),
+//         };
+//     }
+// 
+//     pub fn execute(&self, ctx: &Context, ev: &Event) {
+//         for f in self.events.read().values() {
+//             f(&ctx, &ev);
+//         }
+// 
+//         if let Some(mut events) = self.events.try_write() {
+//             let mut pending = self.pending.lock();
+//             let actions = pending.drain(..);
+// 
+//             for action in actions {
+//                 match action {
+//                     Action::Add(name, f) => events.insert(name, f),
+//                     Action::Done(name) => events.remove(&name),
+//                 };
+//             }
+//         }
+//     }
 }
 
 pub struct Information {
@@ -96,10 +96,10 @@ pub struct Information {
 }
 
 impl Information {
-    pub fn init(http: &Http) -> Result<Self> {
+    pub async fn init(http: &Http) -> Result<Self> {
         let info = Self {
             booted_on: Utc::now(),
-            user_id: http.get_current_user()?.id,
+            user_id: http.get_current_user().await?.id,
             executed: AtomicUsize::new(0),
         };
 

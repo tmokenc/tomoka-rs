@@ -1,6 +1,6 @@
 #![allow(unstable_name_collisions)]
 
-use crate::commands::prelude::now;
+use crate::utils::now;
 use chrono::{TimeZone, Utc};
 use magic::report_bytes;
 use magic::traits::MagicIter as _;
@@ -9,7 +9,7 @@ use serenity::builder::CreateEmbed;
 use std::fmt::{Display, Write as _};
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
-pub trait ToEmbed {
+pub trait ToEmbed: Send {
     fn to_embed(&self, embed: &mut CreateEmbed);
 }
 
