@@ -47,6 +47,14 @@ pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> b
     }
 }
 
+/// removes mentions from the message
+pub fn remove_mention<S: AsRef<str>>(msg: S) -> String {
+    lazy_static! {
+        static ref MENTION_RE: Regex = Regex::new("<@[0-9]+>").unwrap();
+    }
+    MENTION_RE.replace_all(msg.as_ref(), "").to_string()
+}
+
 /// removes all emote from the message
 pub fn remove_emote<S: AsRef<str>>(msg: S) -> String {
     lazy_static! {

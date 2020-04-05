@@ -21,6 +21,7 @@ use crate::{
     storages::{AIStore, CustomEventList, InforKey, ReqwestClient},
     traits::ToEmbed,
     utils::*,
+    Result,
 };
 
 use chrono::{DateTime, Utc};
@@ -138,27 +139,36 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
 
 #[hook]
 async fn normal_message(ctx: &mut Context, msg: &Message) {
-    // macro_rules! exec_func {
-    //     ( $( $x:ident ),* ) => {
-    //         let config = crate::read_config();
+    macro_rules! exec_func {
+        ( $( $x:ident ),* ) => {
+            let config = crate::read_config().await;
+ 
+            $(
+                let func = SmallString::from(stringify!($x));
+                let mut futs = Vec::new();
+                
+                if !config.disable_auto_cmd.contains(&func) {
+                    futs.push($x(&ctx, &msg));
+                }
+            )*
+            
+            futures::future::join_all(futs)
+                .await
+                .into_iter()
+                .filter_map(|v| v.err())
+                .for_each(|err| println!("Cannot exec a auto process\n{:#?}", err));
+        };
+    }
 
-    //         $(
-    //             if !config.disable_auto_cmd.contains(&SmallString::from(stringify!($x))) {
-    //                 $x(&ctx, &msg);
-    //             }
-    //         )*
-    //     };
-    // }
-
-    // exec_func! {
-    //     mention_rgb,
-    //     repeat_words,
-    //     respect,
-    //     eliza_response,
-    //     rgb_tu,
-    //     find_sauce,
-    //     find_sadkaede
-    // }
+    exec_func! {
+        mention_rgb,
+        repeat_words,
+        respect,
+        eliza_response,
+        rgb_tu
+        // find_sauce,
+        // find_sadkaede
+    }
 }
 
 fn framwork_config(config: &mut Configuration) -> &mut Configuration {
@@ -207,168 +217,177 @@ async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .then(|| config.master_prefix.to_string())
 }
 
-// fn mention_rgb(ctx: &Context, msg: &Message) {
-//     let guild_id = match msg.guild_id {
-//         Some(v) => v,
-//         None => return,
-//     };
-//
-//     if !msg.content.contains("@rgb") {
-//         return;
-//     }
-//
-//     let to_say = crate::read_config()
-//         .guilds
-//         .get(&guild_id)
-//         .as_deref()
-//         .and_then(|v| v.rgblized.as_ref())
-//         .map(|v| {
-//             let mut res = String::with_capacity(v.len() * 22);
-//             for role in v {
-//                 write!(&mut res, "<@&{}>", role.id).unwrap();
-//             }
-//             res
-//         });
-//
-//     if let Some(m) = to_say {
-//         m.split_at_limit(1980, ">")
-//             .filter_map(|s| msg.channel_id.say(&ctx, s).err())
-//             .for_each(|err| error!("Cannot mention rgb\n{}", err))
-//     }
-// }
-//
-// fn repeat_words(ctx: &Context, msg: &Message) {
-//     let guild_id = match msg.guild_id {
-//         Some(g) => g,
-//         None => return,
-//     };
-//
-//     let config = crate::read_config();
-//     let guild = match config.guilds.get(&guild_id) {
-//         Some(d) => d,
-//         None => return,
-//     };
-//
-//     if guild.repeat_words.enable && !guild.repeat_words.words.is_empty() {
-//         let mess: String = msg
-//             .content
-//             .split_whitespace()
-//             .filter(|v| guild.repeat_words.words.contains(&v.to_lowercase()))
-//             .map(|v| format!("**{}**", v))
-//             .join(", ");
-//
-//         if !mess.is_empty() {
-//             if let Err(why) = msg.channel_id.say(ctx, mess) {
-//                 error!("Error occur while repeating words:\n{}", why)
-//             }
-//         }
-//     }
-// }
-//
-// fn respect(ctx: &Context, msg: &Message) {
-//     if msg
-//         .content
-//         .split_whitespace()
-//         .next()
-//         .filter(|&v| v == "f" || v == "F")
-//         .is_none()
-//     {
-//         return;
-//     }
-//
-//     let mut content = format!("**{}** has paid their respects", msg.author.name);
-//
-//     if msg.content.len() > 2 {
-//         let arg = remove_emote(&msg.content[2..]);
-//         if !arg.is_empty() {
-//             write!(&mut content, " for **{}**", arg.trim()).unwrap();
-//         }
-//     }
-//
-//     content.push('.');
-//
-//     let emoji = match crate::read_config().respect_emoji {
-//         None => ReactionType::from('🇫'),
-//         Some(id) => ReactionType::from(EmojiIdentifier {
-//             id,
-//             name: "f_".to_string(),
-//         }),
-//     };
-//
-//     let send = msg.channel_id.send_message(ctx, |message| {
-//         message.content(content);
-//         message.reactions(Some(emoji));
-//         message
-//     });
-//
-//     if let Err(why) = send {
-//         error!("Cannot pay respect:\n{:#?}", why);
-//     }
-// }
-//
-// fn eliza_response(ctx: &Context, msg: &Message) {
-//     let data = ctx.data.read();
-//     let me = data.get::<InforKey>().unwrap();
-//
-//     if msg.mentions_user_id(me.user_id) {
-//         let brain = get_data::<AIStore>(&ctx).expect("Expected brain in ShareMap.");
-//
-//         let input = remove_mention(&msg.content);
-//         let mut eliza = brain.lock();
-//         let response = eliza.respond(&input);
-//
-//         if let Err(err) = msg.channel_id.say(&ctx.http, response) {
-//             error!("Cannot send the smart response\n{:#?}", err);
-//         }
-//     }
-// }
-//
-// fn rgb_tu(ctx: &Context, msg: &Message) {
-//     use rand::prelude::*;
-//     use std::fs;
-//
-//     let config = crate::read_config();
-//     let rgb = match config.rgb.as_ref() {
-//         Some(r) => r,
-//         None => return,
-//     };
-//
-//     if msg.guild_id.is_some()
-//         && msg.author.id.0 == 314444746959355905
-//         && msg
-//             .content
-//             .to_lowercase()
-//             .split_whitespace()
-//             .map(SmallString::from)
-//             .any(|v| rgb.tu.contains(&v))
-//     {
-//         let mut rng = SmallRng::from_entropy();
-//         let num = rng.gen::<f32>();
-//
-//         msg
-//         .channel_id
-//         .send_message(&ctx, |m| m.embed(|embed| {
-//             embed
-//             .color((num * 16777215_f32) as u32)
-//             .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
-//         }))
-//         .ok();
-//
-//         if num < 0.05 {
-//             let path = &rgb.evidence;
-//
-//             let evi = fs::read_dir(path)
-//                 .unwrap()
-//                 .filter_map(|v| v.ok())
-//                 .choose(&mut SmallRng::from_entropy())
-//                 .unwrap()
-//                 .path();
-//
-//             msg.channel_id.send_message(&ctx, |m| m.add_file(&evi)).ok();
-//         }
-//     }
-// }
-//
+async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
+    let guild_id = match msg.guild_id {
+        Some(v) => v,
+        None => return Ok(()),
+    };
+
+    if !msg.content.contains("@rgb") {
+        return Ok(());
+    }
+
+    let to_say = crate::read_config()
+        .await
+        .guilds
+        .get(&guild_id)
+        .as_deref()
+        .and_then(|v| v.rgblized.as_ref())
+        .map(|v| {
+            let mut res = String::with_capacity(v.len() * 22);
+            for role in v {
+                write!(&mut res, "<@&{}>", role.id).unwrap();
+            }
+            res
+        });
+
+    if let Some(m) = to_say {
+        for mess in m.split_at_limit(1980, ">") {
+            msg.channel_id.say(&ctx, mess).await?;
+        }
+    }
+    
+    
+    Ok(())
+}
+
+async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
+    let guild_id = match msg.guild_id {
+        Some(g) => g,
+        None => return Ok(()),
+    };
+
+    let config = crate::read_config().await;
+    let guild = match config.guilds.get(&guild_id) {
+        Some(d) => d,
+        None => return Ok(()),
+    };
+
+    if guild.repeat_words.enable && !guild.repeat_words.words.is_empty() {
+        let mess: String = msg
+            .content
+            .split_whitespace()
+            .filter(|v| guild.repeat_words.words.contains(&v.to_lowercase()))
+            .map(|v| format!("**{}**", v))
+            .join(", ");
+
+        if !mess.is_empty() {
+            msg.channel_id.say(ctx, mess).await?;
+        }
+    }
+    
+    Ok(())
+}
+
+async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
+    if msg
+        .content
+        .split_whitespace()
+        .next()
+        .filter(|&v| v == "f" || v == "F")
+        .is_none()
+    {
+        return Ok(());
+    }
+
+    let mut content = format!("**{}** has paid their respects", msg.author.name);
+
+    if msg.content.len() > 2 {
+        let arg = remove_emote(&msg.content[2..]);
+        if !arg.is_empty() {
+            write!(&mut content, " for **{}**", arg.trim())?;
+        }
+    }
+
+    content.push('.');
+
+    let emoji = match crate::read_config().await.respect_emoji {
+        None => ReactionType::from('🇫'),
+        Some(id) => ReactionType::from(EmojiIdentifier {
+            id,
+            name: "f_".to_string(),
+        }),
+    };
+
+    let send = msg.channel_id.send_message(ctx, |message| {
+        message.content(content);
+        message.reactions(Some(emoji));
+        message
+    }).await?;
+    
+    Ok(())
+}
+
+async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
+    let data = ctx.data.read().await;
+    let me = data.get::<InforKey>().unwrap();
+
+    if msg.mentions_user_id(me.user_id) {
+        let brain = get_data::<AIStore>(&ctx).await.expect("Expected brain in ShareMap.");
+
+        let input = remove_mention(&msg.content);
+        let mut eliza = brain.lock().await;
+        let response = eliza.respond(&input);
+
+        msg.channel_id.say(&ctx.http, response).await?;
+    }
+    
+    Ok(())
+}
+
+async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
+    use rand::prelude::*;
+
+    let config = crate::read_config().await;
+    let rgb = match config.rgb.as_ref() {
+        Some(r) => r,
+        None => return Ok(()),
+    };
+
+    if msg.guild_id.is_some()
+        && msg.author.id.0 == 314444746959355905
+        && msg
+            .content
+            .to_lowercase()
+            .split_whitespace()
+            .map(SmallString::from)
+            .any(|v| rgb.tu.contains(&v))
+    {
+        let mut rng = SmallRng::from_entropy();
+        let num = rng.gen::<f32>();
+
+        msg
+        .channel_id
+        .send_message(&ctx, |m| m.embed(|embed| {
+            embed
+            .color((num * 16777215_f32) as u32)
+            .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
+        }))
+        .await?;
+
+        if num < 0.05 {
+            use tokio::fs;
+            use tokio::stream::StreamExt;
+            
+            let path = &rgb.evidence;
+
+            let evi = fs::read_dir(path)
+                .await?
+                .filter_map(|v| v.ok())
+                .collect::<Vec<_>>()
+                .await
+                .choose(&mut rng)
+                .map(|v| v.path());
+                
+            if let Some(evi) = evi {
+                msg.channel_id.send_message(&ctx, |m| m.add_file(&evi)).await?;
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 // struct SchedulerReact {
 //     data: Vec<Box<dyn ToEmbed>>,
 //     channel_id: ChannelId,
