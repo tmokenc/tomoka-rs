@@ -621,7 +621,7 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 [[package]]
 name = "command_attr"
 version = "0.1.7"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#0c83785737532386104f196d490f9898c5271f6d"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#a42f1bbf946f483a1929328be01b96dc9a983ed7"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -701,7 +701,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "crappy_magic"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/crappy-magic#b1ef3e5de1942bdd261181749ae8912c3e13ec37"
+source = "git+https://gitlab.com/tmokenc/crappy-magic#5ef6e59983587f52e4035cf2542325fa7b086874"
 dependencies = [
  "bytesize",
  "dominant_color",
@@ -1701,10 +1701,22 @@ dependencies = [
  "kernel32-sys",
  "libc",
  "log",
- "miow",
+ "miow 0.2.1",
  "net2",
  "slab",
  "winapi 0.2.8",
+]
+
+[[package]]
+name = "mio-named-pipes"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5e374eff525ce1c5b7687c4cef63943e7686524a387933ad27ca7ec43779cb3"
+dependencies = [
+ "log",
+ "mio",
+ "miow 0.3.3",
+ "winapi 0.3.8",
 ]
 
 [[package]]
@@ -1728,6 +1740,16 @@ dependencies = [
  "net2",
  "winapi 0.2.8",
  "ws2_32-sys",
+]
+
+[[package]]
+name = "miow"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "396aa0f2003d7df8395cb93e09871561ccc3e785f0acb369170e8cc74ddf9226"
+dependencies = [
+ "socket2",
+ "winapi 0.3.8",
 ]
 
 [[package]]
@@ -2543,15 +2565,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scheduled-thread-pool"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0988d7fdf88d5e5fcf5923a0f1e8ab345f3e98ab4bc6bc45a2d5ff7f7458fbf6"
-dependencies = [
- "parking_lot 0.10.0",
-]
-
-[[package]]
 name = "scoped_threadpool"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2687,9 +2700,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78a7a12c167809363ec3bd7329fc0a3369056996de43c4b37ef3cd54a6ce4867"
+checksum = "da07b57ee2623368351e9a0488bb0b261322a15a6e0ae53e243cbdc0f4208da9"
 dependencies = [
  "itoa",
  "ryu",
@@ -2720,7 +2733,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#0c83785737532386104f196d490f9898c5271f6d"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#a42f1bbf946f483a1929328be01b96dc9a983ed7"
 dependencies = [
  "async-tls",
  "async-trait",
@@ -3068,6 +3081,7 @@ dependencies = [
  "libc",
  "memchr",
  "mio",
+ "mio-named-pipes",
  "mio-uds",
  "num_cpus",
  "pin-project-lite",
@@ -3174,7 +3188,6 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "requester",
- "scheduled-thread-pool",
  "scraper",
  "serde 1.0.106",
  "serde_json",

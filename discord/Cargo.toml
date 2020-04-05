@@ -11,7 +11,7 @@ bytes = "0.5.3"
 config = "0.10"
 chrono = "0.4"
 chrono-tz = "0.5"
-scheduled-thread-pool = "0.2.3"
+# scheduled-thread-pool = "0.2.3"
 colorful = "0.2"
 dotenv = "0.15"
 eliza = "2"
@@ -36,7 +36,7 @@ pokemon_core = { git = "https://gitlab.com/tmokenc/pokemon_rs" }
 magic = { git = "https://gitlab.com/tmokenc/crappy-magic", package = "crappy_magic", features = ["full"] }
 rand = { version = "0.7", features = ["small_rng"] }
 ctrlc = { version = "3.1", features = ["termination"] }
-tokio = { version = "0.2", features = ["fs", "sync", "stream", "signal", "io-util", "rt-util", "rt-threaded"] }
+tokio = { version = "0.2", features = ["fs", "sync", "stream", "signal", "io-util", "rt-threaded"] }
 dashmap = { version = "3", features = ["serde"] }
 smallstr = { version = "0.2", features = ["serde"] }
 # serenity = { version = "0.8", features = ["voice", "cache"] }

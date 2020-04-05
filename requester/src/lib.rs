@@ -15,4 +15,4 @@ pub use reqwest::get;
 pub use reqwest::Client as Reqwest;
 pub use reqwest::Error as ReqwestError;
 
-pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Sync + Send>>;
