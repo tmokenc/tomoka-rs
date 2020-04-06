@@ -89,16 +89,8 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
-
-        data.read()
-            .await
-            .get::<CacheStorage>()
-            .unwrap()
-            .clean_up()
-            .await;
-
-        info!("{}", "BYE".underlined().gradient(Color::Red));
         shard_manager.lock().await.shutdown_all().await;
+        info!("{}", "BYE".underlined().gradient(Color::Red));
     });
 
     client.start().await?;
