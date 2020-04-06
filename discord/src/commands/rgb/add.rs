@@ -4,11 +4,11 @@ use crate::types::GuildConfig;
 #[command]
 #[only_in(guilds)]
 #[required_permissions(MANAGE_ROLES)]
-#[description = "Add roles to the almighty RGB databse"]
-fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+/// Add roles to the almighty RGB databse
+async fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
         msg.channel_id
-            .say(&ctx, "Please mention some role to be added")?;
+            .say(&ctx, "Please mention some role to be added").await?;
         return Ok(());
     }
 
@@ -17,26 +17,30 @@ fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         None => return Ok(())
     };
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let mut guild = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));
 
-    let roles = msg
-        .mention_roles
-        .iter()
-        .filter_map(|v| v.to_role_cached(&ctx));
+    let mut roles = Vec::new();
+    
+    for role in &msg.mention_roles {
+        if let Some(role) = role.to_role_cached(&ctx).await {
+            roles.push(role);
+        }
+    }
+    
     let count = guild.add_rgb(roles);
 
     let response = if count == 0 {
         "Please make sure that you are adding a mentionable roles, which is not in the rgb list yet"
             .to_owned()
     } else {
-        update_guild_config(&ctx, &guild)?;
+        update_guild_config(&ctx, &guild).await?;
         format!("Added {} roles into the almighty RGB database", count)
     };
 
-    msg.channel_id.say(&ctx, response)?;
+    msg.channel_id.say(&ctx, response).await?;
     Ok(())
 }

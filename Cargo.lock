@@ -621,7 +621,7 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#9c7562bcd84b1a6a143155a0dd9a3e2e3e17c967"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#4298fb8588400745c24bb851dbcee19c3d72a5a1"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -1373,9 +1373,9 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.23.2"
+version = "0.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9062b90712d25bc6bb165d110aa59c6b47c849246e341e7b86a98daff9d49f60"
+checksum = "bfc5483f8d5afd3653b38a196c52294dcb239c3e1a5bade1990353ea13bcf387"
 dependencies = [
  "bytemuck",
  "byteorder",
@@ -2701,7 +2701,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.1"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#9c7562bcd84b1a6a143155a0dd9a3e2e3e17c967"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#4298fb8588400745c24bb851dbcee19c3d72a5a1"
 dependencies = [
  "async-tls",
  "async-trait",

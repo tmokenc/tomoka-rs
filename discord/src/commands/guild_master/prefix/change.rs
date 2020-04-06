@@ -8,7 +8,7 @@ use crate::types::GuildConfig;
 #[min_args(1)]
 #[required_permissions(MANAGE_GUILD)]
 ///Set a custom prefix instead of the default
-fn change(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn change(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let prefix = args.rest();
     if prefix.is_empty() {
         return Ok(());
@@ -19,20 +19,24 @@ fn change(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         None => return Ok(())
     };
 
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let mut g = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));
 
     let old_prefix = g.set_prefix(&prefix);
-    update_guild_config(&ctx, &g)?;
+    let color = config.color.information;
+    
+    update_guild_config(&ctx, &g).await?;
+    drop(g);
+    drop(config);
     
     let description = format!("Changed the current prefix to **__{}__**", &prefix);
     
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
         embed.title("Prefix information");
-        embed.color(config.color.information);
+        embed.color(color);
         embed.timestamp(now());
         
         embed.description(description);
@@ -43,7 +47,7 @@ fn change(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
         
         embed
-    }))?;
+    })).await?;
 
     Ok(())
 }

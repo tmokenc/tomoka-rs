@@ -6,51 +6,61 @@ use magic::traits::MagicIter;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// Toggle the repeat-words machine on/off
-fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(()),
     };
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let mut guild = config
         .guilds
         .entry(guild_id)
         .or_insert_with(|| GuildConfig::new(guild_id.0));
     
     let current = guild.toggle_repeat_words();
-    update_guild_config(&ctx, &guild)?;
+    update_guild_config(&ctx, &guild).await?;
+    
+    let color = config.color.information;
+    
+    let (description, words) = match (current, guild.repeat_words.words.len()) {
+        (true, 0) => {
+            let des = "Enabled the repeat-words machine but there is no word in the list yet
+            Consider using the `option words add` command to add words to be repeated";
+            (des, None)
+        }
+        
+        (true, _) => {
+            let words = guild
+            .repeat_words
+            .words
+            .iter()
+            .map(|w| format!("`{}`", w))
+            .join(", ");
+            
+            ("Enabled the repeat-words machine", Some(words))
+        } 
+        
+        _ => {
+            ("Disabled the repeat-words machine", None)
+        }
+    };
+    
+    drop(guild);
+    drop(config);
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
         embed.title("Repeat-words information");
-        embed.color(config.color.information);
+        embed.color(color);
         embed.timestamp(now());
+        embed.description(description);
         
-        match (current, guild.repeat_words.words.len()) {
-            (true, 0) => {
-                embed.description("Enabled the repeat-words machine but there is no word in the list yet
-                Consider using the `option words add` command to add words to be repeated");
-            }
-            
-            (true, _) => {
-                let words = guild
-                .repeat_words
-                .words
-                .iter()
-                .map(|w| format!("`{}`", w))
-                .join(", ");
-                
-                embed.description("Enabled the repeat-words machine");
-                embed.field("Words", words, false);
-            } 
-            
-            (false, _) => {
-                embed.description("Disabled the repeat-words machine");
-            }
+        if let Some(w) = words {
+            embed.field("Words", w, true);
         }
         
         embed
-    }))?;
+    })).await?;
 
     Ok(())
 }

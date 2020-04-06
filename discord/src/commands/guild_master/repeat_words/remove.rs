@@ -5,7 +5,7 @@ use crate::commands::prelude::*;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// "Remove words (seperate by `, `) in the repeating words list
-fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let words: Vec<_> = args.rest().trim().split(", ").collect();
     if words.get(0).filter(|x| !x.is_empty()).is_none() {
         return Ok(())
@@ -16,8 +16,9 @@ fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         None => return Ok(())
     };
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let mut guild = config.guilds.get_mut(&guild_id);
+    let color = config.color.information;
     let description = match guild {
         Some(ref mut guild) => {
             let length = guild.remove_words(words);
@@ -25,7 +26,7 @@ fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             if length == 0 {
                 String::from("There is no word to be removed")
             } else {
-                update_guild_config(&ctx, &guild)?;
+                update_guild_config(&ctx, &guild).await?;
                 format!("Removed {} words", length)
             }
         }
@@ -34,15 +35,18 @@ fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             String::from("This guilds hasn't used this feature yet.")
         }
     };
+    
+    drop(guild);
+    drop(config);
             
     msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
         embed.title("Repeat-words information");
-        embed.color(config.color.information);
+        embed.color(color);
         embed.timestamp(now());
         
         embed.description(description);
         embed
-    }))?;
+    })).await?;
    
     Ok(())
 }

@@ -24,8 +24,11 @@ struct CoronaResult {
 /// Add limit number to limit the result
 /// `tomo>leaderboard 10` < this will only show first 10 countries
 async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    let req = get_data::<ReqwestClient>(&ctx).unwrap();
-    let res: Vec<CoronaResult> = req.get(API).send().await?.json().await?;
+    let res: Vec<CoronaResult> = get_data::<ReqwestClient>(&ctx).await
+        .unwrap()
+        .get(API)
+        .send().await?
+        .json().await?;
     
     let (total_c, total_r, total_d) = res
         .iter()

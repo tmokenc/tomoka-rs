@@ -6,15 +6,23 @@ use scraper::{Html, Selector};
 
 #[command]
 #[aliases("smogon", "strategy")]
-fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let req = get_data::<ReqwestClient>(&ctx).unwrap();
+async fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let pokemon = args.rest();
     let aliasized = pokemon.replace(" ", "-").to_lowercase();
     let title = format!("Strategies for {}", pokemon);
 
-    let strategies = block_on(req.strategy(&aliasized, None))?;
+    let strategies = get_data::<ReqwestClient>(&ctx)
+        .await
+        .unwrap()
+        .strategy(&aliasized, None)
+        .await?;
 
     if strategies.is_empty() {
+        let color = {
+            let config = crate::read_config().await;
+            config.color.error
+        };
+        
         msg.channel_id.send_message(&ctx, |m| {
             m.embed(|embed| {
                 embed.title(title);
@@ -23,15 +31,11 @@ fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResul
                     pokemon
                 ));
                 embed.timestamp(now());
-                
-                {
-                    let config = crate::read_config();
-                    embed.color(config.color.error);
-                }
+                embed.color(color);
                 
                 embed
             })
-        })?;
+        }).await?;
         return Ok(());
     }
 
@@ -52,6 +56,11 @@ fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResul
         .iter()
         .map(|v| (v.name.to_owned(), format_moveset(&v), false))
         .collect();
+    
+    let color = {
+        let config = crate::read_config().await;
+        config.color.information
+    };
 
     msg.channel_id.send_message(&ctx, |m| {
         m.embed(|embed| {
@@ -60,15 +69,11 @@ fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResul
             embed.fields(fields);
             embed.thumbnail(sprite);
             embed.timestamp(now());
-            
-            {
-                let config = crate::read_config();
-                embed.color(config.color.information);
-            }
+            embed.color(color);
             
             embed
         })
-    })?;
+    }).await?;
 
     Ok(())
 }

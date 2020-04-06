@@ -1,13 +1,14 @@
 use crate::commands::prelude::*;
 use log::error;
 use rand::prelude::*;
-use std::fs;
+use tokio::fs;
+use tokio::stream::StreamExt;
 
 #[command]
 #[aliases("evi")]
-#[description = "The evidence of RGB"]
-fn evidence(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let config = crate::read_config();
+/// The evidence of RGB
+async fn evidence(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let config = crate::read_config().await;
     let rgb = match config.rgb {
         Some(ref rgb) => rgb,
         None => {
@@ -16,12 +17,18 @@ fn evidence(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     };
 
-    let evi = fs::read_dir(&rgb.evidence)?
+    let evi = fs::read_dir(&rgb.evidence)
+        .await?
         .filter_map(|v| v.ok())
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
         .choose(&mut SmallRng::from_entropy())
-        .unwrap()
-        .path();
+        .map(|v| v.path());
 
-    msg.channel_id.send_message(&ctx, |m| m.add_file(&evi))?;
+    if let Some(e) = evi {
+        msg.channel_id.send_message(&ctx, |m| m.add_file(&e)).await?;
+    }
+    
     Ok(())
 }

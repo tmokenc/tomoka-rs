@@ -32,6 +32,18 @@ use serenity::{
 
 pub type Color = (u8, u8, u8);
 
+//I have problem with the built-in method `parse_channel` of the serenity, so I decided to write my own function for this.
+pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
+    lazy_static! {
+        static ref CHANNEL_RE: Regex = Regex::new(r"<#(\d+)>").unwrap();
+    }
+    CHANNEL_RE
+        .captures_iter(msg)
+        .filter_map(|v| v[1].parse::<u64>().ok())
+        .map(ChannelId)
+        .collect()
+}
+
 /// Check if a (guild) channel is nsfw or not
 pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
     let channel = channel

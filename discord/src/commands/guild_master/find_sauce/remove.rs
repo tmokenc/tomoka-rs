@@ -5,7 +5,7 @@ use magic::traits::MagicIter as _;
 #[only_in("guilds")]
 #[required_permissions(MANAGE_GUILD)]
 /// Remove channel(s) from the saucing list on this server
-fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(())
@@ -16,50 +16,56 @@ fn remove(ctx: &mut Context, msg: &Message) -> CommandResult {
     if channels.is_empty() {
         msg.channel_id.send_message(ctx, |m| {
                 m.content("Please *mention* some channel to be watched")
-            })?;
+            }).await?;
             return Ok(());
     }
     
-    let config = crate::read_config();
-    let mut guild_config = config
-        .guilds
-        .get_mut(&guild_id);
-        
-    msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail(&config.sauce.thumbnail);
-        embed.color(config.color.information);
-        embed.timestamp(now());
-        
-        match guild_config {
-            Some(ref mut g) => {
-                let removed_channels = channels
-                    .into_iter()
-                    .filter_map(|v| g.remove_sauce_channel(v))
-                    .collect::<Vec<_>>();
-                
-                if removed_channels.is_empty() {
-                    embed.description("These channels don't exist in the list...");
-                } else {
-                    update_guild_config(&ctx, &g).ok();
-                    let mess = format!("Removed {} channels", removed_channels.len());
-                    let s = removed_channels
-                        .into_iter()
-                        .map(|v| format!("<#{}>", v.0))
-                        .join(" ");
-                        
-                    embed.description(mess);
-                    embed.field("Channels", s, true);
-                }
-            }
+    let config = crate::read_config().await;
+    let (description, field) = match config.guilds.get_mut(&guild_id) {
+        Some(ref mut g) => {
+            let removed_channels = channels
+                .into_iter()
+                .filter_map(|v| g.remove_sauce_channel(v))
+                .collect::<Vec<_>>();
             
-            _ => {
-                embed.description("These channels don't exist in the list...");
+            if removed_channels.is_empty() {
+                ("These channels don't exist in the list...".to_string(), None)
+            } else {
+                update_guild_config(&ctx, &g).await?;
+                let mess = format!("Removed {} channels", removed_channels.len());
+                let s = removed_channels
+                    .into_iter()
+                    .map(|v| format!("<#{}>", v.0))
+                    .join(" ");
+                    
+                (mess, Some(s))
             }
         }
         
+        _ => {
+            ("These channels don't exist in the list...".to_string(), None)
+        }
+    };
+    
+    let thumbnail = config.sauce.thumbnail.to_owned();
+    let color = config.color.information;
+    
+    drop(config);
+        
+    msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
+        embed.title("Saucing information");
+        embed.thumbnail(thumbnail);
+        embed.color(color);
+        embed.timestamp(now());
+        
+        embed.description(description);
+        
+        if let Some(value) = field {
+            embed.field("Channels", value, true);
+        }
+       
         embed
-    }))?;
+    })).await?;
     
     Ok(())
 }

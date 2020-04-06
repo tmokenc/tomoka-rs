@@ -4,13 +4,13 @@ use crate::traits::ToEmbed;
 #[command]
 #[only_in(guilds)]
 /// Get the info of the repeat-words machine
-fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())
     };
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let guild = config
         .guilds
         .get(&guild_id);
@@ -30,7 +30,7 @@ fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
         
         embed
-    }))?;
+    })).await?;
     
     Ok(())
 }

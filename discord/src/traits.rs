@@ -7,10 +7,17 @@ use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
 use std::fmt::{Display, Write as _};
+use std::collections::HashMap;
+use serde_json::value::Value;
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
 pub trait ToEmbed: Send {
     fn to_embed(&self, embed: &mut CreateEmbed);
+    fn embed_data(&self) -> HashMap<&'static str, Value> {
+        let mut embed = CreateEmbed::default();
+        self.to_embed(&mut embed);
+        embed.0
+    }
 }
 
 impl ToEmbed for magic::sauce::SauceNao {

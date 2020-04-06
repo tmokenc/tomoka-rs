@@ -8,7 +8,7 @@ use magic::traits::MagicIter as _;
 #[required_permissions(MANAGE_GUILD)]
 /// Add channel(s) to be watcing for sauce
 /// *This* command will automatically enable the sauce machine, even when it is disabled 
-fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())
@@ -19,11 +19,11 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     if channels.is_empty() {
         msg.channel_id.send_message(ctx, |m| {
             m.content("Please *mention* some channel to be watched")
-        })?;
+        }).await?;
         return Ok(());
     }
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
 
     let mut guild = config
         .guilds
@@ -44,12 +44,18 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
             v
         });
         
-    update_guild_config(&ctx, &guild)?;
+    update_guild_config(&ctx, &guild).await?;
 
-    msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
+    let thumbnail = config.sauce.thumbnail.to_owned();
+    let color = config.color.information;
+    
+    drop(guild);
+    drop(config);
+        
+    msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
         embed.title("Saucing information");
-        embed.thumbnail(&config.sauce.thumbnail);
-        embed.color(config.color.information);
+        embed.thumbnail(thumbnail);
+        embed.color(color);
         embed.timestamp(now());
         
         let mess = match (channels.len(), added.len()) {
@@ -83,7 +89,7 @@ fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
 
         embed.description(mess);
         embed
-    }))?;
+    })).await?;
 
     Ok(())
 }

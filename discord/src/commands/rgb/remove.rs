@@ -3,11 +3,11 @@ use crate::commands::prelude::*;
 #[command]
 #[only_in(guilds)]
 #[required_permissions(MANAGE_ROLES)]
-#[description = "Remove roles from the almighty RGB database"]
-fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+/// Remove roles from the almighty RGB database
+async fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
         msg.channel_id
-            .say(&ctx, "Please mention some role to be deleted")?;
+            .say(&ctx, "Please mention some role to be deleted").await?;
         return Ok(());
     }
 
@@ -16,11 +16,11 @@ fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         None => return Ok(())
     };
     
-    let config = crate::read_config();
+    let config = crate::read_config().await;
     let mut guild = match config.guilds.get_mut(&guild_id) {
         Some(v) => v,
         None => {
-            msg.channel_id.say(&ctx, "This guild hasn't been rgblized yet...")?;
+            msg.channel_id.say(&ctx, "This guild hasn't been rgblized yet...").await?;
             return Ok(())
         }
     };
@@ -31,11 +31,11 @@ fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
     let response = if count == 0 {
         "These roles aren't in the RGB list...".to_owned()
     } else {
-        update_guild_config(&ctx, &guild)?;
+        update_guild_config(&ctx, &guild).await?;
         format!("Removed {} roles from the almighty RGB database", count)
     };
 
-    msg.channel_id.say(&ctx, response)?;
+    msg.channel_id.say(&ctx, response).await?;
     
     Ok(())
 }
