@@ -161,7 +161,6 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
                     names.push(func);
                 }
             )*
-
         };
     }
 
@@ -181,7 +180,7 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
         .into_iter()
         .zip(names)
         .filter_map(|(func, name)| func.err().map(|e| (e, name)))
-        .for_each(|(err, name)| println!("Cannot exec the {} process\n{:#?}", name, err));
+        .for_each(|(err, name)| error!("Cannot exec the {} process\n{:#?}", name, err));
 }
 
 fn framwork_config(config: &mut Configuration) -> &mut Configuration {

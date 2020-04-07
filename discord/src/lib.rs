@@ -78,9 +78,10 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
         data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
 
-        // if has_external_command("ffmpeg") {
-        //     data.insert::<MusicManager>(mutex_data(HashMap::new()));
-        // }
+        if has_external_command("ffmpeg") {
+            data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
+            // data.insert::<MusicManager>(mutex_data(HashMap::new()));
+        }
     }
 
     let shard_manager = client.shard_manager.clone();

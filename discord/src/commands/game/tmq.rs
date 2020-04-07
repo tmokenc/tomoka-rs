@@ -68,7 +68,10 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
         None => return Ok(()),
     };
 
-    let voice_manager = get_data::<VoiceManager>(&ctx).await.unwrap();
+    let voice_manager = match get_data::<VoiceManager>(&ctx).await {
+        Some(m) => m,
+        None => return Ok(()),
+    };
     match voice_manager.lock().await.join(guild_id, voice_channel) {
         Some(ref mut voice) => voice.set_bitrate(Bitrate::BitsPerSecond(192000)),
         None => return Ok(())
