@@ -147,24 +147,21 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
 
 #[hook]
 async fn normal_message(ctx: &mut Context, msg: &Message) {
+    let config = crate::read_config().await;
+    let mut futs = Vec::new();
+    let mut names = Vec::new();
+    
     macro_rules! exec_func {
         ( $( $x:ident ),* ) => {
-            let config = crate::read_config().await;
-
             $(
                 let func = SmallString::from(stringify!($x));
-                let mut futs = Vec::new();
 
                 if !config.disable_auto_cmd.contains(&func) {
                     futs.push($x(&ctx, &msg));
+                    names.push(func);
                 }
             )*
 
-            futures::future::join_all(futs)
-                .await
-                .into_iter()
-                .filter_map(|v| v.err())
-                .for_each(|err| println!("Cannot exec an auto process\n{:#?}", err));
         };
     }
 
@@ -177,6 +174,14 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
         find_sauce,
         find_sadkaede
     }
+    
+    drop(config);
+    futures::future::join_all(futs)
+        .await
+        .into_iter()
+        .zip(names)
+        .filter_map(|(func, name)| func.err().map(|e| (e, name)))
+        .for_each(|(err, name)| println!("Cannot exec the {} process\n{:#?}", name, err));
 }
 
 fn framwork_config(config: &mut Configuration) -> &mut Configuration {
@@ -224,6 +229,7 @@ async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .then(|| config.master_prefix.to_string())
 }
 
+#[hook]
 async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
     let guild_id = match msg.guild_id {
         Some(v) => v,
@@ -257,6 +263,7 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
     let guild_id = match msg.guild_id {
         Some(g) => g,
@@ -285,6 +292,7 @@ async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
     if msg
         .content
@@ -326,6 +334,7 @@ async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     let data = ctx.data.read().await;
     let me = data.get::<InforKey>().unwrap().user_id;
@@ -347,6 +356,7 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     use rand::prelude::*;
 
@@ -405,6 +415,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     use futures::future;
     use magic::sauce::get_sauce;
@@ -481,6 +492,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
+#[hook]
 // Simply a clone of the find_sauce due to similar functionality
 async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
     if msg.content.len() < 20 {

@@ -41,12 +41,12 @@ impl RawEventHandler for RawHandler {
 }
 
 pub struct RawEvents {
-    events: RwLock<HashMap<String, Box<EventHook>>>,
+    events: RwLock<HashMap<String, EventHook>>,
     actions: Mutex<Vec<Action>>
 }
 
 enum Action {
-    Add(String, Box<EventHook>),
+    Add(String, EventHook),
     Remove(String),
 }
 
@@ -58,10 +58,9 @@ impl RawEvents {
         }
     }
     
-    pub async fn add(&self, name: impl AsRef<str>, f: EventHook) {
+    pub async fn add(&self, name: impl AsRef<str>, fut: EventHook) {
         let timeout = Duration::from_millis(30);
         let name = name.as_ref().to_string();
-        let fut = Box::new(f);
         
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => { events.insert(name, fut); },
