@@ -11,7 +11,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tokio::fs;
-use tokio::io::{AsyncWrite as _, AsyncWriteExt as _};
+use tokio::io::AsyncWriteExt as _;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {

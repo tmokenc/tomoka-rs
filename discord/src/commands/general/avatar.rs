@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::utils::{get_dominant_color, Color};
+use crate::utils::get_dominant_color;
 use futures::future::{self, TryFutureExt};
 
 #[command]
@@ -36,24 +36,22 @@ async fn avatar(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult 
     
     let color = get_dominant_color(&static_avatar);
    
-    let join = future::try_join(
+    let (color, mut message) = future::try_join(
         color,
         mess.map_err(|e| Box::new(e) as Box<_>)
-    );
+    ).await?;
      
-    if let Ok((color, mut message)) = join.await {
-        info!("the dominanted color is {:?}", &color);
-         
-        message.edit(ctx, move |m| {
-            m.embed(move |embed| {
-                embed
-                    .color(color)
-                    .title(display_name)
-                    .image(avatar)
-                    .timestamp(Utc::now().to_rfc3339())
-            })
-        }).await?;
-    }
+    info!("the dominanted color is {:?}", &color);
+     
+    message.edit(ctx, move |m| {
+        m.embed(move |embed| {
+            embed
+                .color(color)
+                .title(display_name)
+                .image(avatar)
+                .timestamp(Utc::now().to_rfc3339())
+        })
+    }).await?;
     
     Ok(())
 }

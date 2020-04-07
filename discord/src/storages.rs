@@ -3,9 +3,9 @@ use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
 use requester::Reqwest;
-use serenity::model::id::GuildId;
+// use serenity::model::id::GuildId;
 use serenity::prelude::TypeMapKey;
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

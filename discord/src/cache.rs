@@ -27,6 +27,7 @@ pub struct MyCache {
 impl Drop for MyCache {
     fn drop(&mut self) {
         info!("Dropping the cache");
+        self.message = Mutex::new(Default::default()); // to run the destructor of these items inside
         if let Err(why) = fs::remove_dir_all(&self.tmp_dir) {
             error!("Cannot clean up the custom cache\n{:#?}", why);
         }
@@ -135,13 +136,6 @@ impl MyCache {
         drop(message);
 
         Ok((cache_length, cache_size))
-    }
-
-    /// This will also delete the cache directory
-    pub async fn clean_up(&self) {
-        if let Err(why) = tokio::fs::remove_dir_all(&self.tmp_dir).await {
-            error!("Cannot clean up the cache\n{:#?}", why);
-        }
     }
 
     /// Set new maximum message allow in the cache

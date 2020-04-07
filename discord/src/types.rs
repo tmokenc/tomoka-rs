@@ -6,16 +6,13 @@ use chrono::{DateTime, Utc};
 use core::time::Duration;
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
-use serenity::client::Context;
 use serenity::http::client::Http;
-use serenity::model::event::Event;
 use serenity::model::guild::Role;
 use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
 use smallstr::SmallString;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{self, Receiver, Sender};
 
 use magic::traits::MagicBool as _;
 

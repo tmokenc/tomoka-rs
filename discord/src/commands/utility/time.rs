@@ -1,7 +1,6 @@
 use crate::commands::prelude::*;
 use chrono::TimeZone;
 use chrono_tz::*;
-use std::env;
 
 #[command]
 /// Get time for various timezone

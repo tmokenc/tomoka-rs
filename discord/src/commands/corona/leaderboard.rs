@@ -61,7 +61,7 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
         
         let mut top = 20;
         
-        for _ in (0..8) {
+        for _ in 0..8 {
             let d = data(iter.by_ref().take(10));
             
             if !d.is_empty() {

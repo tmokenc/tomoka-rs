@@ -11,8 +11,7 @@ use serenity::framework::{
 };
 use serenity::model::{
     channel::{Message, ReactionType},
-    event::Event,
-    id::{ChannelId, EmojiId, MessageId, UserId},
+    id::{MessageId, UserId},
     misc::EmojiIdentifier,
 };
 
@@ -31,11 +30,9 @@ use dashmap::DashMap;
 use lazy_static::lazy_static;
 use log::{error, info};
 use magic::has_external_command;
-use magic::sauce::SauceNao;
-use requester::ehentai::{EhentaiApi, Gmetadata};
+use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
-use std::collections::{HashMap, HashSet};
-use tokio::sync::Mutex;
+use std::collections::HashSet;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
@@ -409,7 +406,6 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     use futures::future::{self, FutureExt};
     use magic::sauce::get_sauce;
-    use serenity::model::channel::ReactionType;
 
     let config = crate::read_config().await;
 

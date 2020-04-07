@@ -1,5 +1,4 @@
 use crate::commands::prelude::*;
-use serenity::framework::standard::CommandError;
 
 #[command]
 #[min_args(1)]

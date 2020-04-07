@@ -1,15 +1,11 @@
-use std::future::Future;
 use std::path::Path;
-use std::sync::Arc;
 
 use bytes::Bytes;
 use lazy_static::lazy_static;
-use log::error;
 use magic::{number_to_le_bytes, number_to_rgb};
 use regex::Regex;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::RwLock;
 
 use colorful::core::color_string::CString;
 use colorful::Colorful;
@@ -20,9 +16,7 @@ use crate::types::GuildConfig;
 use crate::Result;
 
 use serenity::{
-    builder::CreateEmbed,
     client::Context,
-    http::{AttachmentType, Http},
     model::{
         id::{ChannelId, GuildId, UserId},
         user::User,

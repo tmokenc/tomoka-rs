@@ -16,6 +16,73 @@ use colorful::RGB;
 use colorful::{Color, Colorful};
 use magic::number_to_rgb;
 use std::sync::Arc;
+use std::collections::HashMap;
+use std::time::Duration;
+use tokio::sync::{Mutex, RwLock};
+use tokio::time;
+use futures::future::BoxFuture;
+
+type EventHook = for<'fut> fn(&'fut Context, &'fut Event) -> BoxFuture<'fut, Result<()>>;
+pub struct RawHandler {
+    pub handle: Arc<RawEvents>
+}
+
+#[async_trait]
+impl RawEventHandler for RawHandler {
+    async fn raw_event(&self, ctx: Context, ev: Event) {
+        self.handle.execute(ctx, ev).await;
+    }
+}
+
+pub struct RawEvents {
+    events: RwLock<HashMap<String, Box<EventHook>>>,
+    action: Mutex<Vec<Action>>
+}
+
+enum Action {
+    Add(String, Box<EventHook>),
+    Remove(String),
+}
+
+impl RawEvents {
+    pub fn new() -> Self {
+        Self {
+            events: RwLock::new(HashMap::new()),
+            action: Mutex::new(Vec::new())
+        }
+    }
+    
+    pub async fn add(&self, name: impl AsRef<str>, f: EventHook) {
+        let timeout = Duration::from_millis(30);
+        let name = name.as_ref().to_string();
+        let fut = Box::new(f);
+        
+        match time::timeout(timeout, self.events.write()).await {
+            Ok(ref mut events) => { events.insert(name, fut); },
+            Err(_) => self.action.lock().await.push(Action::Add(name, fut))
+        }
+    }
+    
+    pub async fn done(&self, name: impl AsRef<str>) {
+        let timeout = Duration::from_millis(30);
+        let name = name.as_ref();
+        
+        match time::timeout(timeout, self.events.write()).await {
+            Ok(ref mut events) => { events.remove(name); },
+            Err(_) => self.action.lock().await.push(Action::Remove(name.to_string()))
+        }
+    }
+    
+    pub async fn execute(&self, ctx: Context, ev: Event) {
+        for (name, event) in self.events.read().await.iter() {
+            if let Err(why) = event(&ctx, &ev).await {
+                error!("Error while executing the raw event {}\n{:#?}", name, why);
+            }
+        }
+        
+        todo!()
+    }
+}
 
 pub struct Handler;
 impl Handler {
@@ -290,14 +357,16 @@ async fn _process_deleted(
         message
     }).await?;
     
-    log_channel.send_message(ctx, |message| {
-        msg.attachments
-            .iter()
-            .filter_map(|v| v.cached.as_ref())
-            .for_each(|v| { message.add_file(v); });
-        
-        message
-    }).await?;
+    if !msg.attachments.is_empty() {
+        log_channel.send_message(ctx, |message| {
+            msg.attachments
+                .iter()
+                .filter_map(|v| v.cached.as_ref())
+                .for_each(|v| { message.add_file(v); });
+            
+            message
+        }).await?;
+    }
 
     Ok(())
 }

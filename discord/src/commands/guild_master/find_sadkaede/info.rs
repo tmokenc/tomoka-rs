@@ -1,6 +1,5 @@
 use crate::commands::prelude::*;
 use crate::traits::ToEmbed as _;
-use magic::traits::MagicBool as _;
 
 #[command]
 #[only_in("guilds")]

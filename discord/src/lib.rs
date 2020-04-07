@@ -21,8 +21,6 @@ pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub use requester::*;
 
-use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::sync::Arc;
 
@@ -83,9 +81,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         // }
     }
 
-    let data = client.data.clone();
     let shard_manager = client.shard_manager.clone();
-
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
@@ -94,9 +90,6 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     });
 
     client.start().await?;
-
-    println!("Bye");
-
     Ok(())
 }
 
