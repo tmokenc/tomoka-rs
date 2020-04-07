@@ -71,11 +71,11 @@ pub fn get_framework() -> impl Framework {
         // .bucket("basic", |b| b.delay(2).time_span(10).limit(3))
         // .await
         .group(&MASTER_GROUP)
+        .group(&GENERAL_GROUP)
         .group(&GUILDMASTER_GROUP)
         .group(&ADMINISTRATION_GROUP)
         .group(&CORONA_GROUP)
-        .group(&GENERAL_GROUP)
-        // .group(&GAME_GROUP)
+        .group(&GAME_GROUP)
         .group(&POKEMON_GROUP)
         .group(&UTILITY_GROUP)
         .group(&IMAGE_GROUP)
@@ -200,7 +200,6 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
         .by_space(false)
         .no_dm_prefix(true)
         .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
-    // .dynamic_prefixes(&[normal_prefix, master_prefix]) doesn't work
 }
 
 #[hook]
@@ -329,9 +328,9 @@ async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
 
 async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     let data = ctx.data.read().await;
-    let me = data.get::<InforKey>().unwrap();
+    let me = data.get::<InforKey>().unwrap().user_id;
 
-    if msg.mentions_user_id(me.user_id) {
+    if msg.mentions_user_id(me) {
         let input = remove_mention(&msg.content);
         let response = get_data::<AIStore>(&ctx)
             .await
@@ -356,55 +355,58 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
         Some(r) => r,
         None => return Ok(()),
     };
-
-    if msg.guild_id.is_some()
-        && msg.author.id.0 == 314444746959355905
-        && msg
+    
+    if msg.guild_id.is_none()
+        || msg.author.id.0 != 314444746959355905
+        || !msg
             .content
             .to_lowercase()
             .split_whitespace()
             .map(SmallString::from)
             .any(|v| rgb.tu.contains(&v))
     {
-        let mut rng = SmallRng::from_entropy();
-        let num = rng.gen::<f32>();
-
-        msg
-        .channel_id
-        .send_message(&ctx, |m| m.embed(|embed| {
-            embed
-            .color((num * 16777215_f32) as u32)
-            .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
-        }))
-        .await?;
-
-        if num < 0.05 {
-            use tokio::fs;
-            use tokio::stream::StreamExt;
-
-            let path = &rgb.evidence;
-
-            let evi = fs::read_dir(path)
-                .await?
-                .filter_map(|v| v.ok())
-                .collect::<Vec<_>>()
-                .await
-                .choose(&mut rng)
-                .map(|v| v.path());
-
-            if let Some(evi) = evi {
-                msg.channel_id
-                    .send_message(&ctx, |m| m.add_file(&evi))
-                    .await?;
-            }
-        }
+        return Ok(())
     }
 
+    let mut rng = SmallRng::from_entropy();
+    let num = rng.gen::<f32>();
+
+    msg
+    .channel_id
+    .send_message(&ctx, |m| m.embed(|embed| {
+        embed
+        .color((num * 0xffffff as f32 - 1.0) as u32)
+        .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
+    }))
+    .await?;
+
+    if num < 0.05 {
+        use tokio::fs;
+        use tokio::stream::StreamExt;
+
+        let path = &rgb.evidence;
+
+        let evi = fs::read_dir(path)
+            .await?
+            .filter_map(|v| v.ok())
+            .collect::<Vec<_>>()
+            .await
+            .choose(&mut rng)
+            .map(|v| v.path());
+            
+        drop(rgb);
+        drop(config);
+
+        if let Some(evi) = evi {
+            msg.channel_id.send_message(&ctx, |m| m.add_file(&evi)).await?;
+        }
+    }
+    
     Ok(())
 }
 
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
-    use futures::future::{self, FutureExt};
+    use futures::future;
     use magic::sauce::get_sauce;
 
     let config = crate::read_config().await;
@@ -450,29 +452,31 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         id: emoji_id,
         name: String::from("sauce"),
     };
+    
+    wait_for_react(ctx, msg, reaction, timeout, sauces).await?;
 
-    msg.react(ctx, reaction).await?;
-    let collector = msg
-        .await_reaction(&ctx)
-        .timeout(timeout)
-        .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
-        .removed(false)
-        .await;
+    // msg.react(ctx, reaction).await?;
+    // let collector = msg
+    //     .await_reaction(&ctx)
+    //     .timeout(timeout)
+    //     .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
+    //     .removed(false)
+    //     .await;
 
-    if let Some(reaction) = collector {
-        let http = std::sync::Arc::clone(&ctx.http);
-        tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
-        for sauce in sauces {
-            msg.channel_id
-                .send_message(&ctx, |m| {
-                    m.embed(|mut embed| {
-                        sauce.to_embed(&mut embed);
-                        embed
-                    })
-                })
-                .await?;
-        }
-    }
+    // if let Some(reaction) = collector {
+    //     let http = std::sync::Arc::clone(&ctx.http);
+    //     tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
+    //     for sauce in sauces {
+    //         msg.channel_id
+    //             .send_message(&ctx, |m| {
+    //                 m.embed(|mut embed| {
+    //                     sauce.to_embed(&mut embed);
+    //                     embed
+    //                 })
+    //             })
+    //             .await?;
+    //     }
+    // }
 
     Ok(())
 }
@@ -530,8 +534,45 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         id: emoji_id,
         name: String::from("sadkaede"),
     };
+    
+    wait_for_react(ctx, msg, reaction, timeout, data).await?;
 
-    msg.react(ctx, reaction).await?;
+    // msg.react(ctx, reaction).await?;
+    // let collector = msg
+    //     .await_reaction(&ctx)
+    //     .timeout(timeout)
+    //     .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
+    //     .removed(false)
+    //     .await;
+
+    // if let Some(reaction) = collector {
+    //     let http = std::sync::Arc::clone(&ctx.http);
+    //     tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
+    //     for sadkaede in data {
+    //         msg.channel_id
+    //             .send_message(&ctx, |m| {
+    //                 m.embed(|mut embed| {
+    //                     sadkaede.to_embed(&mut embed);
+    //                     embed
+    //                 })
+    //             })
+    //             .await?;
+    //     }
+    // }
+
+    Ok(())
+}
+
+async fn wait_for_react<D: ToEmbed>(
+    ctx: &Context, 
+    msg: &Message,
+    emoji: EmojiIdentifier,
+    timeout: Duration,
+    data: Vec<D>,
+) -> Result<()> {
+    msg.react(ctx, emoji.clone()).await?;
+    
+    let emoji_id = emoji.id;
     let collector = msg
         .await_reaction(&ctx)
         .timeout(timeout)
@@ -539,270 +580,18 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         .removed(false)
         .await;
 
-    if let Some(reaction) = collector {
-        let http = std::sync::Arc::clone(&ctx.http);
-        tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
-        for sadkaede in data {
-            msg.channel_id
-                .send_message(&ctx, |m| {
-                    m.embed(|mut embed| {
-                        sadkaede.to_embed(&mut embed);
-                        embed
-                    })
+    if let Some(_) = collector {
+        for d in data {
+            msg.channel_id.send_message(&ctx, |m| {
+                m.embed(|mut embed| {
+                    d.to_embed(&mut embed);
+                    embed
                 })
-                .await?;
+            }).await?;
         }
     }
+    
+    ctx.http.delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji.into()).await?;
 
     Ok(())
 }
-
-// struct SchedulerReact {
-//     data: Vec<Box<dyn ToEmbed>>,
-//     channel_id: ChannelId,
-//     timer: JobHandle,
-//     emoji_id: EmojiId,
-// }
-//
-// lazy_static! {
-//     static ref WATCHING_REACT: Mutex<HashMap<MessageId, SchedulerReact>> = Default::default();
-// }
-//
-// #[rustfmt::skip]
-// fn find_sauce(ctx: &Context, msg: &Message) {
-//     use magic::sauce::get_sauce;
-//
-//     let config = crate::read_config();
-//
-//     let emoji_id = match config.sauce.emoji {
-//         Some(e) => e,
-//         None => return
-//     };
-//
-//     let is_watching_channel = msg
-//         .guild_id
-//         .and_then(|v| config.guilds.get(&v))
-//         .filter(|v| v.find_sauce.enable)
-//         .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id))
-//         .is_some();
-//
-//     if !is_watching_channel || msg.is_own(&ctx) {
-//         return;
-//     }
-//
-//     let sauces: Vec<_> = msg
-//         .attachments
-//         .iter()
-//         .filter(|v| v.width.is_some())
-//         .filter(|v| !v.url.ends_with(".gif"))
-//         .filter_map(|v| get_sauce(&v.url, None).ok())
-//         .filter(|v| v.found())
-//         .map(|v| Box::new(v) as Box<_>)
-//         .collect();
-//
-//     if sauces.is_empty() {
-//         return
-//     }
-//
-//     let reaction = EmojiIdentifier {
-//         id: emoji_id,
-//         name: String::from("sauce"),
-//     };
-//
-//     if let Err(why) = msg.react(ctx, reaction.clone()) {
-//         error!("Cannot react for the sauce\n{:#?}", why);
-//         return
-//     }
-//
-//     let http = ctx.http.clone();
-//     let channel_id = msg.channel_id.0;
-//     let msg_id = msg.id.0;
-//     let duration = Duration::from_secs(config.sauce.wait_duration as u64);
-//
-//     drop(config);
-//
-//     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
-//         let emoji = reaction.into();
-//         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
-//             error!("Cannot delete the sauce reaction\n{:#?}", why);
-//         }
-//     });
-//
-//     let scheduler = SchedulerReact {
-//         timer,
-//         data: sauces,
-//         channel_id: msg.channel_id,
-//         emoji_id,
-//     };
-//
-//     let mut data_r = WATCHING_REACT.lock();
-//
-//     data_r.insert(msg.id, scheduler);
-//     if data_r.len() == 1 {
-//         get_data::<CustomEventList>(&ctx).unwrap().add("WatchingEmo", watch_emo_event);
-//     }
-// }
-//
-// // Simply a clone of the find_sauce due to similar functionality
-// async fn find_sadkaede(ctx: &Context, msg: &Message) {
-//     if msg.content.len() < 20 {
-//         return;
-//     }
-//
-//     let config = crate::read_config().await;
-//
-//     let emoji_id = match config.sadkaede.emoji {
-//         Some(e) => e,
-//         None => return,
-//     };
-//
-//     let is_watching_channel = msg
-//         .guild_id
-//         .and_then(|v| config.guilds.get(&v))
-//         .filter(|v| v.find_sadkaede.enable)
-//         .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id))
-//         .is_some();
-//
-//     if !is_watching_channel || msg.is_own(&ctx) {
-//         return;
-//     }
-//
-//     let req = get_data::<ReqwestClient>(&ctx).unwrap();
-//     let gids = parse_eh_token(&msg.content);
-//
-//     if gids.is_empty() {
-//         return;
-//     }
-//
-//     let data = match req.gmetadata(gids.into_iter().take(25)).await {
-//         Ok(d) => d,
-//         Err(_) => return,
-//     };
-//
-//     let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
-//
-//     let data: Vec<_> = data
-//         .into_iter()
-//         .filter(|data| is_channel_nsfw || data.is_sfw())
-//         .map(|v| Box::new(v) as Box<_>)
-//         .collect();
-//
-//     if data.is_empty() {
-//         return;
-//     }
-//
-//     let reaction = EmojiIdentifier {
-//         id: emoji_id,
-//         name: String::from("sadkaede"),
-//     };
-//
-//     if let Err(why) = msg.react(ctx, reaction.clone()) {
-//         error!("Cannot reaction to the sadkaede\n{:#?}", why);
-//         return;
-//     }
-//
-//     let http = ctx.http.clone();
-//     let channel_id = msg.channel_id.0;
-//     let msg_id = msg.id.0;
-//     let duration = Duration::from_secs(config.sadkaede.wait_duration as u64);
-//
-//     drop(config);
-//
-//     let timer = crate::global::GLOBAL_POOL.execute_after(duration, move || {
-//         let emoji = reaction.into();
-//         if let Err(why) = http.delete_reaction(channel_id, msg_id, None, &emoji) {
-//             error!("Cannot delete the sadkaede reaction\n{:#?}", why);
-//         }
-//     });
-//
-//     let scheduler = SchedulerReact {
-//         timer,
-//         data,
-//         channel_id: msg.channel_id,
-//         emoji_id,
-//     };
-//
-//     let mut data_r = WATCHING_REACT.lock();
-//
-//     data_r.insert(msg.id, scheduler);
-//     if data_r.len() == 1 {
-//         get_data::<CustomEventList>(&ctx)
-//             .unwrap()
-//             .add("WatchingEmo", watch_emo_event);
-//     }
-// }
-//
-// fn watch_emo_event(ctx: &Context, ev: &Event) {
-//     fn process_delete_message(ctx: &Context, id: MessageId) {
-//         let mut data_r = WATCHING_REACT.lock();
-//         if let Some(s) = data_r.remove(&id) {
-//             s.timer.cancel();
-//             if data_r.is_empty() {
-//                 get_data::<CustomEventList>(ctx)
-//                     .unwrap()
-//                     .done("WatchingEmo");
-//             }
-//         }
-//     }
-//
-//     match ev {
-//         Event::MessageDelete(e) => process_delete_message(&ctx, e.message_id),
-//         Event::MessageDeleteBulk(e) => {
-//             for id in &e.ids {
-//                 process_delete_message(&ctx, *id);
-//             }
-//         }
-//
-//         Event::ReactionAdd(reaction) => {
-//             let reaction = &reaction.reaction;
-//
-//             if reaction.user_id == ctx.data.read().get::<InforKey>().unwrap().user_id {
-//                 return;
-//             }
-//
-//             let mut data_r = WATCHING_REACT.lock();
-//
-//             let watching = data_r
-//                 .get(&reaction.message_id)
-//                 .filter(|v| {
-//                     if let ReactionType::Custom { id, .. } = reaction.emoji {
-//                         v.emoji_id == id
-//                     } else {
-//                         false
-//                     }
-//                 })
-//                 .is_some();
-//
-//             if !watching {
-//                 return;
-//             }
-//
-//             if let Some(s) = data_r.remove(&reaction.message_id) {
-//                 s.timer.cancel();
-//                 reaction.delete(ctx).ok();
-//
-//                 for d in s.data {
-//                     let sent = s.channel_id.send_message(&ctx, |m| {
-//                         m.embed(|mut embed| {
-//                             d.to_embed(&mut embed);
-//                             embed
-//                         })
-//                     });
-//
-//                     if let Err(why) = sent {
-//                         error!("Cannot send the sauce\n{:#?}", why);
-//                     }
-//                 }
-//
-//                 if data_r.is_empty() {
-//                     get_data::<CustomEventList>(&ctx)
-//                         .unwrap()
-//                         .done("WatchingEmo");
-//                 }
-//             }
-//         }
-//
-//         _ => {}
-//     }
-// }
-//

@@ -1,15 +1,22 @@
 use crate::cache::MyCache;
 use crate::types::*;
+use crate::events::RawEvents;
 use db::DbInstance;
 use eliza::Eliza;
 use requester::Reqwest;
 // use serenity::model::id::GuildId;
 use serenity::prelude::TypeMapKey;
+use serenity::client::bridge::voice::ClientVoiceManager;
 // use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 type MutexData<T> = Arc<Mutex<T>>;
+
+pub struct CustomEventList;
+impl TypeMapKey for CustomEventList {
+    type Value = Arc<RawEvents>;
+}
 
 pub struct InforKey;
 impl TypeMapKey for InforKey {
@@ -24,6 +31,11 @@ impl TypeMapKey for ReqwestClient {
 pub struct DatabaseKey;
 impl TypeMapKey for DatabaseKey {
     type Value = Arc<DbInstance>;
+}
+
+pub struct VoiceManager;
+impl TypeMapKey for VoiceManager {
+    type Value = Arc<serenity::prelude::Mutex<ClientVoiceManager>>;
 }
 
 // pub struct MusicManager;

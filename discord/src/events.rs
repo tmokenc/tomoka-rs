@@ -24,19 +24,25 @@ use futures::future::BoxFuture;
 
 type EventHook = for<'fut> fn(&'fut Context, &'fut Event) -> BoxFuture<'fut, Result<()>>;
 pub struct RawHandler {
-    pub handle: Arc<RawEvents>
+    pub handler: Arc<RawEvents>
+}
+
+impl RawHandler {
+    pub fn new() -> Self {
+        Self { handler: Arc::new(RawEvents::new()) }    
+    }
 }
 
 #[async_trait]
 impl RawEventHandler for RawHandler {
     async fn raw_event(&self, ctx: Context, ev: Event) {
-        self.handle.execute(ctx, ev).await;
+        self.handler.execute(ctx, ev).await;
     }
 }
 
 pub struct RawEvents {
     events: RwLock<HashMap<String, Box<EventHook>>>,
-    action: Mutex<Vec<Action>>
+    actions: Mutex<Vec<Action>>
 }
 
 enum Action {
@@ -48,7 +54,7 @@ impl RawEvents {
     pub fn new() -> Self {
         Self {
             events: RwLock::new(HashMap::new()),
-            action: Mutex::new(Vec::new())
+            actions: Mutex::new(Vec::new())
         }
     }
     
@@ -59,7 +65,7 @@ impl RawEvents {
         
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => { events.insert(name, fut); },
-            Err(_) => self.action.lock().await.push(Action::Add(name, fut))
+            Err(_) => self.actions.lock().await.push(Action::Add(name, fut))
         }
     }
     
@@ -69,7 +75,7 @@ impl RawEvents {
         
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => { events.remove(name); },
-            Err(_) => self.action.lock().await.push(Action::Remove(name.to_string()))
+            Err(_) => self.actions.lock().await.push(Action::Remove(name.to_string()))
         }
     }
     
@@ -80,7 +86,15 @@ impl RawEvents {
             }
         }
         
-        todo!()
+        let timeout = Duration::from_millis(1);
+        if let Ok(ref mut map) = time::timeout(timeout, self.events.write()).await {
+            for action in self.actions.lock().await.drain(..) {
+                match action {
+                    Action::Add(name, fut) => map.insert(name, fut),
+                    Action::Remove(name) => map.remove(&name),
+                };
+            }
+        }
     }
 }
 

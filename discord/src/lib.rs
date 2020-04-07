@@ -27,7 +27,7 @@ use std::sync::Arc;
 use crate::config::Config;
 use cache::MyCache;
 use db::DbInstance;
-use events::Handler;
+use events::{RawHandler, Handler};
 use magic::dark_magic::{bytes_to_le_u64, has_external_command};
 use serenity::Client;
 use storages::*;
@@ -41,6 +41,8 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     logger::init();
 
     let handler = Handler::new();
+    let raw_handler = RawHandler::new();
+    let custom_events_arc = raw_handler.handler.clone();
 
     info!(
         "Login with the token:\n{}",
@@ -69,7 +71,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         let db = DbInstance::new(&config.database.path, None)?;
         fetch_guild_config_from_db(&db).await?;
 
-        // data.insert::<CustomEventList>(custom_events_arc);
+        data.insert::<CustomEventList>(custom_events_arc);
         data.insert::<DatabaseKey>(Arc::new(db));
         data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
         data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));

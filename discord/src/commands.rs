@@ -4,7 +4,7 @@ pub mod prelude;
 
 pub_import_all! {
     administration,
-    //game,
+    game,
     general,
     guild_master,
     image,

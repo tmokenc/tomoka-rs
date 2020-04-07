@@ -92,57 +92,40 @@ pub fn colored_name_user(user: &User) -> CString {
     name.color(color)
 }
 
-// pub fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> Option<ChannelId> {
-//     guild_id
-//         .to_guild_cached(&ctx)
-//         .and_then(|v| {
-//             let guild = v.read();
-//             guild.voice_states.get(&mem).cloned()
-//         })
-//         .and_then(|v| v.channel_id)
-// }
+pub async fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> Option<ChannelId> {
+    match guild_id.to_guild_cached(&ctx).await {
+        Some(c) => {
+            let guild = c.read().await;
+            guild.voice_states.get(&mem).and_then(|v| v.channel_id)
+        }
+        None => None
+    }
+}
 
-// pub fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
-//     ctx.data
-//         .read()
-//         .get::<InforKey>()
-//         .and_then(|v| get_user_voice_channel(ctx, guild_id, v.user_id))
-// }
+pub async fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
+    match ctx.data.read().await.get::<InforKey>() {
+        Some(v) => get_user_voice_channel(ctx, guild_id, v.user_id).await,
+        None => None,
+    }
+}
 
-// pub fn send_embed<C, F>(http: impl AsRef<Http>, channel: C, embed_f: F)
-// where
-//     C: Into<ChannelId>,
-//     F: FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
-// {
-//     let message = channel.into().send_message(http, |m| m.embed(embed_f));
-
-//     if let Err(why) = message {
-//         error!("Error while sending message...\n{:#?}", why);
-//     };
-// }
-
-// /// where F: Into<AttachmentType<'a>>
-// /// gonna remove this soon because the newer serenity now supported this
-// pub fn send_file<C: Into<ChannelId>, F: AsRef<str>>(http: impl AsRef<Http>, channel: C, file: F) {
-//     let mut to_send: Vec<AttachmentType> = Vec::new();
-//     let url = file.as_ref();
-//
-//     let bytes: Bytes;
-//     if url.starts_with("http") {
-//         if let Ok(b) = get_file_bytes(url) {
-//             bytes = b;
-//             let name = url.split('/').last().unwrap();
-//             info!("file: {} | size: {}", name.to_owned(), bytes.len());
-//             to_send.push((bytes.as_ref(), name).into());
-//         }
-//     } else {
-//         to_send.push(file.as_ref().into());
-//     }
-//
-//     if let Err(why) = channel.into().send_files(http, to_send, |m| m) {
-//         error!("Error while sending the file...\n{:#?}", why);
-//     }
-// }
+pub async fn is_dead_channel(ctx: &Context, channel_id: ChannelId) -> bool {
+    let members = match channel_id.to_channel(ctx).await.ok().and_then(|v| v.guild()) {
+        Some(g) => match g.read().await.members(ctx).await {
+            Ok(m) => m,
+            Err(_) => return false,
+        }
+        None => return false,
+    };
+    
+    for member in members {
+        if !member.user.read().await.bot {
+            return false
+        }
+    }
+    
+    true
+}
 
 pub async fn get_guild_id_from_channel<C: Into<ChannelId>>(
     ctx: &Context,
