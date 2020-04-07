@@ -255,9 +255,8 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
         });
 
     if let Some(m) = to_say {
-        for mess in m.split_at_limit(1980, ">") {
-            msg.channel_id.say(&ctx, mess).await?;
-        }
+        let fut = m.split_at_limit(2000, ">").map(|v| msg.channel_id.say(&ctx, v));
+        futures::future::try_join_all(fut).await?;
     }
 
     Ok(())
