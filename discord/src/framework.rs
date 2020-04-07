@@ -97,7 +97,7 @@ pub fn get_framework() -> impl Framework {
 async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
 
-    if !TYPING_LIST.contains(&cmd_name) {
+    if TYPING_LIST.contains(&cmd_name) {
         msg.channel_id.broadcast_typing(ctx).await.ok();
     }
 
@@ -592,7 +592,7 @@ async fn wait_for_react<D: ToEmbed>(
         .removed(false)
         .await;
 
-    if let Some(_) = collector {
+    if collector.is_some() {
         for d in data {
             msg.channel_id.send_message(&ctx, |m| {
                 m.embed(|mut embed| {
