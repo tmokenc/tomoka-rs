@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::traits::ToEmbed;
+use crate::traits::Embedable as _;
 
 #[command]
 #[only_in("guilds")]

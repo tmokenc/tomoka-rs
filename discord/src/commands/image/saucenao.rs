@@ -1,6 +1,6 @@
 use super::get_last_image_url;
 use crate::commands::prelude::*;
-use crate::traits::ToEmbed as _;
+use crate::traits::Embedable as _;
 use magic::sauce::SauceNao;
 
 #[command]
@@ -37,9 +37,8 @@ async fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         return Ok(());
     }
     
-    msg.channel_id.send_message(ctx, |m| m.embed(|mut embed| {
-        data.to_embed(&mut embed);
-        embed
+    msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
+        data.append_to(embed)
     })).await?;
 
     Ok(())

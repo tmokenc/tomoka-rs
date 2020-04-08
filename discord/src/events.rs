@@ -14,22 +14,24 @@ use crate::{utils::*, Result};
 
 use colorful::RGB;
 use colorful::{Color, Colorful};
+use futures::future::BoxFuture;
 use magic::number_to_rgb;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
-use futures::future::BoxFuture;
 
 type EventHook = for<'fut> fn(&'fut Context, &'fut Event) -> BoxFuture<'fut, Result<()>>;
 pub struct RawHandler {
-    pub handler: Arc<RawEvents>
+    pub handler: Arc<RawEvents>,
 }
 
 impl RawHandler {
     pub fn new() -> Self {
-        Self { handler: Arc::new(RawEvents::new()) }    
+        Self {
+            handler: Arc::new(RawEvents::new()),
+        }
     }
 }
 
@@ -42,7 +44,7 @@ impl RawEventHandler for RawHandler {
 
 pub struct RawEvents {
     events: RwLock<HashMap<String, EventHook>>,
-    actions: Mutex<Vec<Action>>
+    actions: Mutex<Vec<Action>>,
 }
 
 enum Action {
@@ -54,37 +56,45 @@ impl RawEvents {
     pub fn new() -> Self {
         Self {
             events: RwLock::new(HashMap::new()),
-            actions: Mutex::new(Vec::new())
+            actions: Mutex::new(Vec::new()),
         }
     }
-    
+
     pub async fn add(&self, name: impl AsRef<str>, fut: EventHook) {
         let timeout = Duration::from_millis(30);
         let name = name.as_ref().to_string();
-        
+
         match time::timeout(timeout, self.events.write()).await {
-            Ok(ref mut events) => { events.insert(name, fut); },
-            Err(_) => self.actions.lock().await.push(Action::Add(name, fut))
+            Ok(ref mut events) => {
+                events.insert(name, fut);
+            }
+            Err(_) => self.actions.lock().await.push(Action::Add(name, fut)),
         }
     }
-    
+
     pub async fn done(&self, name: impl AsRef<str>) {
         let timeout = Duration::from_millis(30);
         let name = name.as_ref();
-        
+
         match time::timeout(timeout, self.events.write()).await {
-            Ok(ref mut events) => { events.remove(name); },
-            Err(_) => self.actions.lock().await.push(Action::Remove(name.to_string()))
+            Ok(ref mut events) => {
+                events.remove(name);
+            }
+            Err(_) => self
+                .actions
+                .lock()
+                .await
+                .push(Action::Remove(name.to_string())),
         }
     }
-    
+
     pub async fn execute(&self, ctx: Context, ev: Event) {
         for (name, event) in self.events.read().await.iter() {
             if let Err(why) = event(&ctx, &ev).await {
                 error!("Error while executing the raw event {}\n{:#?}", name, why);
             }
         }
-        
+
         let timeout = Duration::from_millis(1);
         if let Ok(ref mut map) = time::timeout(timeout, self.events.write()).await {
             for action in self.actions.lock().await.drain(..) {

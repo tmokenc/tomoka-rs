@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::traits::ToEmbed;
+use crate::traits::Embedable as _;
 
 #[command]
 #[only_in(guilds)]
@@ -11,24 +11,26 @@ async fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
     
     let config = crate::read_config().await;
-    let guild = config
+    let data = config
         .guilds
-        .get(&guild_id);
+        .get(&guild_id)
+        .map(|ref g| g.repeat_words.embed_data());
+        
+    let color = config.color.information;
+    
+    drop(config);
         
     msg.channel_id.send_message(ctx, |m| m.embed(|mut embed| {
-        embed.title("Repeat-words information");
-        embed.color(config.color.information);
-        embed.timestamp(now());
-        
-        match guild {
-            Some(ref g) => {
-                g.repeat_words.to_embed(&mut embed);
-            },
-            None => {
-                embed.description("The repeat-words machine doesn't running on this guild yet");
-            }
+        if let Some(value) = data {
+            embed.0 = value;
+        } else {
+            embed.description("The repeat-words machine doesn't running on this guild yet");
         }
         
+        embed.title("Repeat-words information");
+        embed.color(color);
+        embed.timestamp(now());
+       
         embed
     })).await?;
     

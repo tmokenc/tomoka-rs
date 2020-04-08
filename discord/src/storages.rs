@@ -1,12 +1,12 @@
 use crate::cache::MyCache;
-use crate::types::*;
 use crate::events::RawEvents;
+use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
 use requester::Reqwest;
 // use serenity::model::id::GuildId;
-use serenity::prelude::TypeMapKey;
 use serenity::client::bridge::voice::ClientVoiceManager;
+use serenity::prelude::TypeMapKey;
 // use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;

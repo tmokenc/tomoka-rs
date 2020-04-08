@@ -1,6 +1,6 @@
 #![allow(unstable_name_collisions)]
 
-use crate::traits::ToEmbed;
+use crate::traits::Embedable;
 use crate::Result;
 use chrono::{DateTime, Utc};
 use core::time::Duration;
@@ -81,8 +81,8 @@ pub struct FindSauce {
     pub channels: HashSet<ChannelId>,
 }
 
-impl ToEmbed for FindSauce {
-    fn to_embed(&self, embed: &mut CreateEmbed) {
+impl Embedable for FindSauce {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         use magic::traits::MagicIter as _;
 
         if !self.enable || (self.channels.is_empty() && !self.all) {
@@ -103,6 +103,8 @@ impl ToEmbed for FindSauce {
             embed.description(mess);
             embed.field("Saucing channels", s, true);
         }
+
+        embed
     }
 }
 
@@ -123,8 +125,8 @@ impl Default for FindSadKaede {
     }
 }
 
-impl ToEmbed for FindSadKaede {
-    fn to_embed(&self, embed: &mut CreateEmbed) {
+impl Embedable for FindSadKaede {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         use magic::traits::MagicIter as _;
 
         if !self.enable || (self.channels.is_empty() && !self.all) {
@@ -147,6 +149,8 @@ impl ToEmbed for FindSadKaede {
             embed.description(mess);
             embed.field("SadKaede channels", s, true);
         }
+
+        embed
     }
 }
 
@@ -156,8 +160,8 @@ pub struct RepeatWords {
     pub words: HashSet<String>,
 }
 
-impl ToEmbed for RepeatWords {
-    fn to_embed(&self, embed: &mut CreateEmbed) {
+impl Embedable for RepeatWords {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         use magic::traits::MagicIter as _;
 
         if !self.enable {
@@ -175,6 +179,8 @@ impl ToEmbed for RepeatWords {
             ));
             embed.field("Words", words, false);
         }
+
+        embed
     }
 }
 

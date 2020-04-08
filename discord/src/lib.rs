@@ -28,7 +28,7 @@ use std::sync::Arc;
 use crate::config::Config;
 use cache::MyCache;
 use db::DbInstance;
-use events::{RawHandler, Handler};
+use events::{Handler, RawHandler};
 use magic::dark_magic::{bytes_to_le_u64, has_external_command};
 use serenity::Client;
 use storages::*;

@@ -1,9 +1,9 @@
+#![allow(unstable_name_collisions)]
+
 use serenity::client::Context;
 use serenity::framework::standard::macros::{help, hook};
 use serenity::framework::{
-    standard::{
-        help_commands, Args, CommandGroup, CommandResult, Configuration, HelpOptions,
-    },
+    standard::{help_commands, Args, CommandGroup, CommandResult, Configuration, HelpOptions},
     Framework, StandardFramework,
 };
 use serenity::model::{
@@ -15,7 +15,7 @@ use serenity::model::{
 use crate::{
     commands::*,
     storages::{AIStore, InforKey, ReqwestClient},
-    traits::ToEmbed,
+    traits::Embedable,
     utils::*,
     Result,
 };
@@ -24,13 +24,12 @@ use chrono::{DateTime, Utc};
 use colorful::Colorful;
 use core::time::Duration;
 use dashmap::DashMap;
+use futures::future;
 use lazy_static::lazy_static;
-use log::{error, info};
 use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
 use std::collections::HashSet;
-use futures::future;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
@@ -91,6 +90,51 @@ pub fn get_framework() -> impl Framework {
     framework
 }
 
+fn framwork_config(config: &mut Configuration) -> &mut Configuration {
+    let mut owners = HashSet::new();
+    let mut disabled_commands = HashSet::new();
+
+    owners.insert(UserId(239825449637642240));
+
+    if !has_external_command("ffmpeg") {
+        disabled_commands.insert(String::from("touhou_music_quiz"));
+    }
+
+    if !has_external_command("youtube-dl") {
+        disabled_commands.insert(String::from("play"));
+    }
+
+    config
+        .owners(owners)
+        .disabled_commands(disabled_commands)
+        .case_insensitivity(true)
+        .by_space(false)
+        .no_dm_prefix(true)
+        .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
+}
+
+#[hook]
+async fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
+    let config = crate::read_config().await;
+
+    msg.guild_id
+        .and_then(|guild| config.guilds.get(&guild))
+        .and_then(|guild| guild.prefix.to_owned())
+        .or_else(|| Some(config.prefix.to_owned()))
+        .map(|v| v.to_string())
+}
+
+#[hook]
+async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
+    let config = crate::read_config().await;
+
+    config
+        .masters
+        .iter()
+        .any(|&v| v == msg.author.id)
+        .then(|| config.master_prefix.to_string())
+}
+
 #[hook]
 async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
@@ -148,7 +192,7 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
     let config = crate::read_config().await;
     let mut futs = Vec::new();
     let mut names = Vec::new();
-    
+
     macro_rules! exec_func {
         ( $( $x:ident ),* ) => {
             $(
@@ -171,59 +215,14 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
         find_sauce,
         find_sadkaede
     }
-    
+
     drop(config);
     future::join_all(futs)
         .await
         .into_iter()
         .zip(names)
         .filter_map(|(func, name)| func.err().map(|e| (e, name)))
-        .for_each(|(err, name)| error!("Cannot exec the {} process\n{:#?}", name, err));
-}
-
-fn framwork_config(config: &mut Configuration) -> &mut Configuration {
-    let mut owners = HashSet::new();
-    let mut disabled_commands = HashSet::new();
-
-    owners.insert(UserId(239825449637642240));
-
-    if !has_external_command("ffmpeg") {
-        disabled_commands.insert(String::from("touhou_music_quiz"));
-    }
-
-    if !has_external_command("youtube-dl") {
-        disabled_commands.insert(String::from("play"));
-    }
-
-    config
-        .owners(owners)
-        .disabled_commands(disabled_commands)
-        .case_insensitivity(true)
-        .by_space(false)
-        .no_dm_prefix(true)
-        .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
-}
-
-#[hook]
-async fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
-    let config = crate::read_config().await;
-
-    msg.guild_id
-        .and_then(|guild| config.guilds.get(&guild))
-        .and_then(|guild| guild.prefix.to_owned())
-        .or_else(|| Some(config.prefix.to_owned()))
-        .map(|v| v.to_string())
-}
-
-#[hook]
-async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
-    let config = crate::read_config().await;
-
-    config
-        .masters
-        .iter()
-        .any(|&v| v == msg.author.id)
-        .then(|| config.master_prefix.to_string())
+        .for_each(|(err, name)| error!("Cannot exec the {} autocmd \n{:#?}", name, err));
 }
 
 async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
@@ -251,7 +250,9 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
         });
 
     if let Some(m) = to_say {
-        let fut = m.split_at_limit(2000, ">").map(|v| msg.channel_id.say(&ctx, v));
+        let fut = m
+            .split_at_limit(2000, ">")
+            .map(|v| msg.channel_id.say(&ctx, v));
         future::try_join_all(fut).await?;
     }
 
@@ -356,7 +357,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
         Some(r) => r,
         None => return Ok(()),
     };
-    
+
     if msg.guild_id.is_none()
         || msg.author.id.0 != 314444746959355905
         || !msg
@@ -366,7 +367,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
             .map(SmallString::from)
             .any(|v| rgb.tu.contains(&v))
     {
-        return Ok(())
+        return Ok(());
     }
 
     let mut rng = SmallRng::from_entropy();
@@ -394,21 +395,23 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
             .await
             .choose(&mut rng)
             .map(|v| v.path());
-            
+
         drop(rgb);
         drop(config);
 
         if let Some(evi) = evi {
-            msg.channel_id.send_message(&ctx, |m| m.add_file(&evi)).await?;
+            msg.channel_id
+                .send_message(&ctx, |m| m.add_file(&evi))
+                .await?;
         }
     }
-    
+
     Ok(())
 }
 
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     use magic::sauce::get_sauce;
-    
+
     let config = crate::read_config().await;
 
     let is_watching_channel = msg
@@ -452,7 +455,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         id: emoji_id,
         name: String::from("sauce"),
     };
-    
+
     wait_for_react(ctx, msg, reaction, timeout, sauces).await?;
 
     Ok(())
@@ -512,21 +515,21 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         id: emoji_id,
         name: String::from("sadkaede"),
     };
-    
+
     wait_for_react(ctx, msg, reaction, timeout, data).await?;
 
     Ok(())
 }
 
-async fn wait_for_react<D: ToEmbed>(
-    ctx: &Context, 
+async fn wait_for_react<D: Embedable>(
+    ctx: &Context,
     msg: &Message,
     emoji: EmojiIdentifier,
     timeout: Duration,
     data: Vec<D>,
 ) -> Result<()> {
     msg.react(ctx, emoji.clone()).await?;
-    
+
     let emoji_id = emoji.id;
     let collector = msg
         .await_reaction(&ctx)
@@ -537,16 +540,15 @@ async fn wait_for_react<D: ToEmbed>(
 
     if collector.is_some() {
         for d in data {
-            msg.channel_id.send_message(&ctx, |m| {
-                m.embed(|mut embed| {
-                    d.to_embed(&mut embed);
-                    embed
-                })
-            }).await?;
+            msg.channel_id
+                .send_message(&ctx, |m| m.embed(|embed| d.append_to(embed)))
+                .await?;
         }
     }
-    
-    ctx.http.delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji.into()).await?;
+
+    ctx.http
+        .delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji.into())
+        .await?;
 
     Ok(())
 }

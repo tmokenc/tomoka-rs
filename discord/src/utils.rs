@@ -40,10 +40,7 @@ pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
 
 /// Check if a (guild) channel is nsfw or not
 pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
-    let channel = channel
-        .into()
-        .to_channel(ctx)
-        .await;
+    let channel = channel.into().to_channel(ctx).await;
 
     match channel {
         Ok(v) => v.is_nsfw().await,
@@ -92,13 +89,17 @@ pub fn colored_name_user(user: &User) -> CString {
     name.color(color)
 }
 
-pub async fn get_user_voice_channel(ctx: &Context, guild_id: GuildId, mem: UserId) -> Option<ChannelId> {
+pub async fn get_user_voice_channel(
+    ctx: &Context,
+    guild_id: GuildId,
+    mem: UserId,
+) -> Option<ChannelId> {
     match guild_id.to_guild_cached(&ctx).await {
         Some(c) => {
             let guild = c.read().await;
             guild.voice_states.get(&mem).and_then(|v| v.channel_id)
         }
-        None => None
+        None => None,
     }
 }
 
@@ -110,20 +111,25 @@ pub async fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
 }
 
 pub async fn is_dead_channel(ctx: &Context, channel_id: ChannelId) -> bool {
-    let members = match channel_id.to_channel(ctx).await.ok().and_then(|v| v.guild()) {
+    let members = match channel_id
+        .to_channel(ctx)
+        .await
+        .ok()
+        .and_then(|v| v.guild())
+    {
         Some(g) => match g.read().await.members(ctx).await {
             Ok(m) => m,
             Err(_) => return false,
-        }
+        },
         None => return false,
     };
-    
+
     for member in members {
         if !member.user.read().await.bot {
-            return false
+            return false;
         }
     }
-    
+
     true
 }
 
@@ -191,7 +197,8 @@ pub async fn save_file<P: AsRef<Path>>(url: String, name: P) -> Result<()> {
 /// Get the dominant color from a url
 pub async fn get_dominant_color(url: &str) -> Result<Color> {
     let bytes = get_file_bytes(url).await?;
-    let colors = tokio::task::block_in_place(move || magic::image::get_dominanted_colors(bytes))?;
+    let colors =
+        tokio::task::spawn_blocking(|| magic::image::get_dominanted_colors(bytes)).await??;
     let dominanted = colors.get(0).unwrap_or(&(255, 255, 255));
     Ok(*dominanted)
 }

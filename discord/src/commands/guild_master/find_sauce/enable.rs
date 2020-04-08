@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 use crate::commands::prelude::*;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicBool as _;

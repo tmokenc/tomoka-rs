@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 use crate::commands::prelude::*;
 use crate::types::GuildConfig;
 use magic::traits::MagicBool as _;

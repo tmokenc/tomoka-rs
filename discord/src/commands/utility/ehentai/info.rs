@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::traits::ToEmbed as _;
+use crate::traits::Embedable as _;
 use requester::ehentai::EhentaiApi as _;
 use serenity::model::id::ChannelId;
 use crate::Result;
@@ -32,12 +32,7 @@ async fn info(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     }
 
     for d in data {
-        msg.channel_id.send_message(&ctx, |m| {
-            m.embed(|mut embed| {
-                d.to_embed(&mut embed);
-                embed
-            })
-        }).await?;
+        msg.channel_id.send_message(&ctx, |m| m.embed(|embed| d.append_to(embed))).await?;
     }
 
     Ok(())

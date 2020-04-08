@@ -6,22 +6,22 @@ use magic::report_bytes;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
-use std::fmt::{Display, Write as _};
 use std::collections::HashMap;
-use serde_json::value::Value;
+use std::fmt::{Display, Write as _};
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
-pub trait ToEmbed: Send {
-    fn to_embed(&self, embed: &mut CreateEmbed);
-    fn embed_data(&self) -> HashMap<&'static str, Value> {
+pub trait Embedable: Send {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed;
+
+    fn embed_data(&self) -> HashMap<&'static str, serde_json::Value> {
         let mut embed = CreateEmbed::default();
-        self.to_embed(&mut embed);
+        self.append_to(&mut embed);
         embed.0
     }
 }
 
-impl ToEmbed for magic::sauce::SauceNao {
-    fn to_embed(&self, embed: &mut CreateEmbed) {
+impl Embedable for magic::sauce::SauceNao {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();
 
         match self.characters.len() {
@@ -133,12 +133,12 @@ impl ToEmbed for magic::sauce::SauceNao {
             .url(self.url())
             .thumbnail(self.img_url())
             .timestamp(now())
-            .footer(|f| f.text("Powered by SauceNao"));
+            .footer(|f| f.text("Powered by SauceNao"))
     }
 }
 
-impl ToEmbed for requester::ehentai::Gmetadata {
-    fn to_embed(&self, embed: &mut CreateEmbed) {
+impl Embedable for requester::ehentai::Gmetadata {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let tags = self.parse_tags();
         let mut info = String::new();
 
@@ -251,5 +251,7 @@ impl ToEmbed for requester::ehentai::Gmetadata {
             f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")
                 .text(url)
         });
+
+        embed
     }
 }
