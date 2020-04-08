@@ -3,34 +3,31 @@ use crate::storages::CustomEventList;
 use crate::Result;
 use colorful::Colorful;
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::info;
 use mp3_duration;
 use rand::prelude::*;
-use rand::thread_rng;
 use regex::Regex;
 use serenity::model::event::Event;
 use serenity::model::id::{ChannelId, EmojiId, MessageId, UserId};
 use serenity::model::misc::EmojiIdentifier;
 use serenity::voice::{ffmpeg_optioned, AudioSource, Bitrate};
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use std::{env, thread};
 use tokio::sync::Mutex;
 
 type TmqCollect = Mutex<HashMap<ChannelId, HashMap<UserId, TmqCollector>>>;
 
 lazy_static! {
     static ref TOUHOU_VERSION: HashMap<String, u64> = {
-        let mut rt = tokio::runtime::Builder::new().basic_scheduler().build().unwrap();
-        rt.block_on(async {
+        futures::executor::block_on(async {
             let config = crate::read_config().await;
             let file = File::open(&config.tmq.as_ref().unwrap().emoji).unwrap();
             drop(config);
             let reader = BufReader::new(file);
-    
+
             serde_json::from_reader(reader).unwrap()
         })
     };
@@ -56,10 +53,12 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
 
     if let Some(channel) = is_playing(&ctx, guild_id).await {
-        msg.channel_id.say(
-            &ctx,
-            format!("I'm current playing on channel <#{}>", channel.0),
-        ).await?;
+        msg.channel_id
+            .say(
+                &ctx,
+                format!("I'm current playing on channel <#{}>", channel.0),
+            )
+            .await?;
         return Ok(());
     }
 
@@ -74,16 +73,19 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
     match voice_manager.lock().await.join(guild_id, voice_channel) {
         Some(ref mut voice) => voice.set_bitrate(Bitrate::BitsPerSecond(192000)),
-        None => return Ok(())
+        None => return Ok(()),
     }
+
+    let duration = {
+        let config = crate::read_config().await;
+        config.tmq.as_ref().unwrap().duration
+    };
 
     {
         let mut collector = TMQ_COLLECTOR.lock().await;
         if collector.is_empty() {
-            let custom_events = get_data::<CustomEventList>(&ctx)
-                .await
-                .unwrap();
-                
+            let custom_events = get_data::<CustomEventList>(&ctx).await.unwrap();
+
             custom_events.add("tmq", tmq_event_handler).await;
         }
 
@@ -91,21 +93,22 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
     }
 
     let leave_message = loop {
-        let (path, version) = get_quiz().await?;
-        info!("The answer is touhou {}", version.as_str().blue());
+        let (path, version) = match get_quiz().await {
+            Ok(v) => v,
+            Err(err) => break err.to_string(),
+        };
         
-        let duration = {
-            let config = crate::read_config().await;
-            config.tmq.as_ref().unwrap().duration
+        let audio = match get_audio(path, duration).await {
+            Ok(v) => v,
+            Err(err) => break err.to_string(),
         };
 
-        let audio = get_audio(path, duration).await?;
-        
+        info!("The answer is touhou {}", version.as_str().blue());
         match voice_manager.lock().await.get_mut(guild_id) {
             Some(ref mut voice) => voice.play_only(audio),
             None => break String::from("Cannot play the audio..."),
         };
-        
+
         let wair_for = Duration::from_secs_f32(duration - 2.0);
         tokio::time::delay_for(wair_for).await;
 
@@ -116,7 +119,7 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
             .unwrap()
             .drain()
             .partition(|(_, v)| v.answer == version);
-            
+
         let response = format!(
             "***Time up!!!***\n**The answer is**: Touhou {}\n**Correct**: {}\n**Incorrect**: {}",
             version,
@@ -128,17 +131,19 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
             .into_iter()
             .map(|v| format!("<@{}>\n", v.0))
             .collect::<String>();
-        
-        msg.channel_id.send_message(&ctx, |m| {
-            m.embed(|embed| {
-                embed.description(response);
-                embed.timestamp(now());
-                if !winners.is_empty() {
-                    embed.field("Winners", winners, true);
-                }
-                embed
+
+        msg.channel_id
+            .send_message(&ctx, |m| {
+                m.embed(|embed| {
+                    embed.description(response);
+                    embed.timestamp(now());
+                    if !winners.is_empty() {
+                        embed.field("Winners", winners, true);
+                    }
+                    embed
+                })
             })
-        }).await?;
+            .await?;
 
         if is_dead_channel(&ctx, voice_channel).await {
             break format!(
@@ -149,21 +154,19 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
 
     voice_manager.lock().await.leave(guild_id);
-    msg.channel_id.say(&ctx, leave_message).await?;
 
     {
         let mut collector = TMQ_COLLECTOR.lock().await;
         collector.remove(&msg.channel_id);
 
         if collector.is_empty() {
-            let custom_events = get_data::<CustomEventList>(&ctx)
-                .await
-                .unwrap();
-                
-            custom_events.done("tmq").await;
+            if let Some(events) = get_data::<CustomEventList>(&ctx).await {
+                events.done("tmq").await;
+            }
         }
     }
 
+    msg.channel_id.say(&ctx, leave_message).await?;
     Ok(())
 }
 
@@ -175,7 +178,8 @@ async fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<Box<dyn Audi
         mp3_duration::from_path(path_move)
             .map(|v| v.as_secs_f32())
             .map_err(|_| Error::new(ErrorKind::Other, "quickfix"))
-    }).await??;
+    })
+    .await??;
 
     let start_from = rand::random::<f32>() * total_time - duration;
     let opt = &[
@@ -200,16 +204,16 @@ async fn get_quiz() -> Result<(PathBuf, String)> {
     use std::io::{Error, ErrorKind};
     use tokio::fs;
     use tokio::stream::StreamExt;
-    
+
     let config = crate::read_config().await;
     let tmq_config = config
         .tmq
         .as_ref()
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "tmq config notfound"))?;
-    
+
     let path = &tmq_config.source;
     let mut rng = StdRng::from_entropy();
-    
+
     let dir = fs::read_dir(path)
         .await?
         .filter_map(|v| v.ok())
@@ -217,15 +221,18 @@ async fn get_quiz() -> Result<(PathBuf, String)> {
         .filter(|v| v.is_dir())
         .collect::<Vec<_>>()
         .await;
-        
+
     let touhou = dir
         .choose(&mut rng)
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "Notfound touhou folder"))?;
 
     drop(config);
-    
-    let name = touhou.file_name().unwrap();
-    let version = parse_touhou_version(name.to_str().unwrap()).unwrap();
+
+    let version = touhou
+        .file_name()
+        .and_then(|v| v.to_str())
+        .and_then(parse_touhou_version)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "Notfound touhou version"))?;
 
     let list = fs::read_dir(touhou)
         .await?
@@ -238,7 +245,7 @@ async fn get_quiz() -> Result<(PathBuf, String)> {
         })
         .collect::<Vec<_>>()
         .await;
-        
+
     let file = list
         .choose(&mut rng)
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "Notfound touhou music"))?;
@@ -273,7 +280,7 @@ fn touhou_emoji(version: &str) -> EmojiIdentifier {
     }
 }
 
-#[serenity::framework::standard::macros::hook]
+#[crate::hook]
 async fn tmq_event_handler(ctx: &Context, ev: &Event) -> Result<()> {
     match ev {
         Event::MessageCreate(event) => {
@@ -303,7 +310,9 @@ async fn tmq_event_handler(ctx: &Context, ev: &Event) -> Result<()> {
             let channel_id = event.channel_id;
 
             let content = event.content.as_ref();
-            if let (Some(chan), Some(con)) = (TMQ_COLLECTOR.lock().await.get_mut(&channel_id), content) {
+            if let (Some(chan), Some(con)) =
+                (TMQ_COLLECTOR.lock().await.get_mut(&channel_id), content)
+            {
                 let ans = chan
                     .iter_mut()
                     .find(|(_, v)| v.message_id == event.id)
@@ -314,10 +323,10 @@ async fn tmq_event_handler(ctx: &Context, ev: &Event) -> Result<()> {
                         let old_reaction = touhou_emoji(&answer.answer);
                         let reaction = touhou_emoji(&version);
                         answer.answer = version;
-                        channel_id
-                            .delete_reaction(&ctx, event.id, None, old_reaction)
-                            .await?;
-                        channel_id.create_reaction(&ctx, event.id, reaction).await?;
+                        let deletion =
+                            channel_id.delete_reaction(&ctx, event.id, None, old_reaction);
+                        let creation = channel_id.create_reaction(&ctx, event.id, reaction);
+                        futures::future::try_join(deletion, creation).await?;
                     }
                 }
             }
@@ -354,6 +363,6 @@ async fn tmq_event_handler(ctx: &Context, ev: &Event) -> Result<()> {
 
         _ => {}
     }
-    
+
     Ok(())
 }

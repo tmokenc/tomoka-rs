@@ -1,11 +1,8 @@
-#![allow(unstable_name_collisions)]
-
-use serenity::builder::CreateEmbed;
 use serenity::client::Context;
-use serenity::framework::standard::macros::hook;
+use serenity::framework::standard::macros::{help, hook};
 use serenity::framework::{
     standard::{
-        help_commands, macros::help, Args, CommandGroup, CommandResult, Configuration, HelpOptions,
+        help_commands, Args, CommandGroup, CommandResult, Configuration, HelpOptions,
     },
     Framework, StandardFramework,
 };
@@ -33,6 +30,7 @@ use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
 use std::collections::HashSet;
+use futures::future;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
@@ -157,7 +155,7 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
                 let func = SmallString::from(stringify!($x));
 
                 if !config.disable_auto_cmd.contains(&func) {
-                    futs.push($x(&ctx, &msg));
+                    futs.push($x(&ctx, &msg).boxed());
                     names.push(func);
                 }
             )*
@@ -175,7 +173,7 @@ async fn normal_message(ctx: &mut Context, msg: &Message) {
     }
     
     drop(config);
-    futures::future::join_all(futs)
+    future::join_all(futs)
         .await
         .into_iter()
         .zip(names)
@@ -228,7 +226,6 @@ async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
         .then(|| config.master_prefix.to_string())
 }
 
-#[hook]
 async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
     let guild_id = match msg.guild_id {
         Some(v) => v,
@@ -255,13 +252,12 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
 
     if let Some(m) = to_say {
         let fut = m.split_at_limit(2000, ">").map(|v| msg.channel_id.say(&ctx, v));
-        futures::future::try_join_all(fut).await?;
+        future::try_join_all(fut).await?;
     }
 
     Ok(())
 }
 
-#[hook]
 async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
     let guild_id = match msg.guild_id {
         Some(g) => g,
@@ -290,7 +286,6 @@ async fn repeat_words(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-#[hook]
 async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
     if msg
         .content
@@ -332,7 +327,6 @@ async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-#[hook]
 async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     let data = ctx.data.read().await;
     let me = data.get::<InforKey>().unwrap().user_id;
@@ -354,7 +348,6 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-#[hook]
 async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     use rand::prelude::*;
 
@@ -413,11 +406,9 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-#[hook]
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
-    use futures::future;
     use magic::sauce::get_sauce;
-
+    
     let config = crate::read_config().await;
 
     let is_watching_channel = msg
@@ -463,29 +454,6 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     };
     
     wait_for_react(ctx, msg, reaction, timeout, sauces).await?;
-
-    // msg.react(ctx, reaction).await?;
-    // let collector = msg
-    //     .await_reaction(&ctx)
-    //     .timeout(timeout)
-    //     .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
-    //     .removed(false)
-    //     .await;
-
-    // if let Some(reaction) = collector {
-    //     let http = std::sync::Arc::clone(&ctx.http);
-    //     tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
-    //     for sauce in sauces {
-    //         msg.channel_id
-    //             .send_message(&ctx, |m| {
-    //                 m.embed(|mut embed| {
-    //                     sauce.to_embed(&mut embed);
-    //                     embed
-    //                 })
-    //             })
-    //             .await?;
-    //     }
-    // }
 
     Ok(())
 }
@@ -546,29 +514,6 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
     };
     
     wait_for_react(ctx, msg, reaction, timeout, data).await?;
-
-    // msg.react(ctx, reaction).await?;
-    // let collector = msg
-    //     .await_reaction(&ctx)
-    //     .timeout(timeout)
-    //     .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
-    //     .removed(false)
-    //     .await;
-
-    // if let Some(reaction) = collector {
-    //     let http = std::sync::Arc::clone(&ctx.http);
-    //     tokio::spawn(async move { reaction.as_inner_ref().delete(http).await.ok() });
-    //     for sadkaede in data {
-    //         msg.channel_id
-    //             .send_message(&ctx, |m| {
-    //                 m.embed(|mut embed| {
-    //                     sadkaede.to_embed(&mut embed);
-    //                     embed
-    //                 })
-    //             })
-    //             .await?;
-    //     }
-    // }
 
     Ok(())
 }

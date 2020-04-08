@@ -20,6 +20,7 @@ mod utils;
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub use requester::*;
+pub use serenity::framework::standard::macros::hook;
 
 use std::error::Error;
 use std::sync::Arc;
@@ -51,6 +52,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     let mut client = Client::new_with_extras(token.as_ref(), |event| {
         event
             .event_handler(handler)
+            .raw_event_handler(raw_handler)
             .framework(framework::get_framework())
     })
     .await?;
