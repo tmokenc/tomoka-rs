@@ -461,7 +461,6 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-#[hook]
 // Simply a clone of the find_sauce due to similar functionality
 async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
     if msg.content.len() < 20 {
