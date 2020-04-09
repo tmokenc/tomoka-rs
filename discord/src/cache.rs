@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::mem;
 
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::id::{AttachmentId, MessageId, UserId};
 
 use log::info;
 use tempdir::TempDir;
-use tokio::stream::StreamExt;
+use tokio::fs;
 use tokio::sync::Mutex;
 
 use crate::utils::save_file;
@@ -27,8 +27,13 @@ pub struct MyCache {
 impl Drop for MyCache {
     fn drop(&mut self) {
         info!("Dropping the cache");
-        self.message = Mutex::new(Default::default()); // to run the destructor of these items inside
-        if let Err(why) = fs::remove_dir_all(&self.tmp_dir) {
+        // To clear the message cache without running it destructor
+        if let Some(ref mut map) = self.message.try_lock().ok().as_deref_mut() {
+            let old = mem::replace(*map, Default::default());
+            mem::forget(old);
+        }
+        
+        if let Err(why) = std::fs::remove_dir_all(&self.tmp_dir) {
             error!("Cannot clean up the custom cache\n{:#?}", why);
         }
     }
@@ -86,7 +91,7 @@ impl Drop for AttachmentCache {
     /// just as easy as remove this and drop it, then the file will automatically goen
     fn drop(&mut self) {
         if let Some(file) = &self.cached {
-            if let Err(why) = fs::remove_file(&file) {
+            if let Err(why) = std::fs::remove_file(&file) {
                 error!("Cannot remove a file in cache: {:?}\n{:#?}", file, why);
             }
         }
@@ -119,22 +124,21 @@ impl MyCache {
     /// Clear the cache
     /// Return the length of messages and cached size on disk
     pub async fn clear(&self) -> Result<(usize, usize)> {
+        let mut msgs = self.message.lock().await;
+        let cache_length = msgs.len();
         let mut cache_size = 0;
-        let mut dir = tokio::fs::read_dir(self.tmp_dir.as_path())
-            .await?
-            .filter_map(|v| v.ok());
-
-        while let Some(file) = dir.next().await {
-            let meta = file.metadata().await?;
-            cache_size += meta.len() as usize;
-            tokio::fs::remove_file(file.path()).await?;
+            
+        let iter = msgs
+            .values()
+            .flat_map(|v| &v.attachments)
+            .filter_map(|v| v.cached.as_ref());
+                
+        for path in iter {
+            cache_size += fs::metadata(path).await?.len() as usize;
         }
-
-        let mut message = self.message.lock().await;
-        let cache_length = message.len();
-        message.clear();
-        drop(message);
-
+        
+        msgs.clear();
+      
         Ok((cache_length, cache_size))
     }
 
