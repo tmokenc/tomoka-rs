@@ -396,7 +396,6 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
             .choose(&mut rng)
             .map(|v| v.path());
 
-        drop(rgb);
         drop(config);
 
         if let Some(evi) = evi {

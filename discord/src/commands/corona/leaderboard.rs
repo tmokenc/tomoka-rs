@@ -39,7 +39,7 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
     let rate_re = get_rate(total_c as f32, total_r as f32);
     let rate_de = get_rate(total_c as f32, total_d as f32);
     
-    let take = args.single::<usize>().unwrap_or(res.len());
+    let take = args.single::<usize>().unwrap_or_else(|_| res.len());
     let mut iter = res.into_iter().zip(1..).take(take);
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {

@@ -203,7 +203,7 @@ impl Embedable for requester::ehentai::Gmetadata {
 
         embed.description(info);
 
-        &[
+        [
             ("Male", tags.male),
             ("Female", tags.female),
             ("Misc", tags.misc),

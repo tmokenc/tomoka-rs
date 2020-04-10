@@ -45,12 +45,12 @@ impl From<&str> for Filter {
             }
 
             let mut arg = arg;
-            let mut plus = true;
-
-            if arg.starts_with('-') {
+            let plus = if arg.starts_with('-') {
                 arg = &arg[1..];
-                plus = false;
-            }
+                false
+            } else {
+                true
+            };
 
             if arg.starts_with('+') {
                 arg = &arg[1..];
@@ -63,9 +63,10 @@ impl From<&str> for Filter {
                 });
 
                 if !has {
-                    let data = match plus {
-                        true => FilterData::Increase(stat),
-                        false => FilterData::Decrease(stat),
+                    let data = if plus {
+                        FilterData::Increase(stat)
+                    } else {
+                        FilterData::Decrease(stat)
                     };
 
                     filter.data.push(data);
@@ -118,6 +119,7 @@ async fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
+#[inline]
 fn write_nature(f: &mut String, nature: Nature) {
     writeln!(
         f,

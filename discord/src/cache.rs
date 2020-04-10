@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::mem;
 
 use serenity::model::channel::{Attachment, Message};
 use serenity::model::id::{AttachmentId, MessageId, UserId};
@@ -29,10 +29,10 @@ impl Drop for MyCache {
         info!("Dropping the cache");
         // To clear the message cache without running it destructor
         if let Some(ref mut map) = self.message.try_lock().ok().as_deref_mut() {
-            let old = mem::replace(*map, Default::default());
+            let old = mem::take(*map);
             mem::forget(old);
         }
-        
+
         if let Err(why) = std::fs::remove_dir_all(&self.tmp_dir) {
             error!("Cannot clean up the custom cache\n{:#?}", why);
         }
@@ -127,18 +127,18 @@ impl MyCache {
         let mut msgs = self.message.lock().await;
         let cache_length = msgs.len();
         let mut cache_size = 0;
-            
+
         let iter = msgs
             .values()
             .flat_map(|v| &v.attachments)
             .filter_map(|v| v.cached.as_ref());
-                
+
         for path in iter {
             cache_size += fs::metadata(path).await?.len() as usize;
         }
-        
+
         msgs.clear();
-      
+
         Ok((cache_length, cache_size))
     }
 
@@ -176,7 +176,7 @@ impl MyCache {
 
             if i.size <= max_file_size {
                 let path = self.tmp_dir.join(i.filename());
-                if let Ok(_) = save_file(i.url.to_owned(), path.to_owned()).await {
+                if save_file(i.url.to_owned(), path.to_owned()).await.is_ok() {
                     i.cached = Some(path);
                 }
             }
