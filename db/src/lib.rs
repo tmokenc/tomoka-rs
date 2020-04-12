@@ -1,5 +1,6 @@
 use failure::format_err;
-use rkv::{Manager, OwnedValue, Rkv, SingleStore, StoreOptions, Value};
+use rkv::{Manager, Rkv, SingleStore, StoreOptions};
+pub use rkv::{OwnedValue, Value};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fs;
@@ -54,14 +55,15 @@ impl DbInstance {
         Ok(data)
     }
 
-    pub fn get_json<K, D>(&self, key: K) -> Result<D>
-    where
-        K: AsRef<[u8]>,
-        D: DeserializeOwned,
-    {
-        let data = self.get(key)?;
-        let value = Value::from(&data).to_bytes()?;
-        let result = serde_json::from_slice(value.as_slice())?;
+    pub fn get_json<D: DeserializeOwned>(&self, key: impl AsRef<[u8]>) -> Result<D> {
+        let env = self.manager.read().unwrap();
+        let reader = env.read()?;
+
+        let result = match self.store.get(&reader, key)? {
+            Some(Value::Json(s)) => serde_json::from_str(s)?,
+            _ => return Err(format_err!("Cannot find any json data"))
+        };
+        
         Ok(result)
     }
 
@@ -80,40 +82,25 @@ impl DbInstance {
     }
 
     pub fn get_all_json<D: DeserializeOwned>(&self) -> Result<Vec<(Vec<u8>, D)>> {
+        let env = self.manager.read().unwrap();
+        let reader = env.read()?;
+
         let data = self
-            .get_all()?
-            .into_iter()
+            .store
+            .iter_start(&reader)?
+            .filter_map(|v| v.ok())
             .filter_map(|(k, v)| {
-                if let OwnedValue::Json(s) = v {
-                    serde_json::from_str(&s).ok().map(|v| (k, v))
-                } else {
-                    None
-                }
+                let val = match v {
+                    Some(Value::Json(s)) => serde_json::from_str(s).ok(),
+                    _ => None
+                };
+                
+                val.map(|v| (k.to_vec(), v))
             })
             .collect();
 
         Ok(data)
     }
-
-    // ? don't know why it doesn't work
-    // pub fn get_all_json<D: DeserializeOwned>(&self) -> Result<Vec<(Vec<u8>, D)>> {
-    //     let env = self.manager.read().unwrap();
-    //     let reader = env.read()?;
-
-    //     let data = self
-    //         .store
-    //         .iter_start(&reader)?
-    //         .filter_map(|v| v.ok())
-    //         .filter_map(|(k, v)| {
-    //             v
-    //             .and_then(|val| val.to_bytes().ok())
-    //             .and_then(|val| serde_json::from_slice(val.as_slice()).ok())
-    //             .map(|val| (k.to_vec(), val))
-    //         })
-    //         .collect();
-
-    //     Ok(data)
-    // }
 
     pub fn put<K: AsRef<[u8]>>(&self, key: K, value: &Value) -> Result<()> {
         let env = self.manager.read().unwrap();

@@ -30,13 +30,14 @@ use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use std::fmt::Write as _;
 
-const TYPING_LIST: &[&str] = &["diancie", "say", "flip", "rotate", "saucenao", "info"];
+const TYPING_LIST: &[&str] = &["leaderboard", "diancie", "say", "flip", "rotate", "saucenao", "info"];
 
 lazy_static! {
     static ref EXECUTION_LIST: DashMap<MessageId, DateTime<Utc>> = DashMap::new();
@@ -140,7 +141,16 @@ async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
 
     if TYPING_LIST.contains(&cmd_name) {
-        msg.channel_id.broadcast_typing(ctx).await.ok();
+        let http = Arc::clone(&ctx.http);
+        tokio::spawn(msg.channel_id.broadcast_typing(http));
+    }
+
+    if crate::read_config()
+        .await
+        .cmd_blacklist
+        .contains(&cmd_name.into())
+    {
+        return false;
     }
 
     EXECUTION_LIST.insert(msg.id, Utc::now());
@@ -165,17 +175,12 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
         }
         Err(why) => {
             error!("Couldn't execute the command {}\n{:#?}", cmd.magenta(), why);
-            let config = crate::read_config().await;
-            let color = config.color.error;
-            drop(config);
+            let mess = format!("Cannot execute the command **__{}__**```{}```", cmd, why.0);
+            let color = crate::read_config().await.color.error;
 
             msg.channel_id
-                .send_message(&ctx.http, |m| {
-                    m.embed(|embed| {
-                        embed.color(color).description({
-                            format!("Cannot execute the command **__{}__**```{}```", cmd, why.0)
-                        })
-                    })
+                .send_message(&ctx, move |m| {
+                    m.embed(|embed| embed.color(color).description(mess))
                 })
                 .await
                 .ok();

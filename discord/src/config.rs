@@ -71,6 +71,7 @@ pub struct TimeZone {
 pub struct Config {
     pub prefix: SmallString<[u8; 8]>,
     pub master_prefix: SmallString<[u8; 8]>,
+    pub cmd_blacklist: Vec<SmallString<[u8; 10]>>,
     pub temp_dir: Option<PathBuf>,
     pub eliza_brain: String,
     pub max_cache_file_size: u32,

@@ -53,12 +53,8 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
 
     if let Some(channel) = is_playing(&ctx, guild_id).await {
-        msg.channel_id
-            .say(
-                &ctx,
-                format!("I'm current playing on channel <#{}>", channel.0),
-            )
-            .await?;
+        let to_say = format!("I'm current playing on channel <#{}>", channel.0);
+        msg.channel_id.say(&ctx, to_say).await?;
         return Ok(());
     }
 
