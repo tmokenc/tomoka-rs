@@ -10,7 +10,7 @@ async fn main() -> Result<()> {
         env::set_var("RUST_LOG", "info");
     }
 
-    let token = std::env::var("DISCORD_TOKEN")?;
+    let token = env::var("DISCORD_TOKEN")?;
     tomoka_rs::start(token).await?;
     Ok(())
 }

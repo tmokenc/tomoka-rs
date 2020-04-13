@@ -30,7 +30,6 @@ use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
@@ -141,8 +140,7 @@ async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
 
     if TYPING_LIST.contains(&cmd_name) {
-        let http = Arc::clone(&ctx.http);
-        tokio::spawn(msg.channel_id.broadcast_typing(http));
+        typing(&ctx, msg.channel_id);
     }
 
     if crate::read_config()

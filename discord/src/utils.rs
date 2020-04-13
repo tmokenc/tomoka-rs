@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use lazy_static::lazy_static;
@@ -46,6 +47,12 @@ pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> b
         Ok(v) => v.is_nsfw().await,
         Err(_) => false,
     }
+}
+
+#[inline]
+pub fn typing(ctx: &Context, channel_id: ChannelId) {
+    let http = Arc::clone(&ctx.http);
+    tokio::spawn(channel_id.broadcast_typing(http));
 }
 
 /// removes mentions from the message

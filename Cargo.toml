@@ -1,5 +1,5 @@
 [workspace]
-members = ["bins", "discord", "db", "server"]
+members = ["discord", "db", "server"]
 default-members = ["discord"]
 
 # [build]

@@ -34,7 +34,6 @@ use serenity::Client;
 use storages::*;
 use tokio::sync::Mutex;
 use tokio::signal::{unix, self};
-use futures::pin_mut;
 use types::*;
 
 use colorful::{Color, Colorful};
@@ -89,12 +88,10 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     }
 
     let shard_manager = client.shard_manager.clone();
-    let term_sig = unix::SignalKind::terminate();
-    let mut sig = unix::signal(term_sig)?;
+    let mut term_sig = unix::signal(unix::SignalKind::terminate())?;
     tokio::spawn(async move {
-        let sig_rev = sig.recv();
-        pin_mut!(sig_rev);
-        futures::future::select(sig_rev, Box::pin(signal::ctrl_c())).await;
+        let mut sig = Box::pin(term_sig.recv());
+        futures::future::select(sig.as_mut(), Box::pin(signal::ctrl_c())).await;
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
         shard_manager.lock().await.shutdown_all().await;
         info!("{}", "BYE".underlined().gradient(Color::Red));

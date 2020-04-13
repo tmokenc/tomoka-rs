@@ -14,3 +14,7 @@ actix-files = "0.2"
 rand = "0.7"
 env_logger = "0.7"
 # serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await" }
+db = { path = "../db" }
+serde = "1"
+serde_json = "1"
+smallstr = { version = "0.2", features = ["serde"] }

@@ -3,7 +3,7 @@ use crate::commands::prelude::*;
 use magic::traits::MagicIter;
 use smallstr::SmallString;
 use futures::future::TryFutureExt;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::sync::Arc;
 use crate::Result;
 use db::{OwnedValue, Value};
