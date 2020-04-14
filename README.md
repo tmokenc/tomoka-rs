@@ -12,20 +12,12 @@ If you are running Linux, it will be as easy as
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-
-Additional dependencies (the bot still works without these)
-
-+ ffmpeg (for music related commands)
-+ youtube-dl (for listening music on youtube, even it hasn't supported yet tho)
-
+Then clone this repo, navigate into it
 ```bash
-sudo pacman -S ffmpeg python
-python install youtube-dl
+git clone https://gitlab.com/tmokenc/tomoka-rs
+cd tomoka-rs
 ```
-(*I use Arch btw*)<br>
-
-Then clone this repo, navigate into it and do  
-
+And then build the bot
 ```bash
 cargo build --release --bin tomoka_rs
 ```
@@ -34,8 +26,6 @@ cargo build --release --bin tomoka_rs
 The whole process should be 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-sudo pacman -S ffmpeg python # Change this to your package manager
-python install youtube-dl
 git clone https://gitlab.com/tmokenc/tomoka-rs
 cd tomoka-rs
 cargo build --release --bin tomoka_rs
@@ -65,7 +55,6 @@ The structure of this codebase (kind of mess though) <br>
 + [Server](server) (The web server for the bot, but nothing is there yet)
 + [Db](db) (Database related stuff)
 + [Requester](requester) (Request to external API)
-+ [Pokemon](pokemon) (just there for the furute of Discord Pokemon Battle game)
 + [Bins](bins) (useless binaries)
 
 ## Todo
