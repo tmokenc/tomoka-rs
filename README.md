@@ -64,7 +64,6 @@ The structure of this codebase (kind of mess though) <br>
 + [Discord](discord) (The main bot source code)
 + [Server](server) (The web server for the bot, but nothing is there yet)
 + [Db](db) (Database related stuff)
-+ [Magic](magic) (All the magic in one place)
 + [Requester](requester) (Request to external API)
 + [Pokemon](pokemon) (just there for the furute of Discord Pokemon Battle game)
 + [Bins](bins) (useless binaries)
