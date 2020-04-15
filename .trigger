@@ -1,2 +1,2 @@
-touch .trigger
-chmod +x .trigger
+touch $0
+chmod +x $0

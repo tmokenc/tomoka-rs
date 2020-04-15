@@ -28,6 +28,12 @@ pub struct Color {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct ApiKeys {
+    pub rapidapi: Option<String>,
+    pub google: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Rgb {
     pub evidence: PathBuf,
     pub tu: Vec<SmallString<[u8; 8]>>,
@@ -90,6 +96,7 @@ pub struct Config {
     pub sadkaede: SadKaede,
     #[serde(default)]
     pub guilds: DashMap<GuildId, GuildConfig>,
+    pub apikeys: ApiKeys,
 }
 
 //pub struct SaveOption {

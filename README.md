@@ -54,7 +54,6 @@ The structure of this codebase (kind of mess though) <br>
 + [Discord](discord) (The main bot source code)
 + [Server](server) (The web server for the bot, but nothing is there yet)
 + [Db](db) (Database related stuff)
-+ [Requester](requester) (Request to external API)
 + [Bins](bins) (useless binaries)
 
 ## Todo

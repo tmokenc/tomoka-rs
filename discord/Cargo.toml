@@ -30,9 +30,9 @@ rand = { version = "0.7", features = ["small_rng"] }
 tokio = { version = "=0.2.13", features = ["fs", "sync", "stream", "signal", "io-util", "rt-threaded"] }
 dashmap = { version = "3", features = ["serde"] }
 smallstr = { version = "0.2", features = ["serde"] }
-db = { path = "../db" }
-requester = { path = "../requester" }
 pokemon_core = { git = "https://gitlab.com/tmokenc/pokemon_rs" }
+requester = { git = "https://gitlab.com/tmokenc/tomoreq", package = "tomoreq" }
 magic = { git = "https://gitlab.com/tmokenc/crappy-magic", package = "crappy_magic", features = ["full"] }
 serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await", features = ["collector", "rustls_backend", "voice"] }
 # serenity = { version = "0.8", features = ["voice", "cache"] }
+db = { path = "../db" }
