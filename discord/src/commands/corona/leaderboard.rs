@@ -83,26 +83,32 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
         .unwrap_or(10);
     let mut current_page: u16 = 0;
     
+    macro_rules! append {
+        () => {
+            |embed| {
+                embed.title("Corona Leaderboard");
+                embed.timestamp(now());
+                embed.color(0x8b0000);
+                embed.thumbnail(THUMBNAIL);
+                embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
+                
+                embed.description(&info);
+                
+                let show_data = data
+                    .countries
+                    .iter()
+                    .zip(1..)
+                    .skip((current_page * per_page) as usize)
+                    .take(per_page as usize);
+                
+                append_data(show_data, embed)
+            }
+        }    
+    }
+    
     let mut mess = msg.channel_id.send_message(&ctx, |message| {
         message.reactions(REACTIONS.into_iter().map(|&v| v));
-        message.embed(|embed| {
-            embed.title("Corona Leaderboard");
-            embed.timestamp(now());
-            embed.color(0x8b0000);
-            embed.thumbnail(THUMBNAIL);
-            embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
-           
-            embed.description(&info);
-            
-            let show_data = data
-                .countries
-                .iter()
-                .zip(1..)
-                .skip((current_page * per_page) as usize)
-                .take(per_page as usize);
-            
-            append_data(show_data, embed)
-        });
+        message.embed(append!());
         
         message
     }).await?;
@@ -150,23 +156,7 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
             _ => continue
         }
         
-        let show_data = data
-            .countries
-            .iter()
-            .zip(1..)
-            .skip((current_page * per_page) as usize)
-            .take(per_page as usize);
-        
-        mess.edit(&ctx, |m| m.embed(|embed| {
-            embed.title("Corona Leaderboard");
-            embed.timestamp(now());
-            embed.color(0x8b0000);
-            embed.thumbnail(THUMBNAIL);
-            embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
-            embed.description(&info);
-            
-            append_data(show_data, embed)
-        })).await?;
+        mess.edit(&ctx, |m| m.embed(append!())).await?;
     }
     
     drop(collector);
