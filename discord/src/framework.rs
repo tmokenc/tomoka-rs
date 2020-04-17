@@ -108,7 +108,7 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
         .owners(owners)
         .disabled_commands(disabled_commands)
         .case_insensitivity(true)
-        .by_space(false)
+        .by_space(true)
         .no_dm_prefix(true)
         .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
 }

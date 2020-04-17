@@ -91,7 +91,8 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     let mut term_sig = unix::signal(unix::SignalKind::terminate())?;
     tokio::spawn(async move {
         let mut sig = Box::pin(term_sig.recv());
-        futures::future::select(sig.as_mut(), Box::pin(signal::ctrl_c())).await;
+        let ctrl_c = Box::pin(signal::ctrl_c());
+        futures::future::select(sig.as_mut(), ctrl_c).await;
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
         shard_manager.lock().await.shutdown_all().await;
         info!("{}", "BYE".underlined().gradient(Color::Red));

@@ -3,16 +3,23 @@ use crate::commands::prelude::*;
 use magic::traits::MagicIter;
 use smallstr::SmallString;
 use futures::future::TryFutureExt;
+use futures::stream::StreamExt;
+use tokio::time::timeout;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::sync::Arc;
+use serenity::builder::CreateEmbed;
+use serenity::model::channel::ReactionType;
 use crate::Result;
 use db::{OwnedValue, Value};
 
 const API: &str = "https://api.covid19api.com/summary";
 const THUMBNAIL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Topeka-leaderboard.svg/200px-Topeka-leaderboard.svg.png";
+const WAIT_TIME: Duration = Duration::from_secs(30);
 const CACHE_TIME: u64 = 5 * 60;
 const DB_KEY: &str = "corona";
 const DB_TIME: &str = "c-time";
+
+const REACTIONS: &[&str] = &["◀️", "▶️", "❌"];
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -51,62 +58,171 @@ struct Country {
 #[aliases("corona", "top")]
 /// Get corona leaderboard
 /// Add limit number to limit the result
-/// `tomo>leaderboard 10` < this will only show first 10 countries
+/// `tomo>leaderboard 5` < this will only show 5 countries per page
 async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    let res = get_corona_data(&ctx).await?;
+    let data = get_corona_data(&ctx).await?;
     
-    let total_c = res.global.total_confirmed;
-    let total_r = res.global.total_recovered;
-    let total_d = res.global.total_deaths;
+    let total_c = data.global.total_confirmed;
+    let total_r = data.global.total_recovered;
+    let total_d = data.global.total_deaths;
         
     let rate_re = get_rate(total_c as f32, total_r as f32);
     let rate_de = get_rate(total_c as f32, total_d as f32);
     
-    let take = args.single::<usize>().unwrap_or(50);
+    let info = format!(
+        "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)", 
+        total_c, 
+        total_r, rate_re, 
+        total_d, rate_de,
+    );
     
-    let mut iter = res
-        .countries
-        .iter()
-        .rev()
-        .filter(|v| v.total_confirmed != 0)
-        .zip(1..)
-        .take(take);
+    let per_page: u16 = args
+        .single::<u16>()
+        .ok()
+        .filter(|&v| v > 0 && v <= 50)
+        .unwrap_or(10);
+    let mut current_page: u16 = 0;
     
-    msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-        embed.title("Corona Leaderboard");
-        embed.timestamp(now());
-        embed.color(0x8b0000);
-        embed.thumbnail(THUMBNAIL);
-        embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
-        
-        let info = format!(
-            "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)", 
-            total_c, 
-            total_r, rate_re, 
-            total_d, rate_de,
-        );
-        
-        embed.description(info);
-        embed.field("TOP 10", data(iter.by_ref().take(10)), false);
-        
-        let mut top = 20;
-        
-        for _ in 0..8 {
-            let d = data(iter.by_ref().take(10));
+    let mut mess = msg.channel_id.send_message(&ctx, |message| {
+        message.reactions(REACTIONS.into_iter().map(|&v| v));
+        message.embed(|embed| {
+            embed.title("Corona Leaderboard");
+            embed.timestamp(now());
+            embed.color(0x8b0000);
+            embed.thumbnail(THUMBNAIL);
+            embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
+           
+            embed.description(&info);
             
-            if !d.is_empty() {
-                let title = format!("#{} ~ #{}", top - 9, top);
-                embed.field(title, d, false);
-                top += 10;
-            } else {
-                break
+            let show_data = data
+                .countries
+                .iter()
+                .zip(1..)
+                .skip((current_page * per_page) as usize)
+                .take(per_page as usize);
+            
+            append_data(show_data, embed)
+        });
+        
+        message
+    }).await?;
+    
+    let mut collector = mess
+        .await_reactions(&ctx)
+        .author_id(msg.author.id)
+        .filter(|reaction| {
+            matches!(&reaction.emoji, ReactionType::Unicode(s) if REACTIONS.contains(&s.as_str()))
+        })
+        .await;
+        
+    while let Ok(Some(reaction)) = timeout(WAIT_TIME, collector.next()).await {
+        let reaction = reaction.as_inner_ref();
+        
+        let http = Arc::clone(&ctx.http);
+        let react = reaction.to_owned();
+        tokio::spawn(async move {
+            react.delete(http).await.ok();
+        });
+        
+        let emoji = match &reaction.emoji {
+            ReactionType::Unicode(s) => s,
+            _ => continue,
+        };
+        
+        match emoji.as_str() {
+            "◀️" => {
+                if current_page == 0 {
+                    continue;
+                }
+                
+                current_page -= 1;
             }
+            
+            "▶️" => {
+                if data.countries.len() as u16 - (current_page * per_page) <= per_page {
+                    continue;
+                }
+                
+                current_page += 1;
+            }
+            
+            "❌" => break,
+            _ => continue
         }
         
-        embed
-    })).await?;
+        let show_data = data
+            .countries
+            .iter()
+            .zip(1..)
+            .skip((current_page * per_page) as usize)
+            .take(per_page as usize);
+        
+        mess.edit(&ctx, |m| m.embed(|embed| {
+            embed.title("Corona Leaderboard");
+            embed.timestamp(now());
+            embed.color(0x8b0000);
+            embed.thumbnail(THUMBNAIL);
+            embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
+            embed.description(&info);
+            
+            append_data(show_data, embed)
+        })).await?;
+    }
     
+    drop(collector);
+    
+    let futs = REACTIONS
+        .into_iter()
+        .map(|&s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
+        
+    futures::future::join_all(futs).await;
     Ok(())
+}
+
+fn append_data<'a, 'b, I: IntoIterator<Item=(&'a Country, usize)>>(
+    iter: I,
+    embed: &'b mut CreateEmbed    
+) -> &'b mut CreateEmbed {
+    let mut iter = iter.into_iter();
+    embed.0.remove("fields");
+    
+    loop {
+        let mut ranking = None;
+        let mut many = 0;
+        
+        let data = iter
+            .by_ref()
+            .take(10)
+            .map(|(v, i)| {
+                if ranking.is_none() {
+                    ranking = Some(i);
+                }
+                
+                many += 1;
+                let (rate_re, rate_de) = rate(&v);
+                format!(
+                    "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)", 
+                    i, 
+                    code_to_emoji(&v.country_code),
+                    v.country, 
+                    v.total_confirmed, 
+                    v.total_recovered, rate_re,
+                    v.total_deaths, rate_de,
+                )
+            })
+            .join('\n');
+        
+        match ranking {
+            Some(r) => {
+                let name = format!("#{} - #{}", r, r + many - 1);
+                embed.field(name, data, false);
+            }
+            
+            None => break,
+        }
+    }
+    
+    embed
 }
 
 async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
@@ -135,6 +251,7 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
                 .countries
                 .into_iter()
                 .filter(|v| v.total_confirmed != 0)
+                .rev()
                 .collect();
                 
             tokio::task::block_in_place(|| {
@@ -156,23 +273,6 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
     }).await??;
     
     Ok(json)
-}
-
-fn data<'a, I: IntoIterator<Item=(&'a Country, usize)>>(iter: I) -> String {
-    iter.into_iter()
-        .map(|(v, i)| {
-            let (rate_re, rate_de) = rate(&v);
-            format!(
-                "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)", 
-                i, 
-                code_to_emoji(&v.country_code),
-                v.country, 
-                v.total_confirmed, 
-                v.total_recovered, rate_re,
-                v.total_deaths, rate_de,
-            )
-        })
-        .join('\n')
 }
 
 fn code_to_emoji(s: &str) -> String {
