@@ -40,6 +40,9 @@ async fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         update_guild_config(&ctx, &guild).await?;
         format!("Added {} roles into the almighty RGB database", count)
     };
+    
+    drop(guild);
+    drop(config);
 
     msg.channel_id.say(&ctx, response).await?;
     Ok(())

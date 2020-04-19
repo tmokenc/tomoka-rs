@@ -266,10 +266,7 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
 }
 
 fn code_to_emoji(s: &str) -> String {
-    match s {
-        "OT" => String::from(":cruise_ship:"),
-        n => format!(":flag_{}:", n.to_lowercase())
-    }
+    format!(":flag_{}:", s.to_lowercase())
 }
 
 fn rate(d: &Country) -> (f32, f32) {

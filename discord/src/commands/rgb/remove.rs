@@ -34,6 +34,9 @@ async fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
         update_guild_config(&ctx, &guild).await?;
         format!("Removed {} roles from the almighty RGB database", count)
     };
+    
+    drop(guild);
+    drop(config);
 
     msg.channel_id.say(&ctx, response).await?;
     

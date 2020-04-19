@@ -18,6 +18,7 @@ use futures::future::BoxFuture;
 use magic::number_to_rgb;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
@@ -38,6 +39,10 @@ impl RawHandler {
 #[async_trait]
 impl RawEventHandler for RawHandler {
     async fn raw_event(&self, ctx: Context, ev: Event) {
+        if let Event::Unknown(event) = &ev {
+            debug!("An unknown event\n{:#?}", event);    
+        }
+        
         self.handler.execute(ctx, ev).await;
     }
 }
@@ -107,10 +112,20 @@ impl RawEvents {
     }
 }
 
-pub struct Handler;
+pub struct Handler {
+    ready: AtomicU64,
+    resume: AtomicU64,
+    // ctx: Option<Arc<Context>>,
+    // connected: AtomicBool,
+}
 impl Handler {
     pub fn new() -> Self {
-        Self
+        Self {
+            ready: AtomicU64::from(0),
+            resume: AtomicU64::from(0),
+            // ctx: None,
+            // connected: AtomicBool::from(false),
+        }
     }
 }
 
@@ -234,8 +249,14 @@ impl EventHandler for Handler {
             ready.private_channels.len(),
         );
 
+        let mess = {
+            let resume = self.resume.load(Ordering::SeqCst);
+            let count = self.ready.fetch_add(1, Ordering::SeqCst) + 1;
+            format!("ready for {} | {} times", resume, count)
+        };
+
         // let activity = Activity::listening(&crate::read_config().prefix);
-        let activity = Activity::listening("tomo>leaderboard");
+        let activity = Activity::listening(&mess);
         let status = OnlineStatus::DoNotDisturb;
 
         ctx.set_presence(Some(activity), status).await;
@@ -243,9 +264,36 @@ impl EventHandler for Handler {
         if let Ok(info) = ctx.http.get_current_application_info().await {
             crate::write_config().await.masters.insert(info.owner.id);
         }
+        
+        // if !self.connected.load(Ordering::Relaxed) {
+        //     self.connected.store(true, Ordering::SeqCst);
+        //     
+        //     let arc_ctx = match self.ctx.as_ref() {
+        //         Some(c) => Arc::clone(c),
+        //         None => {
+        //             let arc_ctx = Arc::new(ctx);
+        //             self.ctx = Some(Arc::clone(&arc_ctx));
+        //             arc_ctx
+        //         }
+        //     };
+        //     
+        //     tokio::spawn(async move {
+        //         input(arc_ctx).await;
+        //     });
+        // }
     }
 
-    async fn resume(&self, _: Context, resume: ResumedEvent) {
+    async fn resume(&self, ctx: Context, resume: ResumedEvent) {
+        let mess = {
+            let count = self.resume.fetch_add(1, Ordering::SeqCst) + 1;
+            let ready = self.ready.load(Ordering::SeqCst);
+            format!("ready for {} | {} times", count, ready)
+        };
+        
+        let activity = Activity::listening(&mess);
+        let status = OnlineStatus::DoNotDisturb;
+
+        ctx.set_presence(Some(activity), status).await;
         debug!("Resumed; trace: {:?}", resume.trace);
     }
 }
@@ -397,4 +445,8 @@ async fn _process_deleted(
 fn to_color(id: u64) -> RGB {
     let (r, g, b) = number_to_rgb(id);
     RGB::new(r, g, b)
+}
+
+async fn input(ctx: Arc<Context>) {
+    
 }

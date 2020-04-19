@@ -13,7 +13,9 @@ use smallstr::SmallString;
 use std::collections::HashSet;
 use std::default::Default;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::fmt;
 
+use magic::traits::MagicIter as _;
 use magic::traits::MagicBool as _;
 
 pub struct Information {
@@ -68,6 +70,12 @@ impl From<Role> for SimpleRole {
     }
 }
 
+impl fmt::Display for SimpleRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<@&{}>", self.id)
+    }
+}
+
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct DiscordLogger {
     pub enable: bool,
@@ -83,8 +91,6 @@ pub struct FindSauce {
 
 impl Embedable for FindSauce {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
-        use magic::traits::MagicIter as _;
-
         if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The saucing service is disabled for this server");
         } else if self.all {
@@ -127,8 +133,6 @@ impl Default for FindSadKaede {
 
 impl Embedable for FindSadKaede {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
-        use magic::traits::MagicIter as _;
-
         if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The SadKaede-finder service is disabled for this server");
         } else if self.all {
@@ -304,6 +308,22 @@ impl GuildConfig {
             .collect::<Vec<_>>();
         let length = roles.len() as u8;
         rgb.extend(roles);
+        
+        // sort by luminosity
+        rgb.sort_by(|a, b| {
+            fn get_luminosity((r, g, b): (u8, u8, u8)) -> f64 {
+                let r = r as f64 * 0.2126;
+                let g = g as f64 * 0.7152;
+                let b = b as f64 * 0.0722;
+                
+                (r + g + b).sqrt()
+            }
+            
+            let la = get_luminosity(a.color);
+            let lb = get_luminosity(b.color);
+            
+            la.partial_cmp(&lb).unwrap_or(core::cmp::Ordering::Equal)
+        });
 
         length
     }

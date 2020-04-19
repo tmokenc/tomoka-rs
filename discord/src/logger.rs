@@ -19,15 +19,21 @@ fn logging(buf: &mut Formatter, record: &Record) -> IoResult<()> {
 
     let mut bracket_style = buf.style();
     bracket_style.set_color(Color::Black).set_intense(true);
+    
+    let mut name = record.target().to_owned();
+    
+    if let Some(line) = record.line() {
+        name.push_str(&format!(" /{}", line));
+    }
 
-    let duration = get_time_and_update(&record.target());
+    let duration = get_time_and_update(&name);
 
     writeln!(
         buf,
         "{}{} {}{} {:#?} ({}ms)",
         bracket_style.value("["),
         level,
-        record.target(),
+        name,
         bracket_style.value("]"),
         record.args(),
         duration.as_millis(),
@@ -40,8 +46,7 @@ fn get_time_and_update(name: &str) -> Duration {
         Some(time) => now.duration_since(*time),
         None => Duration::from_millis(0),
     };
-
-    TRACKING.insert(name.to_owned(), now);
+ TRACKING.insert(name.to_owned(), now);
 
     duration
 }

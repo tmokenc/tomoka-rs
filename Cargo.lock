@@ -623,7 +623,7 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#23563e9ff2a69f1180daea246920fd0be578aca7"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -802,9 +802,9 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "3.11.0"
+version = "3.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "002042a65ff32569ea25dfe1deb5b82903b19ed7d9a621e45d0bf18d2daa947c"
+checksum = "0f87a04c37da1d3d27db1fb7f372802b72fb8c3ff3e9c0914530995127f4a6a1"
 dependencies = [
  "ahash",
  "cfg-if",
@@ -1229,9 +1229,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "725cf19794cf90aa94e65050cb4191ff5d8fa87a498383774c47b332e3af952e"
+checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
 dependencies = [
  "libc",
 ]
@@ -1299,9 +1299,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed6081100e960d9d74734659ffc9cc91daf1c0fc7aceb8eaa94ee1a3f5046f2e"
+checksum = "96816e1d921eca64d208a85aab4f7798455a8e34229ee5a88c935bdee1b78b14"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1365,9 +1365,9 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.23.3"
+version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfc5483f8d5afd3653b38a196c52294dcb239c3e1a5bade1990353ea13bcf387"
+checksum = "9117f4167a8f21fa2bb3f17a652a760acd7572645281c98e3b612a26242c96ee"
 dependencies = [
  "bytemuck",
  "byteorder",
@@ -1861,9 +1861,9 @@ dependencies = [
 
 [[package]]
 name = "num_cpus"
-version = "1.12.0"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46203554f085ff89c235cd12f7075f3233af9b11ed7c9e16dfe2560d03313ce6"
+checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
 dependencies = [
  "hermit-abi",
  "libc",
@@ -2034,9 +2034,9 @@ checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
 
 [[package]]
 name = "png"
-version = "0.16.2"
+version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "910f09135b1ed14bb16be445a8c23ddf0777eca485fbfc7cee00d81fecab158a"
+checksum = "2c68a431ed29933a4eb5709aca9800989758c97759345860fa5db3cfced0b65d"
 dependencies = [
  "bitflags",
  "crc32fast",
@@ -2314,9 +2314,9 @@ checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
 
 [[package]]
 name = "regex"
-version = "1.3.6"
+version = "1.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f6946991529684867e47d86474e3a6d0c0ab9b82d5821e314b1ede31fa3a4b3"
+checksum = "a6020f034922e3194c711b82a627453881bc4682166cabb07134a10c26ba7692"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -2673,8 +2673,8 @@ dependencies = [
 
 [[package]]
 name = "serenity"
-version = "0.8.1"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#c9145e62d6d9f96b07668c1f3e7ab7d8a784ace4"
+version = "0.8.4"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#23563e9ff2a69f1180daea246920fd0be578aca7"
 dependencies = [
  "async-tls",
  "async-trait",
@@ -2696,9 +2696,7 @@ dependencies = [
  "serde_json",
  "sodiumoxide",
  "static_assertions 1.1.0",
- "threadpool",
  "tokio",
- "typemap",
  "url",
  "uwl",
  "webpki",
@@ -3019,9 +3017,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.13"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa5e81d6bc4e67fe889d5783bd2a128ab2e0cfa487e0be16b6a8d177b101616"
+checksum = "34ef16d072d2b6dc8b4a56c70f5c5ced1a37752116f8e7c1e80c659aa7cb6713"
 dependencies = [
  "bytes",
  "fnv",
@@ -3149,7 +3147,7 @@ dependencies = [
 [[package]]
 name = "tomoreq"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/tomoreq#98d32bac804f5f13db7674fbe55e4ad3b9b6010b"
+source = "git+https://gitlab.com/tmokenc/tomoreq#f56e19323f973ea7650042b0418a415ffd036569"
 dependencies = [
  "async-trait",
  "crappy_magic",
@@ -3164,12 +3162,6 @@ name = "tower-service"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e987b6bf443f4b5b3b6f38704195592cca41c5bb7aedd3c3693c7081f8289860"
-
-[[package]]
-name = "traitobject"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 
 [[package]]
 name = "trust-dns-proto"
@@ -3236,15 +3228,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typemap"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "653be63c80a3296da5551e1bfd2cca35227e13cdd08c6668903ae2f4f77aa1f6"
-dependencies = [
- "unsafe-any",
-]
-
-[[package]]
 name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3296,15 +3279,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 
 [[package]]
-name = "unsafe-any"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f30360d7979f5e9c6e6cea48af192ea8fab4afb3cf72597154b8f08935bc9c7f"
-dependencies = [
- "traitobject",
-]
-
-[[package]]
 name = "untrusted"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3335,9 +3309,9 @@ checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
 
 [[package]]
 name = "uwl"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a7ab913a1e7531084274437e24137ef81065a4b7c05a76d4a6311d48bf4ae4d"
+checksum = "f4bf03e0ca70d626ecc4ba6b0763b934b6f2976e8c744088bb3c1d646fbb1ad0"
 
 [[package]]
 name = "v_escape"

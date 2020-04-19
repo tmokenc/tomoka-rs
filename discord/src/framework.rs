@@ -192,6 +192,10 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
 
 #[hook]
 async fn normal_message(ctx: &mut Context, msg: &Message) {
+    if msg.author.bot {
+        return
+    }
+    
     let config = crate::read_config().await;
     let mut futs = Vec::new();
     let mut names = Vec::new();
@@ -247,16 +251,15 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
         .map(|v| {
             let mut res = String::with_capacity(v.len() * 22);
             for role in v {
-                write!(&mut res, "<@&{}>", role.id).unwrap();
+                write!(&mut res, "{}", role).unwrap();
             }
             res
         });
 
     if let Some(m) = to_say {
-        let fut = m
-            .split_at_limit(2000, ">")
-            .map(|v| msg.channel_id.say(&ctx, v));
-        future::try_join_all(fut).await?;
+        for roles in m.split_at_limit(2000, ">") {
+            msg.channel_id.say(&ctx, roles).await?;
+        }
     }
 
     Ok(())
