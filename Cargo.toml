@@ -4,8 +4,9 @@ default-members = ["discord"]
 
 # [build]
 # rustflags = ["-C", "target-cpu=native"]
-# 
+ 
+# bỏ comment để thêm độ tối ưu
 [profile.release]
-# lto = "fat"
-# codegen-units = 1
-debug-assertions = false
+debug-assertions = false # tối ưu tý
+# codegen-units = 1 # tối ưu tý nữa
+# lto = "fat" # tối ưu chết cmn luôn

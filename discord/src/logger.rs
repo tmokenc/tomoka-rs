@@ -23,7 +23,7 @@ fn logging(buf: &mut Formatter, record: &Record) -> IoResult<()> {
     let mut name = record.target().to_owned();
     
     if let Some(line) = record.line() {
-        name.push_str(&format!(" /{}", line));
+        name.push_str(&format!(":{}", line));
     }
 
     let duration = get_time_and_update(&name);

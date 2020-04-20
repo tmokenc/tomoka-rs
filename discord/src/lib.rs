@@ -50,22 +50,34 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         "Login with the token:\n{}",
         token.as_ref().to_owned().underlined().yellow()
     );
-    let mut client = Client::new_with_extras(token.as_ref(), |event| {
-        event
+    let mut client = Client::new_with_extras(token.as_ref(), |extra| {
+        use serenity::client::bridge::gateway::GatewayIntents;
+        let intents = GatewayIntents::empty()           // WORKS
+            | GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_VOICE_STATES
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+            | GatewayIntents::DIRECT_MESSAGES
+            | GatewayIntents::DIRECT_MESSAGE_REACTIONS;
+            
+        // let intents = GatewayIntents::all()          // HANGS
+        //     & !GatewayIntents::GUILD_MEMBERS
+        //     & !GatewayIntents::GUILD_BANS
+        //     & !GatewayIntents::GUILD_EMOJIS
+        //     & !GatewayIntents::GUILD_INTEGRATIONS
+        //     & !GatewayIntents::GUILD_WEBHOOKS
+        //     & !GatewayIntents::GUILD_INVITES
+        //     & !GatewayIntents::GUILD_MESSAGE_TYPING
+        //     & !GatewayIntents::DIRECT_MESSAGE_TYPING;
+        
+        extra
             .event_handler(handler)
             .raw_event_handler(raw_handler)
             .framework(framework::get_framework())
+            .guild_subscriptions(false)
+            .intents(intents)
     })
     .await?;
-
-    // Disable the default message cache and use our own
-    client
-        .cache_and_http
-        .cache
-        .write()
-        .await
-        .settings_mut()
-        .max_messages(0);
 
     {
         let mut data = client.data.write().await;
