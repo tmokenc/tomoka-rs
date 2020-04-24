@@ -11,11 +11,12 @@ mod config;
 mod events;
 mod framework;
 mod global;
-mod logger;
 mod storages;
 mod traits;
 mod types;
 mod utils;
+
+pub mod logger;
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -29,47 +30,35 @@ use crate::config::Config;
 use cache::MyCache;
 use db::DbInstance;
 use events::{Handler, RawHandler};
-use magic::dark_magic::{bytes_to_le_u64, has_external_command};
-use serenity::Client;
 use storages::*;
-use tokio::sync::Mutex;
-use tokio::signal::{unix, self};
 use types::*;
 
 use colorful::{Color, Colorful};
 use eliza::Eliza;
+use futures::future;
+use magic::dark_magic::{bytes_to_le_u64, has_external_command};
+use serenity::Client;
+use tokio::signal::{self, unix};
+use tokio::sync::Mutex;
 
 pub async fn start(token: impl AsRef<str>) -> Result<()> {
-    logger::init();
-
     let handler = Handler::new();
     let raw_handler = RawHandler::new();
     let custom_events_arc = raw_handler.handler.clone();
 
-    info!(
-        "Login with the token:\n{}",
-        token.as_ref().to_owned().underlined().yellow()
-    );
     let mut client = Client::new_with_extras(token.as_ref(), |extra| {
         use serenity::client::bridge::gateway::GatewayIntents;
-        let intents = GatewayIntents::empty()           // WORKS
-            | GatewayIntents::GUILDS
-            | GatewayIntents::GUILD_VOICE_STATES
-            | GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::GUILD_MESSAGE_REACTIONS
-            | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::DIRECT_MESSAGE_REACTIONS;
-            
-        // let intents = GatewayIntents::all()          // HANGS
-        //     & !GatewayIntents::GUILD_MEMBERS
-        //     & !GatewayIntents::GUILD_BANS
-        //     & !GatewayIntents::GUILD_EMOJIS
-        //     & !GatewayIntents::GUILD_INTEGRATIONS
-        //     & !GatewayIntents::GUILD_WEBHOOKS
-        //     & !GatewayIntents::GUILD_INVITES
-        //     & !GatewayIntents::GUILD_MESSAGE_TYPING
-        //     & !GatewayIntents::DIRECT_MESSAGE_TYPING;
-        
+        let intents = GatewayIntents::all()
+            & !GatewayIntents::GUILD_MEMBERS
+            & !GatewayIntents::GUILD_BANS
+            & !GatewayIntents::GUILD_EMOJIS
+            & !GatewayIntents::GUILD_INTEGRATIONS
+            & !GatewayIntents::GUILD_WEBHOOKS
+            & !GatewayIntents::GUILD_INVITES
+            & !GatewayIntents::GUILD_PRESENCES
+            & !GatewayIntents::GUILD_MESSAGE_TYPING
+            & !GatewayIntents::DIRECT_MESSAGE_TYPING;
+
         extra
             .event_handler(handler)
             .raw_event_handler(raw_handler)
@@ -79,9 +68,17 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     })
     .await?;
 
+    // Disable the default message cache and use our own. Just in case
+    client
+        .cache_and_http
+        .cache
+        .write()
+        .await
+        .settings_mut()
+        .max_messages(0);
+
     {
-        let mut data = client.data.write().await;
-        let config = read_config().await;
+        let (mut data, config) = future::join(client.data.write(), read_config()).await;
 
         let db = DbInstance::new(&config.database.path, None)?;
         fetch_guild_config_from_db(&db).await?;
@@ -99,7 +96,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         }
     }
 
-    let shard_manager = client.shard_manager.clone();
+    let shard_manager = Arc::clone(&client.shard_manager);
     let mut term_sig = unix::signal(unix::SignalKind::terminate())?;
     tokio::spawn(async move {
         let mut sig = Box::pin(term_sig.recv());

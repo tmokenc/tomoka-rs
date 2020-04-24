@@ -84,11 +84,7 @@ impl From<Attachment> for AttachmentCache {
 }
 
 impl Drop for AttachmentCache {
-    /// This is the **BEST** thing that I have seen in Rust
-    /// Do a post-hook when a memory is goen
-    /// This way we don't have to do manually remove the file
-    /// **Which save me from writing a lot of code and bugs as well as errors**
-    /// just as easy as remove this and drop it, then the file will automatically goen
+    /// To delete the cache when ever the memory is goen
     fn drop(&mut self) {
         if let Some(file) = &self.cached {
             if let Err(why) = std::fs::remove_file(&file) {

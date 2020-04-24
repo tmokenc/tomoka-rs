@@ -17,8 +17,8 @@ use colorful::{Color, Colorful};
 use futures::future::BoxFuture;
 use magic::number_to_rgb;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
@@ -40,9 +40,9 @@ impl RawHandler {
 impl RawEventHandler for RawHandler {
     async fn raw_event(&self, ctx: Context, ev: Event) {
         if let Event::Unknown(event) = &ev {
-            debug!("An unknown event\n{:#?}", event);    
+            debug!("An unknown event\n{:#?}", event);
         }
-        
+
         self.handler.execute(ctx, ev).await;
     }
 }
@@ -135,7 +135,7 @@ impl EventHandler for Handler {
         if !msg.author.bot {
             let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id).await;
 
-            info!(
+            trace!(
                 "A message on {}\n{}> {}",
                 channel_info,
                 colored_name_user(&msg.author).underlined(),
@@ -176,9 +176,10 @@ impl EventHandler for Handler {
             None => return,
         };
 
-        info!(
+        trace!(
             "The message with id {} on channel {} has been updated",
-            event.id.0, channel_id.0
+            event.id.0,
+            channel_id.0
         );
 
         let log_channel = match get_log_channel(guild_id).await {
@@ -228,12 +229,12 @@ impl EventHandler for Handler {
     }
 
     async fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {
-        info!("A message with id {} has been deleted", msg.0);
+        trace!("A message with id {} has been deleted", msg.0);
         process_deleted_message(&ctx, channel, Some(msg)).await; // Option also an iterator
     }
 
     async fn message_delete_bulk(&self, ctx: Context, channel_id: ChannelId, msgs: Vec<MessageId>) {
-        info!(
+        trace!(
             "OMG, there are {} messages has been killed by one slash",
             msgs.len()
         );
@@ -242,20 +243,18 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        info!("{} is connected!", ready.user.name);
         info!(
-            "The bot is now available on {} servers and {} private channels",
+            "{} is connected! The bot is now available on {} servers",
+            ready.user.name,
             ready.guilds.len(),
-            ready.private_channels.len(),
         );
 
         let mess = {
             let resume = self.resume.load(Ordering::SeqCst);
             let count = self.ready.fetch_add(1, Ordering::SeqCst) + 1;
-            format!("ready for {} | {} times", resume, count)
+            format!("tmokenc#0001 ({}/{})", resume, count)
         };
 
-        // let activity = Activity::listening(&crate::read_config().prefix);
         let activity = Activity::listening(&mess);
         let status = OnlineStatus::DoNotDisturb;
 
@@ -264,10 +263,10 @@ impl EventHandler for Handler {
         if let Ok(info) = ctx.http.get_current_application_info().await {
             crate::write_config().await.masters.insert(info.owner.id);
         }
-        
+
         // if !self.connected.load(Ordering::Relaxed) {
         //     self.connected.store(true, Ordering::SeqCst);
-        //     
+        //
         //     let arc_ctx = match self.ctx.as_ref() {
         //         Some(c) => Arc::clone(c),
         //         None => {
@@ -276,7 +275,7 @@ impl EventHandler for Handler {
         //             arc_ctx
         //         }
         //     };
-        //     
+        //
         //     tokio::spawn(async move {
         //         input(arc_ctx).await;
         //     });
@@ -287,9 +286,9 @@ impl EventHandler for Handler {
         let mess = {
             let count = self.resume.fetch_add(1, Ordering::SeqCst) + 1;
             let ready = self.ready.load(Ordering::SeqCst);
-            format!("ready for {} | {} times", count, ready)
+            format!("tmokenc#0001 ({}/{})", count, ready)
         };
-        
+
         let activity = Activity::listening(&mess);
         let status = OnlineStatus::DoNotDisturb;
 
@@ -384,7 +383,7 @@ async fn _process_deleted(
         return Ok(());
     }
     
-    info!("{}", msg.content.to_owned().dim());
+    trace!("{}", msg.content);
     
     let (name, discriminator, is_bot) = match ctx.cache.read().await.user(msg.author_id) {
         None => ("Unknown".to_string(), 0, false),
@@ -448,5 +447,5 @@ fn to_color(id: u64) -> RGB {
 }
 
 // async fn input(ctx: Arc<Context>) {
-//     
+//
 // }

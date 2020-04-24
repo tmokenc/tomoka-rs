@@ -36,7 +36,15 @@ use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use std::fmt::Write as _;
 
-const TYPING_LIST: &[&str] = &["leaderboard", "diancie", "say", "flip", "rotate", "saucenao", "info"];
+const TYPING_LIST: &[&str] = &[
+    "leaderboard",
+    "diancie",
+    "say",
+    "flip",
+    "rotate",
+    "saucenao",
+    "info",
+];
 
 lazy_static! {
     static ref EXECUTION_LIST: DashMap<MessageId, DateTime<Utc>> = DashMap::new();
@@ -193,9 +201,9 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
 #[hook]
 async fn normal_message(ctx: &mut Context, msg: &Message) {
     if msg.author.bot {
-        return
+        return;
     }
-    
+
     let config = crate::read_config().await;
     let mut futs = Vec::new();
     let mut names = Vec::new();

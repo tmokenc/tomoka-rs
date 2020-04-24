@@ -12,11 +12,11 @@ use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
 use smallstr::SmallString;
 use std::collections::HashSet;
 use std::default::Default;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::fmt;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use magic::traits::MagicIter as _;
 use magic::traits::MagicBool as _;
+use magic::traits::MagicIter as _;
 
 pub struct Information {
     pub booted_on: DateTime<Utc>,
@@ -308,20 +308,20 @@ impl GuildConfig {
             .collect::<Vec<_>>();
         let length = roles.len() as u8;
         rgb.extend(roles);
-        
+
         // sort by luminosity
         rgb.sort_by(|a, b| {
             fn get_luminosity((r, g, b): (u8, u8, u8)) -> f64 {
                 let r = r as f64 * 0.2126;
                 let g = g as f64 * 0.7152;
                 let b = b as f64 * 0.0722;
-                
+
                 (r + g + b).sqrt()
             }
-            
+
             let la = get_luminosity(a.color);
             let lb = get_luminosity(b.color);
-            
+
             la.partial_cmp(&lb).unwrap_or(core::cmp::Ordering::Equal)
         });
 

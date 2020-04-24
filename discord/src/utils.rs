@@ -101,20 +101,19 @@ pub async fn get_user_voice_channel(
     guild_id: GuildId,
     mem: UserId,
 ) -> Option<ChannelId> {
-    match guild_id.to_guild_cached(&ctx).await {
-        Some(c) => {
-            let guild = c.read().await;
-            guild.voice_states.get(&mem).and_then(|v| v.channel_id)
-        }
-        None => None,
-    }
+    guild_id
+        .to_guild_cached(&ctx)
+        .await?
+        .read()
+        .await
+        .voice_states
+        .get(&mem)?
+        .channel_id
 }
 
 pub async fn is_playing(ctx: &Context, guild_id: GuildId) -> Option<ChannelId> {
-    match ctx.data.read().await.get::<InforKey>() {
-        Some(v) => get_user_voice_channel(ctx, guild_id, v.user_id).await,
-        None => None,
-    }
+    let user_id = ctx.data.read().await.get::<InforKey>()?.user_id;
+    get_user_voice_channel(ctx, guild_id, user_id).await
 }
 
 pub async fn is_dead_channel(ctx: &Context, channel_id: ChannelId) -> bool {
@@ -148,13 +147,13 @@ pub async fn get_guild_id_from_channel<C: Into<ChannelId>>(
         .into()
         .to_channel(ctx)
         .await
-        .ok()
-        .and_then(|v| v.guild());
+        .ok()?
+        .guild()?
+        .read()
+        .await
+        .guild_id;
 
-    match guild {
-        Some(v) => Some(v.read().await.guild_id),
-        None => None,
-    }
+    Some(guild)
 }
 
 /// This will clone the value if exist

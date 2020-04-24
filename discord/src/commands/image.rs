@@ -19,10 +19,8 @@ struct Image;
 /// Get the last image buf from most recent message on the channel
 /// Max messages length is 100
 pub async fn get_last_image_buf(ctx: &Context, msg: &Message, limit: u16) -> Option<Bytes> {
-    match get_last_image_url(ctx, msg, limit).await {
-        Some(v) => get_file_bytes(v).await.ok(),
-        None => None,
-    }
+    let url = get_last_image_url(ctx, msg, limit).await?;
+    get_file_bytes(url).await.ok()
 }
 
 pub async fn get_last_image_url(ctx: &Context, msg: &Message, limit: u16) -> Option<String> {
@@ -30,11 +28,9 @@ pub async fn get_last_image_url(ctx: &Context, msg: &Message, limit: u16) -> Opt
         None => msg.channel_id
             .messages(ctx, |m| m.limit(limit as u64).before(msg.id))
             .await
-            .ok()
-            .and_then(|msgs| {
-                msgs.into_iter()
-                    .find_map(|v| get_image_url_from_message(&v))
-            }),
+            .ok()?
+            .into_iter()
+            .find_map(|v| get_image_url_from_message(&v)),
         v => v,
     }
 }
@@ -48,7 +44,7 @@ fn get_image_url_from_message(msg: &Message) -> Option<String> {
         .or_else(|| {
             msg.embeds
                 .iter()
-                .find(|v| v.image.is_some())
-                .map(|v| v.image.as_ref().unwrap().url.to_owned())
+                .find_map(|v| v.image.as_ref())
+                .map(|v| v.url.to_owned())
         })
 }
