@@ -317,8 +317,7 @@ async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
     use Channel::*;
 
     match c.to_channel(ctx).await {
-        Ok(Guild(c)) => {
-            let channel = c.read().await;
+        Ok(Guild(channel)) => {
             let guild_name = channel
                 .guild(&ctx.cache)
                 .await

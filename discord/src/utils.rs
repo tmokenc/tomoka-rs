@@ -41,12 +41,7 @@ pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
 
 /// Check if a (guild) channel is nsfw or not
 pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
-    let channel = channel.into().to_channel(ctx).await;
-
-    match channel {
-        Ok(v) => v.is_nsfw().await,
-        Err(_) => false,
-    }
+    channel.into().to_channel(ctx).await.ok().filter(|v| v.is_nsfw()).is_some()
 }
 
 #[inline]
@@ -123,7 +118,7 @@ pub async fn is_dead_channel(ctx: &Context, channel_id: ChannelId) -> bool {
         .ok()
         .and_then(|v| v.guild())
     {
-        Some(g) => match g.read().await.members(ctx).await {
+        Some(g) => match g.members(ctx).await {
             Ok(m) => m,
             Err(_) => return false,
         },
@@ -131,7 +126,7 @@ pub async fn is_dead_channel(ctx: &Context, channel_id: ChannelId) -> bool {
     };
 
     for member in members {
-        if !member.user.read().await.bot {
+        if !member.user.bot {
             return false;
         }
     }
@@ -149,8 +144,6 @@ pub async fn get_guild_id_from_channel<C: Into<ChannelId>>(
         .await
         .ok()?
         .guild()?
-        .read()
-        .await
         .guild_id;
 
     Some(guild)
