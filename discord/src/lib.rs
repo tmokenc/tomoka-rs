@@ -49,7 +49,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     let mut client = Client::new_with_extras(token.as_ref(), |extra| {
         use serenity::client::bridge::gateway::GatewayIntents;
         let intents = GatewayIntents::all()
-            & !GatewayIntents::GUILD_MEMBERS
+            // & !GatewayIntents::GUILD_MEMBERS
             & !GatewayIntents::GUILD_BANS
             & !GatewayIntents::GUILD_EMOJIS
             & !GatewayIntents::GUILD_INTEGRATIONS

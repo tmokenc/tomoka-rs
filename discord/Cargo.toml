@@ -31,7 +31,7 @@ scraper = "0.11"
 tempdir = "0.3"
 tokio = { version = "0.2", features = ["fs", "sync", "stream", "signal", "io-util", "rt-threaded"] }
 pokemon_core = { git = "https://gitlab.com/tmokenc/pokemon_rs" }
-requester = { git = "https://gitlab.com/tmokenc/tomoreq", package = "tomoreq", features = ["extra"] }
+requester = { git = "https://gitlab.com/tmokenc/tomoreq", package = "tomoreq", features = ["full"] }
 magic = { git = "https://gitlab.com/tmokenc/crappy-magic", package = "crappy_magic", features = ["full"] }
 serenity = { git = "https://github.com/Lakelezz/serenity", branch = "await", features = ["collector", "rustls_backend", "voice"] }
 # serenity = { version = "0.8", features = ["voice", "cache"] }

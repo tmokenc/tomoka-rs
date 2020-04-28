@@ -20,7 +20,7 @@ pub trait Embedable: Send {
     }
 }
 
-impl Embedable for magic::sauce::SauceNao {
+impl Embedable for requester::scrapers::saucenao::SauceNao {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();
 

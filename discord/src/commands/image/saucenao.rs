@@ -1,7 +1,7 @@
 use super::get_last_image_url;
 use crate::commands::prelude::*;
 use crate::traits::Embedable as _;
-use magic::sauce::SauceNao;
+use requester::SauceNaoScraper as _;
 
 #[command]
 #[aliases("sauce")]
@@ -11,13 +11,8 @@ async fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
     let img = match get_last_image_url(&ctx, &msg, depth).await {
         Some(i) => i,
         None => {
-            msg.channel_id.say(
-                ctx,
-                format!(
-                    "Cannot find an image from last {} message",
-                    depth
-                ),
-            ).await?;
+            let to_say = format!("Cannot find an image from last {} message", depth);
+            msg.channel_id.say(ctx, to_say).await?;
             return Ok(());
         }
     };
@@ -30,16 +25,18 @@ async fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult
         }
     });
 
-    let data = SauceNao::get(&img, similarity).await?;
+    let data = get_data::<ReqwestClient>(&ctx)
+        .await
+        .unwrap()
+        .saucenao(&img, similarity)
+        .await?;
 
     if data.not_found() {
         msg.channel_id.say(ctx, "Error 404: No sauce found").await?;
         return Ok(());
     }
     
-    msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-        data.append_to(embed)
-    })).await?;
+    msg.channel_id.send_message(ctx, |m| m.embed(|embed| data.append_to(embed))).await?;
 
     Ok(())
 }

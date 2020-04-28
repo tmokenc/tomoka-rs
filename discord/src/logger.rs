@@ -40,7 +40,7 @@ pub fn init() -> Result<()> {
     let file = fern::Dispatch::new()
         .format(file_format)
         .level(LevelFilter::Warn)
-        .level_for("serenity", LevelFilter::Debug)
+        .level_for("serenity", LevelFilter::Trace)
         .level_for("tomoka_rs", LevelFilter::Debug)
         .chain(fern::DateBased::new("logs/", "%F.tomolog"));
 

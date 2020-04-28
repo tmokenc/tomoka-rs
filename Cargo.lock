@@ -286,9 +286,9 @@ checksum = "5d2e7343e7fc9de883d1b0341e0b13970f764c14101234857d2ddafa1cb1cac2"
 
 [[package]]
 name = "ahash"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0989268a37e128d4d7a8028f1c60099430113fdbc70419010601ce51a228e4fe"
+checksum = "35b909d1c126f78ace756fc337133356c499eebeefcce930fa5fb018823f2b2d"
 dependencies = [
  "const-random",
 ]
@@ -623,7 +623,7 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#874571486056e171d08006fc4abf154a70628fc1"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#0fad30bdf491b5cdc003ebb12bf33d3ea4233df5"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -692,15 +692,12 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "crappy_magic"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/crappy-magic#b30076f112c5a0ba2cd64de4794da6c9261a77f5"
+source = "git+https://gitlab.com/tmokenc/crappy-magic#f58b4324851dd8c62626332a13ed52e4810ca3b2"
 dependencies = [
  "bytesize",
  "dominant_color",
  "image",
  "libc",
- "reqwest",
- "scraper",
- "tokio",
 ]
 
 [[package]]
@@ -1239,9 +1236,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
+checksum = "61565ff7aaace3525556587bd2dc31d4a07071957be715e63ce7b1eccf51a8f4"
 dependencies = [
  "libc",
 ]
@@ -1447,9 +1444,9 @@ checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 
 [[package]]
 name = "jpeg-decoder"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0256f0aec7352539102a9efbcb75543227b7ab1117e0f95450023af730128451"
+checksum = "5b47b4c4e017b01abdc5bcc126d2d1002e5a75bbe3ce73f9f4f311a916363704"
 dependencies = [
  "byteorder",
  "rayon",
@@ -2684,7 +2681,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.4"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#874571486056e171d08006fc4abf154a70628fc1"
+source = "git+https://github.com/Lakelezz/serenity?branch=await#0fad30bdf491b5cdc003ebb12bf33d3ea4233df5"
 dependencies = [
  "async-tls",
  "async-trait",
@@ -3156,12 +3153,13 @@ dependencies = [
 [[package]]
 name = "tomoreq"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/tomoreq#f56e19323f973ea7650042b0418a415ffd036569"
+source = "git+https://gitlab.com/tmokenc/tomoreq#7246519c8e47923b81766706490d269848645fe9"
 dependencies = [
  "async-trait",
  "crappy_magic",
  "escaper",
  "reqwest",
+ "scraper",
  "serde 1.0.106",
  "serde_json",
 ]

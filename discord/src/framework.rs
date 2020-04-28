@@ -30,6 +30,7 @@ use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
 use smallstr::SmallString;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
@@ -423,7 +424,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
 }
 
 async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
-    use magic::sauce::get_sauce;
+    use requester::SauceNaoScraper;
 
     let config = crate::read_config().await;
 
@@ -445,13 +446,18 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     };
 
     drop(config);
+    
+    let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
 
     let sauces = msg
         .attachments
         .iter()
         .filter(|v| v.width.is_some())
         .filter(|v| !v.url.ends_with(".gif"))
-        .map(|v| async move { get_sauce(&v.url, None).await });
+        .map(|v| {
+            let req = Arc::clone(&req);
+            async move { req.saucenao(&v.url, None).await }
+        });
 
     let sauces: Vec<_> = future::join_all(sauces)
         .await
@@ -459,10 +465,12 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .filter_map(|v| v.ok())
         .filter(|v| v.found())
         .collect();
-
+        
     if sauces.is_empty() {
         return Ok(());
     }
+    
+    drop(req);
 
     let reaction = EmojiIdentifier {
         id: emoji_id,

@@ -14,6 +14,8 @@ use tokio::sync::Mutex;
 use crate::utils::save_file;
 use crate::Result;
 
+const MAX_MESSAGE: AtomicUsize = AtomicUsize::new(500);
+
 /// An atomic custom cache for the logging purpose
 /// All of its method only use a `&self`
 /// so it can be wrap into an Arc for multithreading
@@ -112,7 +114,7 @@ impl MyCache {
 
         Ok(Self {
             message: Mutex::new(BTreeMap::new()),
-            max_message: AtomicUsize::new(2000),
+            max_message: MAX_MESSAGE,
             tmp_dir: tmp_dir.into_path(),
         })
     }
