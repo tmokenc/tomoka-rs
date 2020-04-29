@@ -5,9 +5,9 @@ extern crate actix_web;
 extern crate serde;
 
 use actix_web::{web, App, HttpResponse, HttpServer};
-use std::env;
 use db::DbInstance;
 use smallstr::SmallString;
+use std::env;
 
 #[get("/")]
 async fn index() -> HttpResponse {
@@ -50,10 +50,10 @@ struct Country {
 #[post("/webhook/corona")]
 async fn corona_update(
     data: web::Bytes,
-    db: web::Data<DbInstance>
+    db: web::Data<DbInstance>,
 ) -> Result<HttpResponse, actix_web::Error> {
     dbg!("Got some");
-    
+
     if let Ok(json) = serde_json::from_slice::<CoronaSummary>(&data) {
         db.put_json("corona", &json)?;
         dbg!("Added data to the database");

@@ -15,12 +15,12 @@ use crate::{utils::*, Result};
 use colorful::RGB;
 use colorful::{Color, Colorful};
 use futures::future::BoxFuture;
+use futures::future::{self, FutureExt, TryFutureExt};
 use magic::number_to_rgb;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use futures::future::{self, TryFutureExt, FutureExt};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
@@ -66,9 +66,9 @@ impl RawEvents {
         }
     }
 
-    pub async fn add(&self, name: impl AsRef<str>, fut: EventHook) {
+    pub async fn add(&self, name: impl ToString, fut: EventHook) {
         let timeout = Duration::from_millis(50);
-        let name = name.as_ref().to_string();
+        let name = name.to_string();
 
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => {
@@ -78,19 +78,15 @@ impl RawEvents {
         }
     }
 
-    pub async fn remove(&self, name: impl AsRef<str>) {
+    pub async fn remove(&self, name: impl ToString) {
         let timeout = Duration::from_millis(50);
-        let name = name.as_ref();
+        let name = name.to_string();
 
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => {
-                events.remove(name);
+                events.remove(&name);
             }
-            Err(_) => self
-                .actions
-                .lock()
-                .await
-                .push(Action::Remove(name.to_string())),
+            Err(_) => self.actions.lock().await.push(Action::Remove(name)),
         }
     }
 
@@ -99,13 +95,13 @@ impl RawEvents {
         let fut = handlers
             .iter()
             .map(|(k, v)| v(&ctx, &ev).map_err(move |e| (k, e)).boxed());
-        
+
         future::join_all(fut)
             .await
             .iter()
             .filter_map(|f| f.as_ref().err())
             .for_each(|(n, e)| error!("Cannot execute the event {}\n{:#?}", n, e));
-            
+
         drop(handlers);
 
         let timeout = Duration::from_millis(1);
@@ -213,10 +209,7 @@ impl EventHandler for Handler {
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
 
-        let color = {
-            let config = crate::read_config().await;
-            config.color.message_update
-        };
+        let color = crate::read_config().await.color.message_update;
 
         let send = log_channel.send_message(&ctx, |m| {
             m.embed(|embed| {
@@ -268,34 +261,17 @@ impl EventHandler for Handler {
 
         if !self.connected.load(Ordering::Relaxed) {
             self.connected.store(true, Ordering::SeqCst);
-            
+
             {
-                let (config, shard) = futures::future::join(
-                    crate::read_config(),
-                    ctx.shard.lock(),
-                ).await;
-                
+                let (config, shard) = future::join(crate::read_config(), ctx.shard.lock()).await;
+
                 let ids = config.guilds.iter().map(|v| *v.key());
                 shard.chunk_guilds(ids, None, None);
             }
-            
+
             if let Ok(info) = ctx.http.get_current_application_info().await {
                 crate::write_config().await.masters.insert(info.owner.id);
             }
-
-        //
-        //     let arc_ctx = match self.ctx.as_ref() {
-        //         Some(c) => Arc::clone(c),
-        //         None => {
-        //             let arc_ctx = Arc::new(ctx);
-        //             self.ctx = Some(Arc::clone(&arc_ctx));
-        //             arc_ctx
-        //         }
-        //     };
-        //
-        //     tokio::spawn(async move {
-        //         input(arc_ctx).await;
-        //     });
         }
     }
 
@@ -378,7 +354,7 @@ where
     for msg in msgs {
         let mess = match cache.remove_message(msg).await {
             Some(v) => v,
-            None => return,
+            None => continue,
         };
 
         if let Err(why) = _process_deleted(&ctx, log_channel, channel_id, mess).await {
@@ -395,12 +371,9 @@ async fn _process_deleted(
     msg: MessageCache,
 ) -> Result<()> {
     let is_empty_content = msg.content.is_empty();
-    
     if is_empty_content && msg.attachments.is_empty() {
         return Ok(());
     }
-    
-    trace!("{}", msg.content);
     
     let (name, discriminator, is_bot) = match ctx.cache.read().await.user(msg.author_id) {
         None => ("Unknown".to_string(), 0, false),
@@ -410,28 +383,26 @@ async fn _process_deleted(
         }
     };
     
-    let color = {
-        let config = crate::read_config().await;
-        config.color.message_delete
+    let color = crate::read_config().await.color.message_delete;
+    
+    let mut fields = Vec::new();
+       
+    let typed = if is_empty_content { "file" } else {
+        trace!("{}", msg.content);
+        fields.push(("Deleted message", msg.content.to_owned(), false));
+        "message"
     };
 
-    log_channel.send_message(&ctx, |message| {
-        let mut fields = Vec::new();
-           
-        let typed = if is_empty_content { "file" } else {
-            fields.push(("Deleted message", msg.content.to_owned(), false));
-            "message"
-        };
+    let content = format!(
+        "A {} by {} **{}**#{:04} on channel <#{}> has been deleted",
+        typed,
+        if is_bot { "a *bot* named" } else { "" },
+        name,
+        discriminator,
+        channel_id.0
+    );
 
-        let content = format!(
-            "A {} by {} **{}**#{:04} on channel <#{}> has been deleted",
-            typed,
-            if is_bot { "a *bot* named" } else { "" },
-            name,
-            discriminator,
-            channel_id.0
-        );
-        
+    log_channel.send_message(&ctx, |message| {
         message.embed(|embed| {
             embed.description(content);
             embed.timestamp(now());
