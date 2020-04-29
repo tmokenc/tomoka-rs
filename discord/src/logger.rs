@@ -42,7 +42,7 @@ pub fn init() -> Result<()> {
         .level(LevelFilter::Warn)
         .level_for("serenity", LevelFilter::Trace)
         .level_for("tomoka_rs", LevelFilter::Debug)
-        .chain(fern::DateBased::new("logs/", "%F.tomolog"));
+        .chain(fern::DateBased::new("logs/", "tomo-%F.log"));
 
     fern::Dispatch::new()
         .chain(file)
@@ -74,11 +74,14 @@ fn console_format(callback: fern::FormatCallback, message: &Arguments, record: &
 }
 
 fn file_format(callback: fern::FormatCallback, message: &Arguments, record: &Record) {
+    let line = record.line().map(|v| format!(":{}", v));
+    
     callback.finish(format_args!(
-        "{} {} {} {}",
+        "{} {} {}{}> {}",
         chrono::Local::now().format("%F %T%.3f"),
         record.level(),
         record.target(),
+        line.unwrap_or_default(),
         message,
     ))
 }

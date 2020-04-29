@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use lazy_static::lazy_static;
-use magic::{number_to_le_bytes, number_to_rgb};
+use magic::number_to_rgb;
 use regex::Regex;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
