@@ -242,11 +242,7 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        info!(
-            "{} is connected! The bot is now available on {} servers",
-            ready.user.name,
-            ready.guilds.len(),
-        );
+        info!("{} is now available on {} servers", ready.user.name, ready.guilds.len());
 
         let mess = {
             let resume = self.resume.load(Ordering::SeqCst);
