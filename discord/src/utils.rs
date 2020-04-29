@@ -27,16 +27,6 @@ use serenity::{
 
 pub type Color = (u8, u8, u8);
 
-#[derive(Debug)]
-pub struct EmptyError;
-
-impl std::fmt::Display for EmptyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "An empty error, nothing to display here")
-    }
-}
-
-impl std::error::Error for EmptyError {}
 //I have problem with the built-in method `parse_channel` of the serenity, so I decided to write my own function for this.
 pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
     lazy_static! {

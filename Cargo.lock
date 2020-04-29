@@ -689,7 +689,7 @@ checksum = "b3a71ab494c0b5b860bdc8407ae08978052417070c2ced38573a9157ad75b8ac"
 [[package]]
 name = "crappy_magic"
 version = "0.1.0"
-source = "git+https://gitlab.com/tmokenc/crappy-magic#f58b4324851dd8c62626332a13ed52e4810ca3b2"
+source = "git+https://gitlab.com/tmokenc/crappy-magic#7ad6a20110d75299ed931d9068ec693717e62dc2"
 dependencies = [
  "bytesize",
  "dominant_color",

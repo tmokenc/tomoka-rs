@@ -260,7 +260,7 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
 
     let json = tokio::task::spawn_blocking(move || db.get(&DB_KEY))
         .await??
-        .ok_or_else(|| Box::new(EmptyError) as Box<_>)?;
+        .ok_or_else(|| Box::new(magic::EmptyError) as Box<_>)?;
 
     Ok(json)
 }
