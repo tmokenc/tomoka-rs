@@ -18,9 +18,11 @@ async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     let channels = extract_channel_ids(&msg.content);
 
     if channels.is_empty() {
-        msg.channel_id.send_message(ctx, |m| {
-            m.content("Please *mention* some channel to be watched")
-        }).await?;
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.content("Please *mention* some channel to be watched")
+            })
+            .await?;
         return Ok(());
     }
 
@@ -34,7 +36,7 @@ async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     guild.enable_find_sadkaede();
 
     let (added, existed) = channels.iter().fold((Vec::new(), Vec::new()), |mut v, x| {
-        if !guild.find_sadkaede.channels.contains(&x) {
+        if !guild.find_sadkaede.channels.contains(&x.0) {
             guild.add_sadkaede_channel(x);
             v.0.push(x);
         } else {
@@ -42,70 +44,74 @@ async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
         v
     });
-   
+
     let thumbnail = config.sadkaede.thumbnail.to_owned();
     let color = config.color.information;
-    
+
     update_guild_config(&ctx, &guild).await?;
-    
+
     drop(guild);
     drop(config);
-    
+
     let mut sfw_channels = String::new();
-    
+
     for channel in added.iter() {
         if !is_nsfw_channel(&ctx, *channel).await {
             write!(&mut sfw_channels, "<#{}> ", channel)?;
         }
-    }    
+    }
 
-    msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Sadkaede-finder information");
-        embed.thumbnail(thumbnail);
-        embed.color(color);
-        embed.timestamp(now());
+    msg.channel_id
+        .send_message(&ctx, |m| {
+            m.embed(|embed| {
+                embed.title("Sadkaede-finder information");
+                embed.thumbnail(thumbnail);
+                embed.color(color);
+                embed.timestamp(now());
 
-        let mess = match (channels.len(), added.len()) {
-            (1, 0) => String::from("I'm watching this channel already"),
-            (_, 0) => String::from("I'm watching these channels already"),
-            (_, 1) => String::from("Added a channel to be watching"),
-            (v, x) if v - x == 1 => {
-                let channel = existed.iter().next().unwrap();
-                format!(
-                    "Added {} channels to be watching, <#{}> already exists",
-                    x, channel
-                )
-            }
-            (v, x) if v > x => {
-                let exist = existed.into_iter().map(|v| format!("<#{}>", v)).join(" ");
+                let mess = match (channels.len(), added.len()) {
+                    (1, 0) => String::from("I'm watching this channel already"),
+                    (_, 0) => String::from("I'm watching these channels already"),
+                    (_, 1) => String::from("Added a channel to be watching"),
+                    (v, x) if v - x == 1 => {
+                        let channel = existed.iter().next().unwrap();
+                        format!(
+                            "Added {} channels to be watching, <#{}> already exists",
+                            x, channel
+                        )
+                    }
+                    (v, x) if v > x => {
+                        let exist = existed.into_iter().map(|v| format!("<#{}>", v)).join(" ");
 
-                embed.field("Exist channel", exist, true);
-                format!(
-                    "Added {} channels to be watching, {} channels already exist",
-                    x,
-                    v - x
-                )
-            }
-            (_, x) => format!("Added {} channels to be watching", x),
-        };
+                        embed.field("Exist channel", exist, true);
+                        format!(
+                            "Added {} channels to be watching, {} channels already exist",
+                            x,
+                            v - x
+                        )
+                    }
+                    (_, x) => format!("Added {} channels to be watching", x),
+                };
 
-        if !added.is_empty() {
-            let added = added.into_iter().map(|v| format!("<#{}>", v)).join(" ");
+                if !added.is_empty() {
+                    let added = added.into_iter().map(|v| format!("<#{}>", v)).join(" ");
 
-            embed.field("Added channels", added, true);
-                
-            if !sfw_channels.is_empty() {
-                embed.field(
-                    "SFW channels (These channels will be watching for non-h content only)",
-                    sfw_channels,
-                    false,
-                );
-            }
-        }
+                    embed.field("Added channels", added, true);
 
-        embed.description(mess);
-        embed
-        })).await?;
+                    if !sfw_channels.is_empty() {
+                        embed.field(
+                            "SFW channels (These channels will be watching for non-h content only)",
+                            sfw_channels,
+                            false,
+                        );
+                    }
+                }
+
+                embed.description(mess);
+                embed
+            })
+        })
+        .await?;
 
     Ok(())
 }

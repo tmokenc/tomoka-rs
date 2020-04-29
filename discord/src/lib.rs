@@ -36,7 +36,8 @@ use types::*;
 use colorful::{Color, Colorful};
 use eliza::Eliza;
 use futures::future;
-use magic::dark_magic::{bytes_to_le_u64, has_external_command};
+use magic::dark_magic::has_external_command;
+use serenity::model::id::GuildId;
 use serenity::Client;
 use tokio::signal::{self, unix};
 use tokio::sync::Mutex;
@@ -127,12 +128,11 @@ async fn write_config() -> tokio::sync::RwLockWriteGuard<'static, Config> {
 }
 
 async fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {
-    let data = db.open("GuildConfig")?.get_all_json::<GuildConfig>()?;
+    let data = db.open("GuildConfig")?.get_all::<u64, GuildConfig>();
     let guilds_config = &crate::read_config().await.guilds;
 
     for (k, v) in data {
-        let key = bytes_to_le_u64(k).into();
-        guilds_config.insert(key, v);
+        guilds_config.insert(GuildId(k), v);
     }
 
     Ok(())

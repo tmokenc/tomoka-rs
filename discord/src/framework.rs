@@ -432,7 +432,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .guild_id
         .and_then(|v| config.guilds.get(&v))
         .filter(|v| v.find_sauce.enable)
-        .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id))
+        .filter(|v| v.find_sauce.all || v.find_sauce.channels.contains(&msg.channel_id.0))
         .is_some();
 
     if !is_watching_channel || msg.is_own(&ctx).await {
@@ -446,7 +446,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     };
 
     drop(config);
-    
+
     let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
 
     let sauces = msg
@@ -465,11 +465,11 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .filter_map(|v| v.ok())
         .filter(|v| v.found())
         .collect();
-        
+
     if sauces.is_empty() {
         return Ok(());
     }
-    
+
     drop(req);
 
     let reaction = EmojiIdentifier {
@@ -494,7 +494,7 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         .guild_id
         .and_then(|v| config.guilds.get(&v))
         .filter(|v| v.find_sadkaede.enable)
-        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id))
+        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
         .is_some();
 
     if !is_watching_channel || msg.is_own(&ctx).await {

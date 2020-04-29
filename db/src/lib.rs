@@ -1,143 +1,162 @@
-use failure::format_err;
-use rkv::{Manager, Rkv, SingleStore, StoreOptions};
-pub use rkv::{OwnedValue, Value};
+use lazy_static::lazy_static;
+use log::error;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
-use std::fs;
+use serde::ser::Serialize;
+use sled::{Db, Tree};
+use std::error::Error;
+use std::marker::PhantomData;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
-type Result<T> = std::result::Result<T, failure::Error>;
-pub type DbManager = Arc<RwLock<Rkv>>;
+type Manager = Arc<Db>;
+type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
+
+lazy_static! {
+    static ref ENCODER: bincode::Config = {
+        let mut c = bincode::config();
+        c.big_endian();
+        c
+    };
+}
 
 pub struct DbInstance {
-    pub store: SingleStore,
-    pub manager: DbManager,
+    tree: Option<Tree>,
+    manager: Manager,
+}
+
+impl Drop for DbInstance {
+    fn drop(&mut self) {
+        self.manager.flush().ok();
+    }
+}
+
+pub struct Iter<K: DeserializeOwned, V: DeserializeOwned> {
+    iter: sled::Iter,
+    _marker: PhantomData<(K, V)>,
+}
+
+impl<K: DeserializeOwned, V: DeserializeOwned> Iter<K, V> {
+    pub(crate) fn new(iter: sled::Iter) -> Self {
+        Self {
+            iter,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter
+            .by_ref()
+            .filter_map(|v| v.ok())
+            .find_map(|(ref key, ref val)| {
+                let k = match ENCODER.deserialize(key) {
+                    Ok(e) => e,
+                    Err(why) => {
+                        match *why {
+                            bincode::ErrorKind::Custom(_) => {}
+                            e => error!("Cannot deserialize data | {}", e),
+                        }
+
+                        return None;
+                    }
+                };
+
+                let v = match ENCODER.deserialize(val) {
+                    Ok(e) => e,
+                    Err(why) => {
+                        match *why {
+                            bincode::ErrorKind::Custom(_) => {}
+                            e => error!("Cannot deserialize data | {}", e),
+                        }
+
+                        return None;
+                    }
+                };
+
+                Some((k, v))
+            })
+    }
 }
 
 impl DbInstance {
     pub fn new<'a, P, N>(path: P, name: N) -> Result<Self>
     where
         P: AsRef<Path>,
-        N: Into<Option<&'a str>>,
+        N: Into<Option<&'a [u8]>>,
     {
-        let db_name = name.into().unwrap_or("tomoka");
         let manager = get_db_manager(path)?;
-        let result = Self::from_manager(manager, db_name)?;
-        Ok(result)
+        let db = Self::from_manager(manager, name.into())?;
+        Ok(db)
     }
 
-    pub fn from_manager<N: AsRef<str>>(manager: DbManager, name: N) -> Result<Self> {
-        let store = manager
-            .read()
-            .unwrap()
-            .open_single(name.as_ref(), StoreOptions::create())?;
+    pub fn from_manager<N: AsRef<[u8]>>(manager: Manager, name: Option<N>) -> Result<Self> {
+        let tree = match name {
+            Some(n) => Some(manager.open_tree(n)?),
+            None => None,
+        };
 
-        Ok(Self { manager, store })
+        Ok(Self { tree, manager })
     }
 
-    pub fn open(&self, name: impl AsRef<str>) -> Result<Self> {
-        let res = Self::from_manager(self.manager.clone(), name)?;
+    pub fn open<N: AsRef<[u8]>>(&self, tree: N) -> Result<Self> {
+        let manager = Arc::clone(&self.manager);
+        Self::from_manager(manager, Some(tree))
+    }
+
+    pub fn get<K, V>(&self, key: &K) -> Result<Option<V>>
+    where
+        K: Serialize,
+        V: DeserializeOwned,
+    {
+        let k = ENCODER.serialize(key)?;
+        let res = self
+            .tree()
+            .get(&k)?
+            .and_then(|ref v| ENCODER.deserialize(v).ok());
+
         Ok(res)
     }
 
-    pub fn get<K: AsRef<[u8]>>(&self, key: K) -> Result<OwnedValue> {
-        let env = self.manager.read().unwrap();
-        let reader = env.read()?;
-
-        let data = self
-            .store
-            .get(&reader, key)?
-            .as_ref()
-            .map(OwnedValue::from)
-            .ok_or_else(|| format_err!("Not found any value"))?;
-
-        Ok(data)
-    }
-
-    pub fn get_json<D: DeserializeOwned>(&self, key: impl AsRef<[u8]>) -> Result<D> {
-        let env = self.manager.read().unwrap();
-        let reader = env.read()?;
-
-        let result = match self.store.get(&reader, key)? {
-            Some(Value::Json(s)) => serde_json::from_str(s)?,
-            _ => return Err(format_err!("Cannot find any json data"))
-        };
-        
-        Ok(result)
-    }
-
-    pub fn get_all(&self) -> Result<Vec<(Vec<u8>, OwnedValue)>> {
-        let env = self.manager.read().unwrap();
-        let reader = env.read()?;
-
-        let data = self
-            .store
-            .iter_start(&reader)?
-            .filter_map(|v| v.ok())
-            .filter_map(|(k, v)| v.map(|v| (k.to_owned(), OwnedValue::from(&v))))
-            .collect();
-
-        Ok(data)
-    }
-
-    pub fn get_all_json<D: DeserializeOwned>(&self) -> Result<Vec<(Vec<u8>, D)>> {
-        let env = self.manager.read().unwrap();
-        let reader = env.read()?;
-
-        let data = self
-            .store
-            .iter_start(&reader)?
-            .filter_map(|v| v.ok())
-            .filter_map(|(k, v)| {
-                let val = match v {
-                    Some(Value::Json(s)) => serde_json::from_str(s).ok(),
-                    _ => None
-                };
-                
-                val.map(|v| (k.to_vec(), v))
-            })
-            .collect();
-
-        Ok(data)
-    }
-
-    pub fn put<K: AsRef<[u8]>>(&self, key: K, value: &Value) -> Result<()> {
-        let env = self.manager.read().unwrap();
-        let mut writer = env.write()?;
-        self.store.put(&mut writer, key, value)?;
-        writer.commit()?;
-        Ok(())
-    }
-
-    pub fn put_json<K, V>(&self, key: K, value: &V) -> Result<()>
+    pub fn get_all<K, V>(&self) -> Iter<K, V>
     where
-        K: AsRef<[u8]>,
+        K: DeserializeOwned,
+        V: DeserializeOwned,
+    {
+        let iter = self.tree().iter();
+        Iter::<K, V>::new(iter)
+    }
+
+    pub fn insert<K, V>(&self, key: &K, value: &V) -> Result<()>
+    where
+        K: Serialize,
         V: Serialize,
     {
-        let json = serde_json::to_string(value)?;
-        let val = Value::Json(json.as_str());
-        self.put(key, &val)?;
+        let k = ENCODER.serialize(key)?;
+        let v = ENCODER.serialize(value)?;
+        self.tree().insert(&k, v)?;
         Ok(())
     }
 
-    pub fn delete<K: AsRef<[u8]>>(&self, key: K) -> Result<()> {
-        let env = self.manager.read().unwrap();
-        let mut writer = env.write()?;
-        self.store.delete(&mut writer, key)?;
-        writer.commit()?;
+    pub fn remove<K: Serialize>(&self, key: &K) -> Result<()> {
+        let k = ENCODER.serialize(key)?;
+        self.tree().remove(&k)?;
         Ok(())
+    }
+
+    pub fn tree(&self) -> &Tree {
+        match &self.tree {
+            Some(t) => t,
+            None => &**self.manager,
+        }
     }
 }
 
-pub fn get_db_manager<P: AsRef<Path>>(path: P) -> Result<DbManager> {
-    let db_path = path.as_ref();
-    fs::create_dir_all(db_path)?;
-
-    let manager = Manager::singleton()
-        .write()
-        .unwrap()
-        .get_or_create(db_path, Rkv::new)?;
-
-    Ok(manager)
+#[inline]
+pub fn get_db_manager(path: impl AsRef<Path>) -> Result<Manager> {
+    sled::open(path)
+        .map(Arc::new)
+        .map_err(|v| Box::new(v) as Box<_>)
 }

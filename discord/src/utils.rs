@@ -27,6 +27,16 @@ use serenity::{
 
 pub type Color = (u8, u8, u8);
 
+#[derive(Debug)]
+pub struct EmptyError;
+
+impl std::fmt::Display for EmptyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "An empty error, nothing to display here")
+    }
+}
+
+impl std::error::Error for EmptyError {}
 //I have problem with the built-in method `parse_channel` of the serenity, so I decided to write my own function for this.
 pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
     lazy_static! {
@@ -41,7 +51,13 @@ pub fn extract_channel_ids(msg: &str) -> Vec<ChannelId> {
 
 /// Check if a (guild) channel is nsfw or not
 pub async fn is_nsfw_channel<C: Into<ChannelId>>(ctx: &Context, channel: C) -> bool {
-    channel.into().to_channel(ctx).await.ok().filter(|v| v.is_nsfw()).is_some()
+    channel
+        .into()
+        .to_channel(ctx)
+        .await
+        .ok()
+        .filter(|v| v.is_nsfw())
+        .is_some()
 }
 
 #[inline]
@@ -160,7 +176,7 @@ where
 
 // #[rustfmt_skip]
 pub async fn update_guild_config(ctx: &Context, new_config: &GuildConfig) -> Result<()> {
-    let key = number_to_le_bytes(new_config.id);
+    let key = new_config.id;
     let config_db = get_data::<DatabaseKey>(ctx)
         .await
         .unwrap()
@@ -168,9 +184,9 @@ pub async fn update_guild_config(ctx: &Context, new_config: &GuildConfig) -> Res
 
     tokio::task::block_in_place(move || {
         if new_config.is_default() {
-            config_db.delete(key)
+            config_db.remove(&key)
         } else {
-            config_db.put_json(key, new_config)
+            config_db.insert(&key, new_config)
         }
     })?;
 

@@ -1,16 +1,15 @@
-use serde::{Serialize, Deserialize};
 use crate::commands::prelude::*;
-use magic::traits::MagicIter;
-use smallstr::SmallString;
+use crate::Result;
 use futures::future::TryFutureExt;
 use futures::stream::StreamExt;
-use tokio::time::timeout;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::sync::Arc;
+use magic::traits::MagicIter;
+use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
 use serenity::model::channel::ReactionType;
-use crate::Result;
-use db::{OwnedValue, Value};
+use smallstr::SmallString;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::time::timeout;
 
 const API: &str = "https://api.covid19api.com/summary";
 const THUMBNAIL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Topeka-leaderboard.svg/200px-Topeka-leaderboard.svg.png";
@@ -61,28 +60,26 @@ struct Country {
 /// `tomo>leaderboard 5` < this will only show 5 countries per page
 async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = get_corona_data(&ctx).await?;
-    
+
     let total_c = data.global.total_confirmed;
     let total_r = data.global.total_recovered;
     let total_d = data.global.total_deaths;
-        
+
     let rate_re = get_rate(total_c as f32, total_r as f32);
     let rate_de = get_rate(total_c as f32, total_d as f32);
-    
+
     let info = format!(
-        "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)", 
-        total_c, 
-        total_r, rate_re, 
-        total_d, rate_de,
+        "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)",
+        total_c, total_r, rate_re, total_d, rate_de,
     );
-    
+
     let per_page: u16 = args
         .single::<u16>()
         .ok()
         .filter(|&v| v > 0 && v <= 50)
         .unwrap_or(10);
     let mut current_page: u16 = 0;
-    
+
     macro_rules! append {
         () => {
             |embed| {
@@ -91,28 +88,31 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
                 embed.color(0x8b0000);
                 embed.thumbnail(THUMBNAIL);
                 embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
-                
+
                 embed.description(&info);
-                
+
                 let show_data = data
                     .countries
                     .iter()
                     .zip(1..)
                     .skip((current_page * per_page) as usize)
                     .take(per_page as usize);
-                
+
                 append_data(show_data, embed)
             }
-        }    
+        };
     }
-    
-    let mut mess = msg.channel_id.send_message(&ctx, |message| {
-        message.reactions(REACTIONS.into_iter().map(|&v| v));
-        message.embed(append!());
-        
-        message
-    }).await?;
-    
+
+    let mut mess = msg
+        .channel_id
+        .send_message(&ctx, |message| {
+            message.reactions(REACTIONS.into_iter().map(|&v| v));
+            message.embed(append!());
+
+            message
+        })
+        .await?;
+
     let mut collector = mess
         .await_reactions(&ctx)
         .author_id(msg.author.id)
@@ -120,66 +120,66 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
             matches!(&reaction.emoji, ReactionType::Unicode(s) if REACTIONS.contains(&s.as_str()))
         })
         .await;
-        
+
     while let Ok(Some(reaction)) = timeout(WAIT_TIME, collector.next()).await {
         let reaction = reaction.as_inner_ref();
-        
+
         let http = Arc::clone(&ctx.http);
         let react = reaction.to_owned();
         tokio::spawn(async move {
             react.delete(http).await.ok();
         });
-        
+
         let emoji = match &reaction.emoji {
             ReactionType::Unicode(s) => s,
             _ => continue,
         };
-        
+
         match emoji.as_str() {
             "◀️" => {
                 if current_page == 0 {
                     continue;
                 }
-                
+
                 current_page -= 1;
             }
-            
+
             "▶️" => {
                 if data.countries.len() as u16 - (current_page * per_page) <= per_page {
                     continue;
                 }
-                
+
                 current_page += 1;
             }
-            
+
             "❌" => break,
-            _ => continue
+            _ => continue,
         }
-        
+
         mess.edit(&ctx, |m| m.embed(append!())).await?;
     }
-    
+
     drop(collector);
-    
+
     let futs = REACTIONS
         .into_iter()
         .map(|&s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
-        
+
     futures::future::join_all(futs).await;
     Ok(())
 }
 
-fn append_data<'a, 'b, I: IntoIterator<Item=(&'a Country, usize)>>(
+fn append_data<'a, 'b, I: IntoIterator<Item = (&'a Country, usize)>>(
     iter: I,
-    embed: &'b mut CreateEmbed    
+    embed: &'b mut CreateEmbed,
 ) -> &'b mut CreateEmbed {
     let mut iter = iter.into_iter();
     embed.0.remove("fields");
-    
+
     loop {
         let mut ranking = None;
         let mut many = 0;
-        
+
         let data = iter
             .by_ref()
             .take(10)
@@ -187,54 +187,54 @@ fn append_data<'a, 'b, I: IntoIterator<Item=(&'a Country, usize)>>(
                 if ranking.is_none() {
                     ranking = Some(i);
                 }
-                
+
                 many += 1;
                 let (rate_re, rate_de) = rate(&v);
                 format!(
-                    "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)", 
-                    i, 
+                    "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)",
+                    i,
                     code_to_emoji(&v.country_code),
-                    v.country, 
-                    v.total_confirmed, 
-                    v.total_recovered, rate_re,
-                    v.total_deaths, rate_de,
+                    v.country,
+                    v.total_confirmed,
+                    v.total_recovered,
+                    rate_re,
+                    v.total_deaths,
+                    rate_de,
                 )
             })
             .join('\n');
-        
+
         match ranking {
             Some(r) => {
                 let name = format!("#{} - #{}", r, r + many - 1);
                 embed.field(name, data, false);
             }
-            
+
             None => break,
         }
     }
-    
+
     embed
 }
 
 async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
     let db = get_data::<DatabaseKey>(&ctx).await.unwrap();
     let db_ref = Arc::clone(&db);
-    
+
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-    let last = tokio::task::spawn_blocking(move || {
-        match db_ref.get(DB_TIME) {
-            Ok(OwnedValue::U64(s)) => s,
-            _ => 0,
-        }
-    }).await?;
-    
+    let last: u64 = tokio::task::spawn_blocking(move || db_ref.get(&DB_TIME))
+        .await??
+        .unwrap_or(0);
+
     if now - last > CACHE_TIME {
-        let res = get_data::<ReqwestClient>(ctx).await
+        let res = get_data::<ReqwestClient>(ctx)
+            .await
             .unwrap()
             .get(API)
             .send()
             .and_then(|v| v.json::<CoronaSummary>())
             .await;
-            
+
         if let Ok(mut data) = res {
             data.countries.sort_by_key(|v| v.total_confirmed);
             data.countries = data
@@ -243,25 +243,25 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
                 .filter(|v| v.total_confirmed != 0)
                 .rev()
                 .collect();
-                
+
             tokio::task::block_in_place(|| {
                 let put = db
-                    .put_json(DB_KEY, &data)
-                    .and_then(|_| db.put(DB_TIME, &Value::U64(now)));
-                    
+                    .insert(&DB_KEY, &data)
+                    .and_then(|_| db.insert(&DB_TIME, &now));
+
                 if let Err(why) = put {
                     error!("Failed to put the corona data to db\n{:#?}", why);
                 }
             });
-            
+
             return Ok(data);
         }
     }
-    
-    let json = tokio::task::spawn_blocking(move || {
-        db.get_json(DB_KEY)
-    }).await??;
-    
+
+    let json = tokio::task::spawn_blocking(move || db.get(&DB_KEY))
+        .await??
+        .ok_or_else(|| Box::new(EmptyError) as Box<_>)?;
+
     Ok(json)
 }
 
@@ -273,10 +273,10 @@ fn rate(d: &Country) -> (f32, f32) {
     let confirmed = d.total_confirmed as f32;
     let recovered = d.total_recovered as f32;
     let deaths = d.total_deaths as f32;
-    
+
     let re = get_rate(confirmed, recovered);
     let de = get_rate(confirmed, deaths);
-    
+
     (re, de)
 }
 

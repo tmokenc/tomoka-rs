@@ -27,9 +27,8 @@ pub struct Color {
     pub lovely: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ApiKeys {
-    pub rapidapi: Option<String>,
     pub google: Option<String>,
 }
 
@@ -96,6 +95,7 @@ pub struct Config {
     pub sadkaede: SadKaede,
     #[serde(default)]
     pub guilds: DashMap<GuildId, GuildConfig>,
+    #[serde(default)]
     pub apikeys: ApiKeys,
 }
 
@@ -146,12 +146,11 @@ impl Config {
 
         *self = config.try_into()?;
 
-        let db_data = db.open("GuildConfig")?.get_all_json::<GuildConfig>()?;
+        let db_data = db.open("GuildConfig")?.get_all::<GuildId, GuildConfig>();
         let guilds_config = &self.guilds;
 
         for (k, v) in db_data {
-            let key = bytes_to_le_u64(k).into();
-            guilds_config.insert(key, v);
+            guilds_config.insert(k, v);
         }
 
         Ok(())

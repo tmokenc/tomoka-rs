@@ -311,6 +311,7 @@ async fn get_log_channel(guild: GuildId) -> Option<ChannelId> {
         .guilds
         .get(&guild)
         .and_then(|config| config.logger.channel.filter(|_| config.logger.enable))
+        .map(ChannelId)
 }
 
 async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {

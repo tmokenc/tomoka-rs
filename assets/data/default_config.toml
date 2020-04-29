@@ -2,6 +2,7 @@ prefix = "tomo>"
 master_prefix = "%"
 temp_dir = "./temp" # directory for temporary files
 disable_auto_cmd = ["rgb_tu"]
+cmd_blacklist = []
 radio_stations = "./assets/data/radio.json"
 eliza_brain = "./assets/data/brain.json"
 max_cache_file_size = 7654321

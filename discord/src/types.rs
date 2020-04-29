@@ -56,14 +56,14 @@ impl Information {
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct SimpleRole {
     pub name: SmallString<[u8; 32]>,
-    pub id: RoleId,
+    pub id: u64,
     pub color: (u8, u8, u8),
 }
 
 impl From<Role> for SimpleRole {
     fn from(role: Role) -> Self {
         Self {
-            id: role.id,
+            id: role.id.0,
             name: SmallString::from(role.name),
             color: role.colour.tuple(),
         }
@@ -79,14 +79,16 @@ impl fmt::Display for SimpleRole {
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct DiscordLogger {
     pub enable: bool,
-    pub channel: Option<ChannelId>,
+    // pub channel: Option<ChannelId>,
+    pub channel: Option<u64>,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FindSauce {
     pub all: bool,
     pub enable: bool,
-    pub channels: HashSet<ChannelId>,
+    // pub channels: HashSet<ChannelId>,
+    pub channels: HashSet<u64>,
 }
 
 impl Embedable for FindSauce {
@@ -100,11 +102,7 @@ impl Embedable for FindSauce {
                 "The saucing service is enabled for {} channels on this server",
                 self.channels.len()
             );
-            let s = self
-                .channels
-                .iter()
-                .map(|v| format!("<#{}>", v.0))
-                .join(" ");
+            let s = self.channels.iter().map(|v| format!("<#{}>", v)).join(" ");
 
             embed.description(mess);
             embed.field("Saucing channels", s, true);
@@ -118,7 +116,8 @@ impl Embedable for FindSauce {
 pub struct FindSadKaede {
     pub all: bool,
     pub enable: bool,
-    pub channels: HashSet<ChannelId>,
+    // pub channels: HashSet<ChannelId>,
+    pub channels: HashSet<u64>,
 }
 
 impl Default for FindSadKaede {
@@ -144,11 +143,7 @@ impl Embedable for FindSadKaede {
                 "The SadKaed-finder service is enabled for {} channels on this server",
                 self.channels.len()
             );
-            let s = self
-                .channels
-                .iter()
-                .map(|v| format!("<#{}>", v.0))
-                .join(" ");
+            let s = self.channels.iter().map(|v| format!("<#{}>", v)).join(" ");
 
             embed.description(mess);
             embed.field("SadKaede channels", s, true);
@@ -189,10 +184,11 @@ impl Embedable for RepeatWords {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+//#[serde(rename_all = "camelCase")]
 #[serde(default)]
 pub struct GuildConfig {
-    pub id: GuildId,
+    //pub id: GuildId,
+    pub id: u64,
     pub prefix: Option<SmallString<[u8; 8]>>,
     pub rgblized: Option<Vec<SimpleRole>>,
     pub logger: DiscordLogger,
@@ -204,7 +200,7 @@ pub struct GuildConfig {
 impl GuildConfig {
     pub fn new<G: Into<GuildId>>(id: G) -> Self {
         Self {
-            id: id.into(),
+            id: id.into().0,
             ..Default::default()
         }
     }
@@ -237,8 +233,8 @@ impl GuildConfig {
 
     pub fn set_log_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
         let old = self.logger.channel;
-        self.logger.channel = Some(channel.into());
-        old
+        self.logger.channel = Some(channel.into().0);
+        old.map(ChannelId)
     }
 
     pub fn enable_logger(&mut self) {
@@ -266,12 +262,15 @@ impl GuildConfig {
 
     pub fn add_sauce_channel<C: Into<ChannelId>>(&mut self, channel: C) {
         let channel = channel.into();
-        self.find_sauce.channels.insert(channel);
+        self.find_sauce.channels.insert(channel.0);
     }
 
     pub fn remove_sauce_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
         let channel = channel.into();
-        self.find_sauce.channels.remove(&channel).then_some(channel)
+        self.find_sauce
+            .channels
+            .remove(&channel.0)
+            .then_some(channel)
     }
 
     pub fn enable_find_sadkaede(&mut self) {
@@ -284,14 +283,14 @@ impl GuildConfig {
 
     pub fn add_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) {
         let channel = channel.into();
-        self.find_sadkaede.channels.insert(channel);
+        self.find_sadkaede.channels.insert(channel.0);
     }
 
     pub fn remove_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
         let channel = channel.into();
         self.find_sadkaede
             .channels
-            .remove(&channel)
+            .remove(&channel.0)
             .then_some(channel)
     }
 
@@ -339,7 +338,7 @@ impl GuildConfig {
             let old_len = v.len();
             let roles: Vec<_> = roles.into_iter().map(|x| x.into()).collect();
 
-            v.retain(|x| !roles.contains(&x.id));
+            v.retain(|x| !roles.contains(&RoleId(x.id)));
             length = (old_len - v.len()) as u8;
 
             if v.is_empty() {

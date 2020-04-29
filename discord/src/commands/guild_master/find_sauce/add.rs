@@ -7,22 +7,24 @@ use magic::traits::MagicIter as _;
 #[only_in("guilds")]
 #[required_permissions(MANAGE_GUILD)]
 /// Add channel(s) to be watcing for sauce
-/// *This* command will automatically enable the sauce machine, even when it is disabled 
+/// *This* command will automatically enable the sauce machine, even when it is disabled
 async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
-        None => return Ok(())
+        None => return Ok(()),
     };
 
     let channels = extract_channel_ids(&msg.content);
-    
+
     if channels.is_empty() {
-        msg.channel_id.send_message(ctx, |m| {
-            m.content("Please *mention* some channel to be watched")
-        }).await?;
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.content("Please *mention* some channel to be watched")
+            })
+            .await?;
         return Ok(());
     }
-    
+
     let config = crate::read_config().await;
 
     let mut guild = config
@@ -32,64 +34,67 @@ async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     guild.enable_find_sauce();
 
-    let (added, existed) = channels
-        .iter()
-        .fold((Vec::new(), Vec::new()), |mut v, x| {
-            if !guild.find_sauce.channels.contains(&x) {
-                guild.add_sauce_channel(x);
-                v.0.push(x);
-            } else {
-                v.1.push(x);
-            }
-            v
-        });
-        
+    let (added, existed) = channels.iter().fold((Vec::new(), Vec::new()), |mut v, x| {
+        if !guild.find_sauce.channels.contains(&x.0) {
+            guild.add_sauce_channel(x);
+            v.0.push(x);
+        } else {
+            v.1.push(x);
+        }
+        v
+    });
+
     update_guild_config(&ctx, &guild).await?;
 
     let thumbnail = config.sauce.thumbnail.to_owned();
     let color = config.color.information;
-    
+
     drop(guild);
     drop(config);
-        
-    msg.channel_id.send_message(&ctx, |m| m.embed(|embed| {
-        embed.title("Saucing information");
-        embed.thumbnail(thumbnail);
-        embed.color(color);
-        embed.timestamp(now());
-        
-        let mess = match (channels.len(), added.len()) {
-            (1, 0) => String::from("I'm watching this channel already"),
-            (_, 0) => String::from("I'm watching these channels already"),
-            (_, 1) => String::from("Added a channel to be watching"),
-            (v, x) if v - x == 1 => {
-                let channel = existed.iter().next().unwrap();
-                format!("Added {} channels to be watching, <#{}> already exists", x, channel) 
-            }
-            (v, x) if v > x => {
-                let exist = existed
-                    .into_iter()
-                    .map(|v| format!("<#{}>", v))
-                    .join(" ");
-                    
-                embed.field("Exist channel", exist, true);
-                format!("Added {} channels to be watching, {} channels already exist", x, v - x) 
-            },
-            (_, x) => format!("Added {} channels to be watching", x)
-        };
 
-        if !added.is_empty() {
-            let added = added
-                .into_iter()
-                .map(|v| format!("<#{}>", v))
-                .join(" ");
-            
-            embed.field("Added channels", added, true);
-        }
+    msg.channel_id
+        .send_message(&ctx, |m| {
+            m.embed(|embed| {
+                embed.title("Saucing information");
+                embed.thumbnail(thumbnail);
+                embed.color(color);
+                embed.timestamp(now());
 
-        embed.description(mess);
-        embed
-    })).await?;
+                let mess = match (channels.len(), added.len()) {
+                    (1, 0) => String::from("I'm watching this channel already"),
+                    (_, 0) => String::from("I'm watching these channels already"),
+                    (_, 1) => String::from("Added a channel to be watching"),
+                    (v, x) if v - x == 1 => {
+                        let channel = existed.iter().next().unwrap();
+                        format!(
+                            "Added {} channels to be watching, <#{}> already exists",
+                            x, channel
+                        )
+                    }
+                    (v, x) if v > x => {
+                        let exist = existed.into_iter().map(|v| format!("<#{}>", v)).join(" ");
+
+                        embed.field("Exist channel", exist, true);
+                        format!(
+                            "Added {} channels to be watching, {} channels already exist",
+                            x,
+                            v - x
+                        )
+                    }
+                    (_, x) => format!("Added {} channels to be watching", x),
+                };
+
+                if !added.is_empty() {
+                    let added = added.into_iter().map(|v| format!("<#{}>", v)).join(" ");
+
+                    embed.field("Added channels", added, true);
+                }
+
+                embed.description(mess);
+                embed
+            })
+        })
+        .await?;
 
     Ok(())
 }
