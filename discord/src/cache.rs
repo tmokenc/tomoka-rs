@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -9,7 +9,7 @@ use serenity::model::id::{AttachmentId, MessageId, UserId};
 use log::info;
 use tempdir::TempDir;
 use tokio::fs;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex};
 
 use crate::utils::save_file;
 use crate::Result;

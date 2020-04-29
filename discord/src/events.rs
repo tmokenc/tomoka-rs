@@ -115,16 +115,14 @@ impl RawEvents {
 pub struct Handler {
     ready: AtomicU64,
     resume: AtomicU64,
-    // ctx: Option<Arc<Context>>,
-    // connected: AtomicBool,
+    connected: AtomicBool,
 }
 impl Handler {
     pub fn new() -> Self {
         Self {
             ready: AtomicU64::from(0),
             resume: AtomicU64::from(0),
-            // ctx: None,
-            // connected: AtomicBool::from(false),
+            connected: AtomicBool::from(false),
         }
     }
 }
@@ -264,8 +262,18 @@ impl EventHandler for Handler {
             crate::write_config().await.masters.insert(info.owner.id);
         }
 
-        // if !self.connected.load(Ordering::Relaxed) {
-        //     self.connected.store(true, Ordering::SeqCst);
+        if !self.connected.load(Ordering::Relaxed) {
+            self.connected.store(true, Ordering::SeqCst);
+            
+            {
+                let (config, shard) = futures::future::join(
+                    crate::read_config(),
+                    ctx.shard.lock(),
+                ).await;
+                
+                let ids = config.guilds.iter().map(|v| *v.key());
+                shard.chunk_guilds(ids, None, None);
+            }
         //
         //     let arc_ctx = match self.ctx.as_ref() {
         //         Some(c) => Arc::clone(c),
@@ -279,7 +287,7 @@ impl EventHandler for Handler {
         //     tokio::spawn(async move {
         //         input(arc_ctx).await;
         //     });
-        // }
+        }
     }
 
     async fn resume(&self, ctx: Context, resume: ResumedEvent) {

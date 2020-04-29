@@ -156,7 +156,10 @@ impl DbInstance {
 
 #[inline]
 pub fn get_db_manager(path: impl AsRef<Path>) -> Result<Manager> {
-    sled::open(path)
+    sled::Config::new()
+        .path(path)
+        .use_compression(true)
+        .open()
         .map(Arc::new)
         .map_err(|v| Box::new(v) as Box<_>)
 }

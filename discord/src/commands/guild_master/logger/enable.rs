@@ -4,6 +4,7 @@ use crate::utils::extract_channel_ids;
 
 #[command]
 #[only_in(guilds)]
+#[owner_privilege]
 #[required_permissions(MANAGE_GUILD)]
 /// Enable the logger
 async fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
