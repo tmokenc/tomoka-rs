@@ -158,7 +158,7 @@ async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
 
         if collector.is_empty() {
             if let Some(events) = get_data::<CustomEventList>(&ctx).await {
-                events.done("tmq").await;
+                events.remove("tmq").await;
             }
         }
     }

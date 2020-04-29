@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use futures::future::{self, TryFutureExt, FutureExt};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
@@ -66,7 +67,7 @@ impl RawEvents {
     }
 
     pub async fn add(&self, name: impl AsRef<str>, fut: EventHook) {
-        let timeout = Duration::from_millis(30);
+        let timeout = Duration::from_millis(50);
         let name = name.as_ref().to_string();
 
         match time::timeout(timeout, self.events.write()).await {
@@ -77,8 +78,8 @@ impl RawEvents {
         }
     }
 
-    pub async fn done(&self, name: impl AsRef<str>) {
-        let timeout = Duration::from_millis(30);
+    pub async fn remove(&self, name: impl AsRef<str>) {
+        let timeout = Duration::from_millis(50);
         let name = name.as_ref();
 
         match time::timeout(timeout, self.events.write()).await {
@@ -94,11 +95,18 @@ impl RawEvents {
     }
 
     pub async fn execute(&self, ctx: Context, ev: Event) {
-        for (name, event) in self.events.read().await.iter() {
-            if let Err(why) = event(&ctx, &ev).await {
-                error!("Error while executing the raw event {}\n{:#?}", name, why);
-            }
-        }
+        let handlers = self.events.read().await;
+        let fut = handlers
+            .iter()
+            .map(|(k, v)| v(&ctx, &ev).map_err(move |e| (k, e)).boxed());
+        
+        future::join_all(fut)
+            .await
+            .iter()
+            .filter_map(|f| f.as_ref().err())
+            .for_each(|(n, e)| error!("Cannot execute the event {}\n{:#?}", n, e));
+            
+        drop(handlers);
 
         let timeout = Duration::from_millis(1);
         if let Ok(ref mut map) = time::timeout(timeout, self.events.write()).await {
@@ -258,10 +266,6 @@ impl EventHandler for Handler {
 
         ctx.set_presence(Some(activity), status).await;
 
-        if let Ok(info) = ctx.http.get_current_application_info().await {
-            crate::write_config().await.masters.insert(info.owner.id);
-        }
-
         if !self.connected.load(Ordering::Relaxed) {
             self.connected.store(true, Ordering::SeqCst);
             
@@ -274,6 +278,11 @@ impl EventHandler for Handler {
                 let ids = config.guilds.iter().map(|v| *v.key());
                 shard.chunk_guilds(ids, None, None);
             }
+            
+            if let Ok(info) = ctx.http.get_current_application_info().await {
+                crate::write_config().await.masters.insert(info.owner.id);
+            }
+
         //
         //     let arc_ctx = match self.ctx.as_ref() {
         //         Some(c) => Arc::clone(c),
