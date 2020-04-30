@@ -24,6 +24,9 @@ use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
+static CURRENT_CHANNEL: AtomicU64 = AtomicU64::new(450521152272728065);
+static LOCKED: AtomicBool = AtomicBool::new(false);
+
 type EventHook = for<'fut> fn(&'fut Context, &'fut Event) -> BoxFuture<'fut, Result<()>>;
 pub struct RawHandler {
     pub handler: Arc<RawEvents>,
@@ -135,14 +138,23 @@ impl Handler {
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         if !msg.author.bot {
-            let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id).await;
-
-            trace!(
-                "A message on {}\n{}> {}",
-                channel_info,
-                colored_name_user(&msg.author).underlined(),
-                msg.content.to_owned().gradient(Color::LightGreen),
-            );
+            let mut to_log = true;
+            
+            if LOCKED.load(Ordering::SeqCst) {
+                to_log = CURRENT_CHANNEL.load(Ordering::SeqCst) == msg.channel_id.0;
+            } else {
+                CURRENT_CHANNEL.store(msg.channel_id.0, Ordering::SeqCst);
+            }
+            
+            if to_log {
+                let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id).await;
+                trace!(
+                    "A message on {}\n{}> {}",
+                    channel_info,
+                    colored_name_user(&msg.author).underlined(),
+                    msg.content.to_owned().gradient(Color::LightGreen),
+                );
+            }
         }
 
         let will_be_cached = is_watching_channel(&ctx, msg.channel_id).await
@@ -268,6 +280,9 @@ impl EventHandler for Handler {
             if let Ok(info) = ctx.http.get_current_application_info().await {
                 crate::write_config().await.masters.insert(info.owner.id);
             }
+            
+            let arc_ctx = Arc::new(ctx);
+            tokio::spawn(input(arc_ctx));
         }
     }
 
@@ -430,6 +445,84 @@ fn to_color(id: u64) -> RGB {
     RGB::new(r, g, b)
 }
 
-// async fn input(ctx: Arc<Context>) {
-//
-// }
+async fn input(ctx: Arc<Context>) {
+    use tokio::io::AsyncBufReadExt;
+    
+    let stdin = tokio::io::stdin();
+    let reader = tokio::io::BufReader::new(stdin);
+    let mut lines = reader.lines();
+    
+    loop {
+        if let Ok(Some(line)) = lines.next_line().await {
+            if let Ok(i) = Input::parse(&line) {
+                process_input(Arc::clone(&ctx), i).await;
+            }
+        }
+    }
+}
+
+async fn process_input<'a>(ctx: Arc<Context>, input: Input<'a>) {
+    static LAST_MESSAGE: AtomicU64 = AtomicU64::new(0);
+    static LAST_MESSAGE_CHANNEL: AtomicU64 = AtomicU64::new(0);
+    
+    match input {
+        Input::Message(s) => {
+            let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
+            typing(&ctx, channel);
+            tokio::time::delay_for(std::time::Duration::from_millis(800)).await;
+            if let Ok(msg) = channel.say(ctx, s).await {
+                LAST_MESSAGE.store(msg.id.0, Ordering::SeqCst);
+                LAST_MESSAGE_CHANNEL.store(channel.0, Ordering::SeqCst);
+            }
+        }
+        
+        Input::Edit(s) => {
+            let msg = LAST_MESSAGE.load(Ordering::SeqCst);
+            let channel = LAST_MESSAGE_CHANNEL.load(Ordering::SeqCst);
+            ChannelId(channel).edit_message(ctx, msg, |m| m.content(s)).await.ok();
+        }  
+        
+        Input::Lock(c) => {
+            LOCKED.store(true, Ordering::SeqCst);
+            if let Some(channel) = c {
+                CURRENT_CHANNEL.store(channel, Ordering::SeqCst);
+            }
+        }
+        
+        Input::Unlock => LOCKED.store(false, Ordering::SeqCst)
+    }
+}
+
+#[derive(Debug)]
+pub enum Input<'a> {
+    Message(&'a str),
+    Edit(&'a str),
+    Lock(Option<u64>),
+    Unlock,
+}
+
+impl<'a> Input<'a> {
+    pub fn parse(s: &'a str) -> std::result::Result<Self, magic::Void> {
+        let mut split = s.split_whitespace();
+        
+        match split.next() {
+            Some(":edit") => {
+                if split.next().is_some() {
+                    Ok(Self::Edit(&s[6..]))
+                } else {
+                    Err(magic::Void)
+                }
+            }
+            Some(":lock") => {
+                let channel = split
+                    .next()
+                    .and_then(|v| v.parse::<u64>().ok());
+                    
+                Ok(Self::Lock(channel))
+            }
+            Some(":unlock") => Ok(Self::Unlock),
+            Some(_) => Ok(Self::Message(s)),
+            None => Err(magic::Void)
+        }
+    }
+}

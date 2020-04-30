@@ -75,10 +75,10 @@ fn console_format(callback: fern::FormatCallback, message: &Arguments, record: &
 
 fn file_format(callback: fern::FormatCallback, message: &Arguments, record: &Record) {
     let line = record.line().map(|v| format!(":{}", v));
-    
+
     callback.finish(format_args!(
-        "{} {} {}{}> {}",
-        chrono::Local::now().format("%F %T%.3f"),
+        "{} {:<5} {}{} {}",
+        chrono::Local::now().format("%T%.3f"),
         record.level(),
         record.target(),
         line.unwrap_or_default(),
