@@ -282,7 +282,7 @@ impl EventHandler for Handler {
             }
             
             let arc_ctx = Arc::new(ctx);
-            tokio::spawn(input(arc_ctx));
+            tokio::spawn(read_input(arc_ctx));
         }
     }
 
@@ -445,59 +445,89 @@ fn to_color(id: u64) -> RGB {
     RGB::new(r, g, b)
 }
 
-async fn input(ctx: Arc<Context>) {
+async fn read_input(ctx: Arc<Context>) {
     use tokio::io::AsyncBufReadExt;
     
     let stdin = tokio::io::stdin();
     let reader = tokio::io::BufReader::new(stdin);
     let mut lines = reader.lines();
     
+    let mut data = InputData {
+        messages: Vec::new(),
+        max_history: 10,
+    };
+    
     loop {
         if let Ok(Some(line)) = lines.next_line().await {
             if let Ok(i) = Input::parse(&line) {
-                process_input(Arc::clone(&ctx), i).await;
+                if let Err(why) = process_input(Arc::clone(&ctx), &i, &mut data).await {
+                    error!("{:?} > {:?}", i, why)
+                }
             }
         }
     }
 }
 
-async fn process_input<'a>(ctx: Arc<Context>, input: Input<'a>) {
-    static LAST_MESSAGE: AtomicU64 = AtomicU64::new(0);
-    static LAST_MESSAGE_CHANNEL: AtomicU64 = AtomicU64::new(0);
-    
+async fn process_input<'a>(
+    ctx: Arc<Context>, 
+    input: &Input<'a>, 
+    data: &mut InputData
+) -> Result<()> {
     match input {
         Input::Message(s) => {
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
-            typing(&ctx, channel);
-            tokio::time::delay_for(std::time::Duration::from_millis(800)).await;
-            if let Ok(msg) = channel.say(ctx, s).await {
-                LAST_MESSAGE.store(msg.id.0, Ordering::SeqCst);
-                LAST_MESSAGE_CHANNEL.store(channel.0, Ordering::SeqCst);
+            channel.broadcast_typing(&ctx).await?;
+            
+            tokio::time::delay_for(std::time::Duration::from_millis(1500)).await;
+            
+            let msg = channel.say(ctx, s).await?;
+            data.messages.push((channel, msg.id));
+            
+            if data.messages.len() > data.max_history {
+                data.messages.remove(0);
             }
         }
         
         Input::Edit(s) => {
-            let msg = LAST_MESSAGE.load(Ordering::SeqCst);
-            let channel = LAST_MESSAGE_CHANNEL.load(Ordering::SeqCst);
-            ChannelId(channel).edit_message(ctx, msg, |m| m.content(s)).await.ok();
+            if let Some((channel, msg)) = data.messages.last() {
+                channel.edit_message(ctx, msg, |m| m.content(s)).await?;
+            }
         }  
+        
+        Input::Delete(v) => {
+            let (channel, msg) = match v {
+                Some(v) => *v,
+                None => data.messages.pop().ok_or(magic::MagicError)?,
+            };
+            
+            channel.delete_message(ctx, msg).await?;
+        }
         
         Input::Lock(c) => {
             LOCKED.store(true, Ordering::SeqCst);
             if let Some(channel) = c {
-                CURRENT_CHANNEL.store(channel, Ordering::SeqCst);
+                CURRENT_CHANNEL.store(channel.0, Ordering::SeqCst);
             }
         }
         
         Input::Unlock => LOCKED.store(false, Ordering::SeqCst)
     }
+    
+    Ok(())
+}
+
+#[derive(Debug)]
+pub struct InputData {
+    messages: Vec<(ChannelId, MessageId)>,
+    max_history: usize,
 }
 
 #[derive(Debug)]
 pub enum Input<'a> {
     Message(&'a str),
     Edit(&'a str),
-    Lock(Option<u64>),
+    Delete(Option<(ChannelId, MessageId)>),
+    Lock(Option<ChannelId>),
     Unlock,
 }
 
@@ -513,13 +543,21 @@ impl<'a> Input<'a> {
                     Err(magic::Void)
                 }
             }
+            
+            Some(":delete") => {
+                // todo: delete ids
+                Ok(Self::Delete(None))
+            }
+            
             Some(":lock") => {
                 let channel = split
                     .next()
-                    .and_then(|v| v.parse::<u64>().ok());
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .map(ChannelId);
                     
                 Ok(Self::Lock(channel))
             }
+            
             Some(":unlock") => Ok(Self::Unlock),
             Some(_) => Ok(Self::Message(s)),
             None => Err(magic::Void)
