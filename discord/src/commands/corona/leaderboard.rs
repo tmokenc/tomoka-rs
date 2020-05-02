@@ -10,6 +10,7 @@ use smallstr::SmallString;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::timeout;
+use std::convert::TryInto as _;
 
 const API: &str = "https://api.covid19api.com/summary";
 const THUMBNAIL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Topeka-leaderboard.svg/200px-Topeka-leaderboard.svg.png";
@@ -106,7 +107,8 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
     let mut mess = msg
         .channel_id
         .send_message(&ctx, |message| {
-            message.reactions(REACTIONS.into_iter().map(|&v| v));
+            let reactions = REACTIONS.into_iter().map(|&s| s.try_into().unwrap())
+            message.reactions(reactions);
             message.embed(append!());
 
             message
@@ -163,7 +165,8 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
 
     let futs = REACTIONS
         .into_iter()
-        .map(|&s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
+        .map(|&s| s.try_into().unwrap())
+        .map(|s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
 
     futures::future::join_all(futs).await;
     Ok(())

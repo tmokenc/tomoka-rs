@@ -39,6 +39,7 @@ use futures::future;
 use magic::dark_magic::has_external_command;
 use serenity::model::id::GuildId;
 use serenity::Client;
+use serenity::client::bridge::gateway::GatewayIntents;
 use tokio::signal::{self, unix};
 use tokio::sync::Mutex;
 
@@ -46,28 +47,15 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     let handler = Handler::new();
     let raw_handler = RawHandler::new();
     let custom_events_arc = raw_handler.handler.clone();
+    let framework = framework::get_framework();
 
-    let mut client = Client::new_with_extras(token.as_ref(), |extra| {
-        use serenity::client::bridge::gateway::GatewayIntents;
-        let intents = GatewayIntents::all()
-            // & !GatewayIntents::GUILD_MEMBERS
-            & !GatewayIntents::GUILD_BANS
-            & !GatewayIntents::GUILD_EMOJIS
-            & !GatewayIntents::GUILD_INTEGRATIONS
-            & !GatewayIntents::GUILD_WEBHOOKS
-            & !GatewayIntents::GUILD_INVITES
-            & !GatewayIntents::GUILD_PRESENCES
-            & !GatewayIntents::GUILD_MESSAGE_TYPING
-            & !GatewayIntents::DIRECT_MESSAGE_TYPING;
-
-        extra
-            .event_handler(handler)
-            .raw_event_handler(raw_handler)
-            .framework(framework::get_framework())
-            .guild_subscriptions(false)
-            .intents(intents)
-    })
-    .await?;
+    let mut client = Client::new(token.as_ref())
+        .guild_subscriptions(false)
+        .framework(framework)
+        .event_handler(handler)
+        .raw_event_handler(raw_handler)
+        .intents(intents())
+        .await?;
 
     // Disable the default message cache and use our own. Just in case
     client
@@ -136,4 +124,18 @@ async fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[inline]
+fn intents() -> GatewayIntents {
+    GatewayIntents::all()
+        // & !GatewayIntents::GUILD_MEMBERS
+        & !GatewayIntents::GUILD_BANS
+        & !GatewayIntents::GUILD_EMOJIS
+        & !GatewayIntents::GUILD_INTEGRATIONS
+        & !GatewayIntents::GUILD_WEBHOOKS
+        & !GatewayIntents::GUILD_INVITES
+        & !GatewayIntents::GUILD_PRESENCES
+        & !GatewayIntents::GUILD_MESSAGE_TYPING
+        & !GatewayIntents::DIRECT_MESSAGE_TYPING
 }

@@ -139,13 +139,13 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         if !msg.author.bot {
             let mut to_log = true;
-            
+
             if LOCKED.load(Ordering::SeqCst) {
                 to_log = CURRENT_CHANNEL.load(Ordering::SeqCst) == msg.channel_id.0;
             } else {
                 CURRENT_CHANNEL.store(msg.channel_id.0, Ordering::SeqCst);
             }
-            
+
             if to_log {
                 let channel_info: String = get_colored_channel_info(&ctx, msg.channel_id).await;
                 trace!(
@@ -254,7 +254,11 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        info!("{} is now available on {} servers", ready.user.name, ready.guilds.len());
+        info!(
+            "{} is now available on {} servers",
+            ready.user.name,
+            ready.guilds.len()
+        );
 
         let mess = {
             let resume = self.resume.load(Ordering::SeqCst);
@@ -280,7 +284,7 @@ impl EventHandler for Handler {
             if let Ok(info) = ctx.http.get_current_application_info().await {
                 crate::write_config().await.masters.insert(info.owner.id);
             }
-            
+
             let arc_ctx = Arc::new(ctx);
             tokio::spawn(read_input(arc_ctx));
         }
@@ -447,16 +451,16 @@ fn to_color(id: u64) -> RGB {
 
 async fn read_input(ctx: Arc<Context>) {
     use tokio::io::AsyncBufReadExt;
-    
+
     let stdin = tokio::io::stdin();
     let reader = tokio::io::BufReader::new(stdin);
     let mut lines = reader.lines();
-    
+
     let mut data = InputData {
         messages: Vec::new(),
         max_history: 10,
     };
-    
+
     loop {
         if let Ok(Some(line)) = lines.next_line().await {
             if let Ok(i) = Input::parse(&line) {
@@ -469,17 +473,16 @@ async fn read_input(ctx: Arc<Context>) {
 }
 
 async fn process_input<'a>(
-    ctx: Arc<Context>, 
-    input: &Input<'a>, 
-    data: &mut InputData
+    ctx: Arc<Context>,
+    input: &Input<'a>,
+    data: &mut InputData,
 ) -> Result<()> {
     match input {
         Input::Message(s) => {
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
             channel.broadcast_typing(&ctx).await?;
             
-            tokio::time::delay_for(std::time::Duration::from_millis(1500)).await;
-            
+            time::delay_for(Duration::from_millis(1500)).await;
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));
             
@@ -487,32 +490,32 @@ async fn process_input<'a>(
                 data.messages.remove(0);
             }
         }
-        
+
         Input::Edit(s) => {
             if let Some((channel, msg)) = data.messages.last() {
                 channel.edit_message(ctx, msg, |m| m.content(s)).await?;
             }
-        }  
-        
+        }
+
         Input::Delete(v) => {
             let (channel, msg) = match v {
                 Some(v) => *v,
                 None => data.messages.pop().ok_or(magic::MagicError)?,
             };
-            
+
             channel.delete_message(ctx, msg).await?;
         }
-        
+
         Input::Lock(c) => {
             LOCKED.store(true, Ordering::SeqCst);
             if let Some(channel) = c {
                 CURRENT_CHANNEL.store(channel.0, Ordering::SeqCst);
             }
         }
-        
-        Input::Unlock => LOCKED.store(false, Ordering::SeqCst)
+
+        Input::Unlock => LOCKED.store(false, Ordering::SeqCst),
     }
-    
+
     Ok(())
 }
 
@@ -534,33 +537,26 @@ pub enum Input<'a> {
 impl<'a> Input<'a> {
     pub fn parse(s: &'a str) -> std::result::Result<Self, magic::Void> {
         let mut split = s.split_whitespace();
-        
+
         match split.next() {
-            Some(":edit") => {
-                if split.next().is_some() {
-                    Ok(Self::Edit(&s[6..]))
-                } else {
-                    Err(magic::Void)
-                }
-            }
-            
             Some(":delete") => {
                 // todo: delete ids
                 Ok(Self::Delete(None))
             }
-            
+
             Some(":lock") => {
                 let channel = split
                     .next()
                     .and_then(|v| v.parse::<u64>().ok())
                     .map(ChannelId);
-                    
+
                 Ok(Self::Lock(channel))
             }
-            
+
+            Some(":edit") => split.next().map(|_| Self::Edit(&s[6..])).ok_or(magic::Void),
             Some(":unlock") => Ok(Self::Unlock),
             Some(_) => Ok(Self::Message(s)),
-            None => Err(magic::Void)
+            None => Err(magic::Void),
         }
     }
 }

@@ -123,7 +123,7 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
 }
 
 #[hook]
-async fn normal_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
+async fn normal_prefix(_ctx: &Context, msg: &Message) -> Option<String> {
     let config = crate::read_config().await;
 
     msg.guild_id
@@ -145,7 +145,7 @@ async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
 }
 
 #[hook]
-async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
+async fn before_cmd(ctx: &Context, msg: &Message, cmd_name: &str) -> bool {
     info!("Found command {}", cmd_name.bold().underlined());
 
     if TYPING_LIST.contains(&cmd_name) {
@@ -165,7 +165,7 @@ async fn before_cmd(ctx: &mut Context, msg: &Message, cmd_name: &str) -> bool {
 }
 
 #[hook]
-async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResult) {
+async fn after_cmd(ctx: &Context, msg: &Message, cmd: &str, err: CommandResult) {
     let start_time = match EXECUTION_LIST.remove(&msg.id) {
         Some((_, v)) => v.timestamp_millis(),
         None => msg.timestamp.timestamp_millis(),
@@ -200,7 +200,7 @@ async fn after_cmd(ctx: &mut Context, msg: &Message, cmd: &str, err: CommandResu
 }
 
 #[hook]
-async fn normal_message(ctx: &mut Context, msg: &Message) {
+async fn normal_message(ctx: &Context, msg: &Message) {
     if msg.author.bot {
         return;
     }
