@@ -266,7 +266,7 @@ async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
 
     tokio::task::spawn_blocking(move || db.get(&DB_KEY))
         .await??
-        .ok_or_else(|| Box::new(magic::MagicError) as Box<_>)
+        .ok_or_else(|| Box::new(magic::Error) as Box<_>)
 }
 
 fn code_to_emoji(s: &str) -> String {

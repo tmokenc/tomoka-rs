@@ -2,6 +2,8 @@
 /tomoka-cache*/
 /temp
 /tomodb
+/logs
+/logs/*
 **/*.rs.bk
 run*
 *.env

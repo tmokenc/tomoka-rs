@@ -101,8 +101,8 @@ impl RawEvents {
 
         future::join_all(fut)
             .await
-            .iter()
-            .filter_map(|f| f.as_ref().err())
+            .into_iter()
+            .filter_map(|f| f.err())
             .for_each(|(n, e)| error!("Cannot execute the event {}\n{:#?}", n, e));
 
         drop(handlers);
