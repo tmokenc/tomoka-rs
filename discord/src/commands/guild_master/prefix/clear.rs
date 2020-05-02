@@ -5,7 +5,7 @@ use crate::commands::prelude::*;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// Clear the custom prefix if exists
-async fn clear(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn clear(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

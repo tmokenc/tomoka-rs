@@ -2,7 +2,7 @@ use crate::commands::prelude::*;
 use crate::storages::MusicManager;
 use crate::types::PlayOption;
 #[command]
-fn resume(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+fn resume(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(()),

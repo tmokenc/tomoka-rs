@@ -7,7 +7,7 @@ use crate::utils::extract_channel_ids;
 #[owner_privilege]
 #[required_permissions(MANAGE_GUILD)]
 /// Enable the logger
-async fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

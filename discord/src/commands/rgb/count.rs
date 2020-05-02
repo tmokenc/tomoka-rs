@@ -2,7 +2,7 @@ use crate::commands::prelude::*;
 
 #[command]
 #[only_in(guilds)]
-async fn count(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+async fn count(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(()),

@@ -5,7 +5,7 @@ use humantime::format_duration;
 
 #[command]
 /// To see how long I have been up!
-async fn uptime(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn uptime(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let now = Utc::now();
     let uptime = ctx
         .data

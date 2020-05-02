@@ -4,7 +4,7 @@ use magic::image::{self, RotateAngle};
 
 #[command]
 /// Rotate the last image from 20 most recent message on the channel
-async fn rotate(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn rotate(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let depth = crate::read_config().await.image_search_depth;
     let image_buf = match get_last_image_buf(&ctx, &msg, depth).await {
         Some(g) => g,

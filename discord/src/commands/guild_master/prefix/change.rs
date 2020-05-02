@@ -8,7 +8,7 @@ use crate::types::GuildConfig;
 #[min_args(1)]
 #[required_permissions(MANAGE_GUILD)]
 ///Set a custom prefix instead of the default
-async fn change(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn change(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let prefix = args.rest();
     if prefix.is_empty() {
         return Ok(());

@@ -6,7 +6,7 @@ use scraper::{Html, Selector};
 
 #[command]
 #[aliases("smogon", "strategy")]
-async fn smogon_strategy(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn smogon_strategy(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let pokemon = args.rest();
     let aliasized = pokemon.replace(" ", "-").to_lowercase();
     let title = format!("Strategies for {}", pokemon);

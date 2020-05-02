@@ -9,7 +9,7 @@ pub const HEART_URL: &str = "https://i.imgur.com/YpRPxeS.png";
 #[command]
 #[usage = "?[@someone] ?[@another one]"]
 /// Check love comparative
-async fn love(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn love(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut person = match msg.mentions.get(0) {
         Some(user) => user,
         None => &msg.author,

@@ -36,7 +36,7 @@ impl Randomizer for Rand {
 ///
 /// Q = Quit
 /// ```
-fn tetris(ctx: &mut Context, msg: &Message) -> CommandResult {
+fn tetris(ctx: &Context, msg: &Message) -> CommandResult {
     if GAME_STATE.contains_key(&msg.channel_id) {
         msg.channel_id.say(ctx, "A game is activating on this channel")?;
         return Ok(())

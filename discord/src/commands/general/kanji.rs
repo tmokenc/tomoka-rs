@@ -8,7 +8,7 @@ use magic::traits::MagicStr;
 #[usage = "<Kanji(s)>"]
 #[example = "智花"]
 /// Get the details meaning of kanji(s)
-async fn kanji(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn kanji(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx).await?;
     let content = args.rest();
     let reqwest = get_data::<ReqwestClient>(&ctx).await.unwrap();

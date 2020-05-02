@@ -5,7 +5,7 @@ use crate::types::GuildConfig;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_ROLES)]
 /// Add roles to the almighty RGB databse
-async fn add(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+async fn add(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
         msg.channel_id
             .say(&ctx, "Please mention some role to be added").await?;

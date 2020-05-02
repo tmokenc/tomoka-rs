@@ -4,7 +4,7 @@ use serenity::prelude::*;
 
 #[command]
 #[bucket = "basic"]
-fn decode(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn decode(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     
     Ok(())
 }

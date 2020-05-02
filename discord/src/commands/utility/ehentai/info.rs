@@ -7,7 +7,7 @@ use crate::Result;
 #[command]
 #[min_args(1)]
 /// Get the e-h gallery info
-async fn info(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn info(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let content = args.rest();
     let data = parse_eh_token(content);
 

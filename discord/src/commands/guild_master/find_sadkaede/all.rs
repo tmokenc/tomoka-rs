@@ -8,7 +8,7 @@ use crate::types::GuildConfig;
 /// By enable this, all channels will be watched, ignoring the `add` and `remove` command
 /// Disable this functionality by using `option sauce disable_all`
 /// __**Note**__: this will enable the saucing machine automatically
-async fn all(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn all(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

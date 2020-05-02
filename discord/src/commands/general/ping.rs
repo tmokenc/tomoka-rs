@@ -2,7 +2,7 @@ use crate::commands::prelude::*;
 
 #[command]
 /// Ping me!
-async fn ping(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn ping(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let now = Utc::now().timestamp_millis();
     let delay = now - msg.timestamp.timestamp_millis();
 

@@ -62,7 +62,7 @@ If you want more information about a specific command, just pass the command as 
 #[lacking_role = "Nothing"]
 #[wrong_channel = "Strike"]
 async fn stolen_help(
-    context: &mut Context,
+    context: &Context,
     msg: &Message,
     args: Args,
     help_options: &'static HelpOptions,
@@ -134,7 +134,7 @@ async fn normal_prefix(_ctx: &Context, msg: &Message) -> Option<String> {
 }
 
 #[hook]
-async fn master_prefix(_ctx: &mut Context, msg: &Message) -> Option<String> {
+async fn master_prefix(_ctx: &Context, msg: &Message) -> Option<String> {
     let config = crate::read_config().await;
 
     config

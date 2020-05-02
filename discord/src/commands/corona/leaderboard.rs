@@ -10,7 +10,7 @@ use smallstr::SmallString;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::timeout;
-use std::convert::TryInto as _;
+use std::convert::TryFrom as _;
 
 const API: &str = "https://api.covid19api.com/summary";
 const THUMBNAIL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Topeka-leaderboard.svg/200px-Topeka-leaderboard.svg.png";
@@ -59,7 +59,7 @@ struct Country {
 /// Get corona leaderboard
 /// Add limit number to limit the result
 /// `tomo>leaderboard 5` < this will only show 5 countries per page
-async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = get_corona_data(&ctx).await?;
 
     let total_c = data.global.total_confirmed;
@@ -107,7 +107,10 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
     let mut mess = msg
         .channel_id
         .send_message(&ctx, |message| {
-            let reactions = REACTIONS.into_iter().map(|&s| s.try_into().unwrap())
+            let reactions = REACTIONS
+                .iter()
+                .map(|&s| ReactionType::try_from(s).unwrap());
+                
             message.reactions(reactions);
             message.embed(append!());
 
@@ -158,14 +161,14 @@ async fn leaderboard(ctx: &mut Context, msg: &Message, mut args: Args) -> Comman
             _ => continue,
         }
 
-        mess.edit(&ctx, |m| m.embed(append!())).await?;
+        mess.edit(ctx, |m| m.embed(append!())).await?;
     }
 
     drop(collector);
 
     let futs = REACTIONS
         .into_iter()
-        .map(|&s| s.try_into().unwrap())
+        .map(|&s| ReactionType::try_from(s).unwrap())
         .map(|s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
 
     futures::future::join_all(futs).await;

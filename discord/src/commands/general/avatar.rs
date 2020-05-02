@@ -9,7 +9,7 @@ use futures::future::{self, TryFutureExt};
 /// Get the avatar of an user
 /// If mention multiple users, I will take the first one
 /// If none, I will response with the user's avatar
-async fn avatar(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+async fn avatar(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let user = msg.mentions.get(0).unwrap_or(&msg.author);
     let display_name = format!("{}#{:04}", user.name, user.discriminator);
     let avatar = user

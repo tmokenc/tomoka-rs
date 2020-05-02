@@ -7,7 +7,7 @@ use tokio::stream::StreamExt;
 #[command]
 #[aliases("evi")]
 /// The evidence of RGB
-async fn evidence(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn evidence(ctx: &Context, msg: &Message) -> CommandResult {
     let config = crate::read_config().await;
     let rgb = match config.rgb {
         Some(ref rgb) => rgb,

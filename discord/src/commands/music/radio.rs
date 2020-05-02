@@ -40,7 +40,7 @@ impl Playable for Radio {
 }
 
 #[command]
-fn radio(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn radio(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(()),

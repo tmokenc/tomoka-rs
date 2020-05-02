@@ -4,7 +4,7 @@ use magic::image::{self, FlipType};
 
 #[command]
 /// Flip the last image from last 20 messages on the channel
-async fn flip(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn flip(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let depth = crate::read_config().await.image_search_depth;
     let buf = match get_last_image_buf(&ctx, &msg, depth).await {
         Some(b) => b,

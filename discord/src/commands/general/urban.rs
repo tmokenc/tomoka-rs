@@ -7,7 +7,7 @@ use crate::UrbanRequester;
 #[usage = "?<words>"]
 #[example = "waifu"]
 /// Search the UrbanDictionary for a meaning of a slang word
-async fn urban(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn urban(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id.broadcast_typing(&ctx).await?;
     let word = args.rest();
     let reqwest = get_data::<ReqwestClient>(&ctx).await.unwrap();

@@ -6,7 +6,7 @@ use crate::commands::prelude::*;
 /// Watching configurated channels instead of all channel
 /// This *will not* remove all channel nor disable the SadKaede-finder
 /// only stop watching all channels if the `option sadkaede all` was enabled 
-async fn disable_all(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn disable_all(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

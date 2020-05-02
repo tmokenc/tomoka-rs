@@ -4,7 +4,7 @@ use crate::commands::prelude::*;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_ROLES)]
 /// Remove roles from the almighty RGB database
-async fn remove(ctx: &mut Context, msg: &Message, _: Args) -> CommandResult {
+async fn remove(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     if msg.mention_roles.is_empty() {
         msg.channel_id
             .say(&ctx, "Please mention some role to be deleted").await?;

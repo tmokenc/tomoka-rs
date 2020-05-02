@@ -4,7 +4,7 @@ use crate::commands::prelude::*;
 #[aliases("setcachesize, resizecache, resize_cache")]
 #[num_args(1)]
 #[owners_only]
-async fn set_cache_size(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn set_cache_size(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let size = args.single::<usize>()?;
 
     let cache = get_data::<CacheStorage>(&ctx).await.unwrap();

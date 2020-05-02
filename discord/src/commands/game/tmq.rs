@@ -46,7 +46,7 @@ struct TmqCollector {
 #[aliases("tmq", "touhoumusicquiz")]
 /// The unfinished TouhouMusicQuiz game
 /// Try to guess which touhou version that contains the song currently playing
-async fn touhou_music_quiz(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(()),

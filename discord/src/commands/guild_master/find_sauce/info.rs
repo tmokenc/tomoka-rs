@@ -4,7 +4,7 @@ use crate::traits::Embedable as _;
 #[command]
 #[only_in("guilds")]
 /// Check saucing status for this server
-async fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(())

@@ -2,7 +2,7 @@ use crate::commands::prelude::*;
 
 #[command]
 #[aliases("information")]
-async fn info(ctx: &mut Context, msg: &Message, _arg: Args) -> CommandResult {
+async fn info(ctx: &Context, msg: &Message, _arg: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let user_info = data.get::<InforKey>().unwrap();
     let my_info = ctx.http.get_current_application_info().await?;

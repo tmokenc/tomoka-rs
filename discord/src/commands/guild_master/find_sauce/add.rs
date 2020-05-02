@@ -8,7 +8,7 @@ use magic::traits::MagicIter as _;
 #[required_permissions(MANAGE_GUILD)]
 /// Add channel(s) to be watcing for sauce
 /// *This* command will automatically enable the sauce machine, even when it is disabled
-async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn add(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(()),

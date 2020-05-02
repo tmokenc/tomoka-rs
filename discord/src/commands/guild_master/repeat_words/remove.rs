@@ -5,7 +5,7 @@ use crate::commands::prelude::*;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// "Remove words (seperate by `, `) in the repeating words list
-async fn remove(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn remove(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let words: Vec<_> = args.rest().trim().split(", ").collect();
     if words.get(0).filter(|x| !x.is_empty()).is_none() {
         return Ok(())

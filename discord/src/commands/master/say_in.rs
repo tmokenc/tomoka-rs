@@ -5,7 +5,7 @@ use serenity::model::id::ChannelId;
 #[command]
 #[owners_only]
 /// Say in specific channel, even in other guild.
-async fn say_in(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn say_in(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let channel_id = match args.single::<u64>() {
         Ok(id) => ChannelId(id),
         Err(_) => {

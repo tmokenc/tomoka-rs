@@ -6,7 +6,7 @@ use chrono_tz::*;
 /// Get time for various timezone
 /// Passing a timestamp (from 01/01/1970 in second) to get time for a specific time
 /// Will support other time parsing soon:tm:
-async fn time(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn time(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let time = args
         .find::<i64>()
         .unwrap_or_else(|_| msg.timestamp.timestamp());

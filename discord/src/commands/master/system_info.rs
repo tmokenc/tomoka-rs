@@ -12,7 +12,7 @@ use sys_info::*;
 /// Get the information of the system that I'm running on.
 /// Passing __-a__ or __--all__ to show more information
 /// **TODO**: show more useful information in *--all* mode
-async fn system_info(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn system_info(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let get_all = args
         .iter::<String>()
         .find(|v| v.as_ref().ok().map_or(false, |s| s == "-a" || s == "--all"));

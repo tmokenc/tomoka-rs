@@ -9,7 +9,7 @@ use crate::types::GuildConfig;
 /// Seperate by `, `
 /// These word will be repeated by the bot when someone use it
 /// This command will automatically enable the repeat-word machine
-async fn add(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn add(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let words = args.rest().split(", ").collect::<Vec<_>>();
     if words.get(0).filter(|x| !x.is_empty()).is_none() {
         return Ok(())

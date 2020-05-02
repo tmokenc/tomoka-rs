@@ -4,7 +4,7 @@ use crate::commands::prelude::*;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// Disable the repeat-words machine.
-async fn disable(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn disable(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

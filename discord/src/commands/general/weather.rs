@@ -5,7 +5,7 @@ use crate::commands::prelude::*;
 #[usage = "<location>"]
 #[example = "Akihabara"]
 #[description = "Check the weather of a specific location"]
-fn weather(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn weather(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     Ok(())
 }

@@ -6,7 +6,7 @@ use magic::traits::MagicIter;
 #[only_in(guilds)]
 #[required_permissions(MANAGE_GUILD)]
 /// Enable the repeat-word function
-async fn enable(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn enable(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

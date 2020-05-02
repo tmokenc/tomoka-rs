@@ -3,7 +3,7 @@ use crate::commands::prelude::*;
 #[command]
 #[owners_only]
 /// Save config to a file
-async fn save_config(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn save_config(ctx: &Context, msg: &Message) -> CommandResult {
     let config = crate::read_config().await;
     
     let path = config

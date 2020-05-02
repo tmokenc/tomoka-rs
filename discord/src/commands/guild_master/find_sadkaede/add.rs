@@ -9,7 +9,7 @@ use std::fmt::Write as _;
 #[required_permissions(MANAGE_GUILD)]
 /// Add channel(s) to be watching for SadKaede stuff
 /// *This* command will automatically enable the SadKaede-finder, even when it is disabled
-async fn add(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn add(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(()),

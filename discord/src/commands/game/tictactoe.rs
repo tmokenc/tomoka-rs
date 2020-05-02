@@ -143,7 +143,7 @@ lazy_static! {
 }
 
 #[command]
-fn tic_tac_toe(ctx: &mut Context, msg: &Message) -> CommandResult {
+fn tic_tac_toe(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(())

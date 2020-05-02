@@ -9,7 +9,7 @@ const TRIGGLE_FILE: &str = "./.trigger";
 /// ```bash
 /// cargo watch --no-gitignore -w .trigger -s "./target/release/tomoka_rs"
 /// ```
-async fn restart(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn restart(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .say(ctx, "I'll be right back in a second!\nPlease wait for me!").await?;
 

@@ -6,7 +6,7 @@ use requester::SauceNaoScraper as _;
 #[command]
 #[aliases("sauce")]
 /// Find an anime image source.
-async fn saucenao(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn saucenao(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let depth = crate::read_config().await.image_search_depth;
     let img = match get_last_image_url(&ctx, &msg, depth).await {
         Some(i) => i,

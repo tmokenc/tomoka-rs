@@ -101,7 +101,7 @@ impl From<&str> for Filter {
 
 #[command]
 /// Get a pokemon nature information or get all of them
-async fn nature(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn nature(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let args = args.rest();
     let filter = Filter::from(args);
     let mut data = String::new();

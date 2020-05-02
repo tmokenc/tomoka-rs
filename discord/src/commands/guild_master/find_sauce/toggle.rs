@@ -5,7 +5,7 @@ use magic::traits::MagicIter as _;
 #[only_in("guilds")]
 #[required_permissions(MANAGE_GUILD)]
 /// Toggle the saucing machine
-async fn toggle(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn toggle(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(())

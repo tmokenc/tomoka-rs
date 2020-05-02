@@ -7,7 +7,7 @@ use crate::types::GuildConfig;
 #[bucket = "basic"]
 /// Change the logging channel
 /// **NOTE**: This command will enable the logger no matter what
-async fn channel(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn channel(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => return Ok(())

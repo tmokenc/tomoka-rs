@@ -7,7 +7,7 @@ use serenity::prelude::*;
 //resends it as if bot if speaking!
 #[command]
 #[bucket = "basic"]
-fn encode(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+fn encode(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let to_say = args.rest();
     
     msg.delete(&ctx)?;

@@ -1,7 +1,7 @@
 use crate::commands::prelude::*;
 use crate::types::PlayOption;
 #[command]
-fn pause(ctx: &mut Context, msg: &Message, _args: Args) -> CommandResult {
+fn pause(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild_id = match msg.guild_id {
         Some(g) => g,
         None => return Ok(()),
