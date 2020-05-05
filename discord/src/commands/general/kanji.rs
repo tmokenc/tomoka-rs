@@ -1,7 +1,6 @@
 use crate::commands::prelude::*;
-use crate::storages::ReqwestClient;
-use crate::MaziiRequester;
-use magic::traits::MagicStr;
+use crate::MaziiApi as _;
+use magic::traits::MagicStr as _;
 
 #[command]
 #[aliases("k")]

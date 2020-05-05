@@ -3,11 +3,12 @@ use magic::import_all;
 
 import_all! {
     ehentai,
-    google,
+    search,
+    search_image,
     time
 }
 
 #[group]
-#[commands(time, google)]
+#[commands(time, search, search_image)]
 #[sub_groups(Ehentai)]
 struct Utility;

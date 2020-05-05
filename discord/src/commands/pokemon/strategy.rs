@@ -1,7 +1,5 @@
 use crate::commands::prelude::*;
-use crate::storages::ReqwestClient;
-use lazy_static::lazy_static;
-use requester::smogon::{MoveSet, SmogonRequester};
+use requester::smogon::{MoveSet, SmogonApi as _};
 use scraper::{Html, Selector};
 
 #[command]
@@ -80,13 +78,10 @@ async fn smogon_strategy(ctx: &Context, msg: &Message, args: Args) -> CommandRes
 
 fn format_overview(m: &str) -> String {
     let fragment = Html::parse_fragment(m);
-
-    lazy_static! {
-        static ref LI_SELECTOR: Selector = Selector::parse("li").unwrap();
-    }
+    let li_selector: Selector = Selector::parse("li").unwrap();
 
     let li = fragment
-        .select(&LI_SELECTOR)
+        .select(&li_selector)
         .map(|v| v.inner_html())
         .collect::<Vec<_>>();
 

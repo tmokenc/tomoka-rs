@@ -20,7 +20,20 @@ pub trait Embedable: Send {
     }
 }
 
-impl Embedable for requester::scrapers::saucenao::SauceNao {
+// #[async_trait]
+// pub trait Paginator {
+//     fn len(&self) -> usize;
+//     fn message_data<'a>(
+//         &mut self, 
+//         msg: &mut CreateMessage<'a>
+//     ) -> &mut CreateMessage<'a>;
+//     
+//     async fn update(&mut self) -> Result<()> {
+//         Ok(())
+//     }
+// }
+
+impl Embedable for requester::saucenao::SauceNao {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();
 

@@ -1,6 +1,5 @@
 use crate::commands::prelude::*;
-use crate::storages::ReqwestClient;
-use crate::UrbanRequester;
+use crate::UrbanApi as _;
 
 #[command]
 #[aliases("u")]
