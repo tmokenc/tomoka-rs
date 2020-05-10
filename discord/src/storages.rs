@@ -1,13 +1,12 @@
 use crate::cache::MyCache;
 use crate::events::RawEvents;
+use crate::types::Reminder;
 use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
 use requester::Reqwest;
-// use serenity::model::id::GuildId;
 use serenity::client::bridge::voice::ClientVoiceManager;
 use serenity::prelude::TypeMapKey;
-// use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -38,10 +37,10 @@ impl TypeMapKey for VoiceManager {
     type Value = Arc<serenity::prelude::Mutex<ClientVoiceManager>>;
 }
 
-// pub struct MusicManager;
-// impl TypeMapKey for MusicManager {
-//     type Value = MutexData<HashMap<GuildId, Music>>;
-// }
+pub struct ReminderSender;
+impl TypeMapKey for ReminderSender {
+    type Value = tokio::sync::mpsc::Sender<(i64, Reminder)>;
+}
 
 pub struct CacheStorage;
 impl TypeMapKey for CacheStorage {

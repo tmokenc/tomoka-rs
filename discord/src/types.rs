@@ -6,10 +6,13 @@ use chrono::{DateTime, Utc};
 use core::time::Duration;
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
+use serenity::client::Context;
 use serenity::http::client::Http;
+use serenity::model::channel::Message;
 use serenity::model::guild::Role;
 use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
 use smallstr::SmallString;
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::default::Default;
 use std::fmt;
@@ -17,6 +20,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
+use magic::traits::MagicStr as _;
 
 pub struct Information {
     pub booted_on: DateTime<Utc>,
@@ -53,6 +57,63 @@ impl Information {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Reminder {
+    pub(crate) user_id: u64,
+    pub(crate) msg_id: u64,
+    pub(crate) channel_id: u64,
+    pub(crate) guild_id: Option<u64>,
+    pub(crate) content: Option<String>,
+    pub when: DateTime<Utc>,
+    pub duration: Duration,
+}
+
+impl Reminder {
+    pub fn new(msg: &Message, duration: Duration, content: &str) -> Self {
+        Self {
+            user_id: msg.author.id.0,
+            msg_id: msg.id.0,
+            channel_id: msg.channel_id.0,
+            guild_id: msg.guild_id.map(|v| v.0),
+            content: content.to_option().map(String::from),
+            when: Utc::now(),
+            duration,
+        }
+    }
+
+    pub async fn remind<C: Borrow<Context>>(&self, ctx: C) -> Result<()> {
+        let ctx = ctx.borrow();
+        let user = UserId(self.user_id);
+        let channel = user.create_dm_channel(ctx).await?;
+
+        channel
+            .send_message(ctx, |m| m.embed(|embed| self.append_to(embed)))
+            .await?;
+
+        Ok(())
+    }
+}
+
+impl Embedable for Reminder {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        let guild = self.guild_id.map(|v| v.to_string()).unwrap_or_else(|| String::from("@me"));
+        let url = format!("https://discord.com/channels/{}/{}/{}", guild, self.channel_id, self.msg_id);
+        let msg = format!("Just remind you that you have a [reminder]({})", url);
+        let color = self.when.timestamp() as u64 & 0xffffff;
+        
+        embed.description(msg);
+        embed.color(color);
+        
+        embed.field("When", self.when.format("%F %T (UTC)"), true);
+        embed.field("for", humantime::format_duration(self.duration), true);
+        
+        if let Some(mess) = &self.content {
+            embed.field("Message", mess, false);
+        }
+        
+        embed
+    }
+}
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct SimpleRole {
     pub name: SmallString<[u8; 32]>,

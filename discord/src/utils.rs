@@ -1,18 +1,18 @@
+use core::borrow::Borrow;
+use core::convert::TryFrom;
+use core::time::Duration;
 use std::path::Path;
 use std::sync::Arc;
-use core::time::Duration;
-use core::convert::TryFrom;
-use core::borrow::Borrow;
 
 use bytes::Bytes;
 use futures::future::{self, TryFutureExt};
+use futures::stream::StreamExt;
 use lazy_static::lazy_static;
 use magic::number_to_rgb;
 use regex::Regex;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::time::timeout;
-use futures::stream::StreamExt;
 
 use colorful::core::color_string::CString;
 use colorful::Colorful;
@@ -23,12 +23,12 @@ use crate::types::GuildConfig;
 use crate::Result;
 
 use serenity::{
-    client::Context,
     builder::CreateEmbed,
+    client::Context,
     model::{
+        channel::{Message, ReactionType},
         id::{ChannelId, GuildId, UserId},
         user::User,
-        channel::{Message, ReactionType},
     },
     prelude::TypeMapKey,
 };
@@ -97,6 +97,11 @@ pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
         .collect()
 }
 
+pub fn to_color(id: u64) -> RGB {
+    let (r, g, b) = number_to_rgb(id);
+    RGB::new(r, g, b)
+}
+
 pub fn colored_name_user(user: &User) -> CString {
     let (r, g, b) = number_to_rgb(user.id.0);
     let color = RGB::new(r, g, b);
@@ -116,25 +121,28 @@ pub async fn paginator<C: Borrow<Context>, T>(
 
     let val = match data.get(0) {
         Some(v) => v,
-        None => return Ok(())
+        None => return Ok(()),
     };
-    
+
     let ctx = ctx.borrow();
     let total = data.len();
     let mut current_page = 1;
-    let mut mess = msg.channel_id.send_message(ctx, move |message| {
-        let reactions = REACTIONS
-            .iter()
-            .map(|&s| ReactionType::try_from(s).unwrap());
-            
-        message.reactions(reactions);
-        message.embed(move |embed| {
-            embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
-            f(embed, val)
-        });
-        message
-    }).await?;
-    
+    let mut mess = msg
+        .channel_id
+        .send_message(ctx, move |message| {
+            let reactions = REACTIONS
+                .iter()
+                .map(|&s| ReactionType::try_from(s).unwrap());
+
+            message.reactions(reactions);
+            message.embed(move |embed| {
+                embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
+                f(embed, val)
+            });
+            message
+        })
+        .await?;
+
     let mut collector = mess
         .await_reactions(&ctx)
         .author_id(msg.author.id)
@@ -142,7 +150,7 @@ pub async fn paginator<C: Borrow<Context>, T>(
             matches!(&reaction.emoji, ReactionType::Unicode(s) if REACTIONS.contains(&s.as_str()))
         })
         .await;
-        
+
     while let Ok(Some(reaction)) = timeout(WAIT_TIME, collector.next()).await {
         let reaction = reaction.as_inner_ref();
 
@@ -177,22 +185,20 @@ pub async fn paginator<C: Borrow<Context>, T>(
             "❌" => {
                 mess.delete(ctx).await?;
                 return Ok(());
-            },
+            }
             _ => continue,
         }
-        
 
-        let val = unsafe {
-            data.get_unchecked(current_page-1)
-        };
-            
+        let val = unsafe { data.get_unchecked(current_page - 1) };
+
         mess.edit(ctx, move |message| {
             message.embed(|embed| {
                 embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
                 f(embed, val)
             });
             message
-        }).await?;
+        })
+        .await?;
     }
 
     drop(collector);

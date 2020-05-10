@@ -146,11 +146,22 @@ impl DbInstance {
         Ok(())
     }
 
+    #[inline]
+    pub fn clear(&self) -> Result<()> {
+        self.tree().clear().map_err(|e| Box::new(e) as Box<_>)
+    }
+
+    #[inline]
     pub fn tree(&self) -> &Tree {
         match &self.tree {
             Some(t) => t,
             None => &**self.manager,
         }
+    }
+
+    #[inline]
+    pub fn manager(&self) -> Manager {
+        Arc::clone(&self.manager)
     }
 }
 

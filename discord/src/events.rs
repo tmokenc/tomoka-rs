@@ -9,18 +9,20 @@ use serenity::model::{
 };
 
 use crate::cache::MessageCache;
-use crate::storages::CacheStorage;
+use crate::storages::{CacheStorage, DatabaseKey, ReminderSender};
+use crate::types::Reminder;
 use crate::{utils::*, Result};
 
-use colorful::RGB;
+use chrono::Utc;
 use colorful::{Color, Colorful};
 use futures::future::BoxFuture;
 use futures::future::{self, FutureExt, TryFutureExt};
-use magic::number_to_rgb;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use std::borrow::Borrow;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
@@ -286,7 +288,8 @@ impl EventHandler for Handler {
             }
 
             let arc_ctx = Arc::new(ctx);
-            tokio::spawn(read_input(arc_ctx));
+            tokio::spawn(read_input(Arc::clone(&arc_ctx)));
+            tokio::spawn(reminder(arc_ctx));
         }
     }
 
@@ -444,9 +447,75 @@ async fn _process_deleted(
     Ok(())
 }
 
-fn to_color(id: u64) -> RGB {
-    let (r, g, b) = number_to_rgb(id);
-    RGB::new(r, g, b)
+async fn reminder(ctx: Arc<Context>) {
+    use tokio::sync::mpsc;
+
+    let (tx, mut rx) = mpsc::channel(50);
+    ctx.data.write().await.insert::<ReminderSender>(tx);
+    let db = get_data::<DatabaseKey>(&*ctx)
+        .await
+        .and_then(|db| db.open("Reminders").ok())
+        .unwrap();
+
+    loop {
+        let first_reminder = db.get_all::<i64, Reminder>().next();
+        match first_reminder {
+            Some((timestamp, value)) => {
+                let wait_time = timestamp - Utc::now().timestamp();
+                let duration = match wait_time.try_into() {
+                    Ok(d) => Duration::from_secs(d),
+                    Err(_) => {
+                        value.remind(&*ctx).await.ok();
+                        
+                        if let Err(why) = db.remove(&timestamp) {
+                            error!("Error while removing the reminder {:?}", why);
+                        }
+                        
+                        continue;
+                    }
+                };
+
+                info!("The next reminder is on {:?}", &duration);
+
+                tokio::select! {
+                    _ = time::delay_for(duration) => {
+                        value.remind(&*ctx).await.ok();
+                        
+                        if let Err(why) = db.remove(&timestamp) {
+                            error!("Error while removing the reminder {:?}", why);
+                        }
+                    }
+
+                    val = rx.recv() => {
+                        if let Some((timestamp, reminder)) = val {
+                            add_reminder(&*ctx, &db, timestamp, reminder).await;
+                        }
+                    }
+                }
+            }
+
+            None => {
+                if let Some((timestamp, reminder)) = rx.recv().await {
+                    add_reminder(&*ctx, &db, timestamp, reminder).await;
+                }
+            }
+        }
+    }
+}
+
+#[inline]
+async fn add_reminder<C: Borrow<Context>>(
+    ctx: C,
+    db: &db::DbInstance, 
+    timestamp: i64, 
+    reminder: Reminder
+) {
+    info!("Got a reminder for {}", &timestamp);
+    if let Err(why) = db.insert(&timestamp, &reminder) {
+        error!("Error while adding a reminder to database {:?}", why);
+        ChannelId(reminder.channel_id)
+            .say(ctx.borrow(), "Error while adding the reminder to database, please try again later").await.ok();
+    }
 }
 
 async fn read_input(ctx: Arc<Context>) {
@@ -481,11 +550,11 @@ async fn process_input<'a>(
         Input::Message(s) => {
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
             channel.broadcast_typing(&ctx).await?;
-            
+
             time::delay_for(Duration::from_millis(1500)).await;
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));
-            
+
             if data.messages.len() > data.max_history {
                 data.messages.remove(0);
             }

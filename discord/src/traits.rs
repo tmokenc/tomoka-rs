@@ -20,7 +20,6 @@ pub trait Embedable: Send {
     }
 }
 
-
 impl Embedable for requester::saucenao::SauceNao {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();

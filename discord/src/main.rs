@@ -1,18 +1,11 @@
 use dotenv::dotenv;
 use std::env;
+use tokio::runtime::Runtime;
 use tomoka_rs::Result;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     dotenv().ok();
-
-    if env::var("RUST_LOG").is_err() {
-        env::set_var("RUST_LOG", "info");
-    }
-
-    tomoka_rs::logger::init()?;
-
     let token = env::var("DISCORD_TOKEN")?;
-    tomoka_rs::start(token).await?;
-    Ok(())
+    tomoka_rs::logger::init()?;
+    Runtime::new()?.block_on(tomoka_rs::start(token))
 }

@@ -37,9 +37,9 @@ use colorful::{Color, Colorful};
 use eliza::Eliza;
 use futures::future;
 use magic::dark_magic::has_external_command;
+use serenity::client::bridge::gateway::GatewayIntents;
 use serenity::model::id::GuildId;
 use serenity::Client;
-use serenity::client::bridge::gateway::GatewayIntents;
 use tokio::signal::{self, unix};
 use tokio::sync::Mutex;
 
