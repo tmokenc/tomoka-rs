@@ -84,12 +84,20 @@ async fn remind_me(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     
     let send_msg = msg.channel_id.send_message(ctx, move |m| m.embed(move |embed| {
         let formated_duration = format_duration(duration);
-        let formated_date = date.format("%F %r");
-        let mess = format!("A reminder has been set for {} ({} UTC)", formated_duration, formated_date);
+        let formated_date = date.format("%F %T UTC");
+        let mess = format!("I will remind you in **{}**", formated_duration);
         
         embed.description(mess);
+        embed.title(":alarm_clock:Reminder");
         embed.image("https://cdn.discordapp.com/attachments/450521152272728065/708817978594033804/Diancie.gif");
         embed.color(color);
+        embed.timestamp(now());
+        
+        if !message.is_empty() {
+            embed.field("Message", message, false);
+        }
+        
+        embed.field("Appointment Date", formated_date, false);
         embed
     }));
     
