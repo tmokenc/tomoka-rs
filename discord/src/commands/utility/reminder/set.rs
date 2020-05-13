@@ -5,6 +5,8 @@ use humantime::{format_duration, parse_duration};
 use futures::future::{self, TryFutureExt};
 use std::sync::Arc;
 
+const MAX_LIMIT_DURATION: u64 = 60 * 60 * 24 * 90;
+
 #[command]
 /// Set a reminder
 async fn set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
@@ -60,7 +62,7 @@ async fn set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         args.advance();
     }
     
-    if duration.as_secs() > 60 * 60 * 24 * 90 {
+    if duration.as_secs() > MAX_LIMIT_DURATION {
         msg.channel_id.say(ctx, format!("The reminder cannot be greater than 90 days")).await?;
         return Ok(())
     }
@@ -75,7 +77,7 @@ async fn set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     
     let notify = match get_data::<ReminderNotify>(ctx).await {
         Some(s) => s,
-        None => return Err("The reminder system hasn't initialized yet, please wait a few nanosecond and try again".to_string().into()),
+        None => return Err("The reminder system hasn't initialized yet, please wait a few nanosecond and try again".into()),
     };
     
     let message = args.rest();

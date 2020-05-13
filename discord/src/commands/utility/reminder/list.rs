@@ -14,12 +14,17 @@ async fn list(ctx: &Context, msg: &Message) -> CommandResult {
         .map(|(_, v)| v)
         .filter(|v| v.user_id == msg.author.id.0)
         .zip(1..)
-        .map(|(v, i)| format!("{}. {} {}", i, v.when.format("%F %T UTC"), v.content.unwrap_or_default()))
+        .map(|(v, i)| format!("**{}.** *{}* __{}__", i, v.when.format("%F %T UTC"), v.content.unwrap_or_default()))
         .join('\n');
     
     msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-        embed.description(text);
-        embed.footer(|f| f.text("Use tomo>reminder remove {index} to remove a reminder"));
+        embed.description(if text.is_empty() {
+            "You haven't set any reminder yet"
+        } else {
+            text.as_str()
+        });
+        
+        embed.footer(|f| f.text("Use `tomo>reminder remove {index}` to remove a reminder"));
         embed.timestamp(now());
         embed
     })).await?;
