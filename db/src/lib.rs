@@ -30,6 +30,34 @@ impl Drop for DbInstance {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct Batch(sled::Batch);
+
+impl Batch {
+    pub fn new() -> Self {
+        Default::default()
+    }
+    
+    pub fn remove<S: Serialize>(&mut self, key: &S) -> Result<()> {
+        let data = ENCODER.serialize(key)?;
+        self.0.remove(data);
+        Ok(())
+    }
+    
+    pub fn insert<S: Serialize>(&mut self, key: &S, val: &S) -> Result<()> {
+        let k = ENCODER.serialize(key)?;
+        let v = ENCODER.serialize(val)?;
+        self.0.insert(k, v);
+        Ok(())
+    }
+}
+
+impl From<Batch> for sled::Batch {
+    fn from(b: Batch) -> sled::Batch {
+        b.0
+    }
+}
+
 pub struct Iter<K: DeserializeOwned, V: DeserializeOwned> {
     iter: sled::Iter,
     _marker: PhantomData<(K, V)>,
@@ -55,11 +83,7 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
                 let k = match ENCODER.deserialize(key) {
                     Ok(e) => e,
                     Err(why) => {
-                        match *why {
-                            bincode::ErrorKind::Custom(_) => {}
-                            e => error!("Cannot deserialize data | {}", e),
-                        }
-
+                        error!("Cannot deserialize data | {}", why);
                         return None;
                     }
                 };
@@ -67,11 +91,7 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
                 let v = match ENCODER.deserialize(val) {
                     Ok(e) => e,
                     Err(why) => {
-                        match *why {
-                            bincode::ErrorKind::Custom(_) => {}
-                            e => error!("Cannot deserialize data | {}", e),
-                        }
-
+                        error!("Cannot deserialize data | {}", why);
                         return None;
                     }
                 };
@@ -105,7 +125,7 @@ impl DbInstance {
         let manager = Arc::clone(&self.manager);
         Self::from_manager(manager, Some(tree))
     }
-
+    
     pub fn get<K, V>(&self, key: &K) -> Result<Option<V>>
     where
         K: Serialize,
@@ -143,6 +163,23 @@ impl DbInstance {
     pub fn remove<K: Serialize>(&self, key: &K) -> Result<()> {
         let k = ENCODER.serialize(key)?;
         self.tree().remove(&k)?;
+        Ok(())
+    }
+    
+    pub fn remove_many<K: Serialize, I: IntoIterator<Item=K>>(&self, keys: I) -> Result<()> {
+        let mut batch = sled::Batch::default();
+        
+        for key in keys {
+            let k = ENCODER.serialize(&key)?;
+            batch.remove(k);
+        }
+        
+        self.tree().apply_batch(batch)?;
+        Ok(())
+    }
+    
+    pub fn batch(&self, batch: Batch) -> Result<()> {
+        self.tree().apply_batch(batch.into())?;
         Ok(())
     }
 

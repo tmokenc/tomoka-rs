@@ -1,6 +1,5 @@
 use crate::cache::MyCache;
 use crate::events::RawEvents;
-use crate::types::Reminder;
 use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
@@ -37,9 +36,9 @@ impl TypeMapKey for VoiceManager {
     type Value = Arc<serenity::prelude::Mutex<ClientVoiceManager>>;
 }
 
-pub struct ReminderSender;
-impl TypeMapKey for ReminderSender {
-    type Value = tokio::sync::mpsc::Sender<(i64, Reminder)>;
+pub struct ReminderNotify;
+impl TypeMapKey for ReminderNotify {
+    type Value = Arc<tokio::sync::Notify>;
 }
 
 pub struct CacheStorage;

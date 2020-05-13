@@ -107,11 +107,11 @@ impl Embedable for Reminder {
         embed.color(color);
         embed.image("https://cdn.discordapp.com/attachments/450521152272728065/708817978594033804/Diancie.gif");
         
-        embed.field("When", self.when.format("%F %T UTC"), true);
-        
         if let Some(mess) = &self.content {
             embed.field("Message", mess, false);
         }
+        
+        embed.field("When", self.when.format("%F %T UTC"), true);
         
         embed
     }

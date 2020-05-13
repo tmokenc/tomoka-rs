@@ -5,11 +5,11 @@ import_all! {
     ehentai,
     search,
     search_image,
-    remind_me,
+    reminder,
     time
 }
 
 #[group]
-#[commands(search, search_image, remind_me, time)]
-#[sub_groups(Ehentai)]
+#[commands(search, search_image, time)]
+#[sub_groups(Ehentai, reminder)]
 struct Utility;

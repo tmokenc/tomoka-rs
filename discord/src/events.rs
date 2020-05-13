@@ -9,7 +9,7 @@ use serenity::model::{
 };
 
 use crate::cache::MessageCache;
-use crate::storages::{CacheStorage, DatabaseKey, ReminderSender};
+use crate::storages::{CacheStorage, DatabaseKey, ReminderNotify};
 use crate::types::Reminder;
 use crate::{utils::*, Result};
 
@@ -22,7 +22,6 @@ use std::convert::TryInto;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use std::borrow::Borrow;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
@@ -277,7 +276,8 @@ impl EventHandler for Handler {
             self.connected.store(true, Ordering::SeqCst);
 
             {
-                let (config, shard) = future::join(crate::read_config(), ctx.shard.lock()).await;
+                let config = crate::read_config().await;
+                let shard = &ctx.shard;
 
                 let ids = config.guilds.iter().map(|v| *v.key());
                 shard.chunk_guilds(ids, None, None);
@@ -448,10 +448,10 @@ async fn _process_deleted(
 }
 
 async fn reminder(ctx: Arc<Context>) {
-    use tokio::sync::mpsc;
+    use tokio::sync::Notify;
 
-    let (tx, mut rx) = mpsc::channel(50);
-    ctx.data.write().await.insert::<ReminderSender>(tx);
+    let notify = Arc::new(Notify::new());
+    ctx.data.write().await.insert::<ReminderNotify>(Arc::clone(&notify));
     let db = get_data::<DatabaseKey>(&*ctx)
         .await
         .and_then(|db| db.open("Reminders").ok())
@@ -486,35 +486,12 @@ async fn reminder(ctx: Arc<Context>) {
                         }
                     }
 
-                    val = rx.recv() => {
-                        if let Some((timestamp, reminder)) = val {
-                            add_reminder(&*ctx, &db, timestamp, reminder).await;
-                        }
-                    }
+                    _ = notify.notified() => {}
                 }
             }
 
-            None => {
-                if let Some((timestamp, reminder)) = rx.recv().await {
-                    add_reminder(&*ctx, &db, timestamp, reminder).await;
-                }
-            }
+            None => notify.notified().await
         }
-    }
-}
-
-#[inline]
-async fn add_reminder<C: Borrow<Context>>(
-    ctx: C,
-    db: &db::DbInstance, 
-    timestamp: i64, 
-    reminder: Reminder
-) {
-    info!("Got a reminder for {}", &timestamp);
-    if let Err(why) = db.insert(&timestamp, &reminder) {
-        error!("Error while adding a reminder to database {:?}", why);
-        ChannelId(reminder.channel_id)
-            .say(ctx.borrow(), "Error while adding the reminder to database, please try again later").await.ok();
     }
 }
 
