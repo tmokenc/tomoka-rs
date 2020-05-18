@@ -229,7 +229,8 @@ async fn normal_message(ctx: &Context, msg: &Message) {
         eliza_response,
         rgb_tu,
         find_sauce,
-        find_sadkaede
+        find_sadkaede,
+        find_nhentai
     }
 
     drop(config);
@@ -440,15 +441,14 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     }
 
     let timeout = Duration::from_secs(config.sauce.wait_duration as u64);
-    let emoji_id = match config.sauce.emoji {
-        Some(e) => e,
-        None => return Ok(()),
+    let reaction = match config.sauce.emoji.parse() {
+        Ok(r) => r,
+        Err(_) => return Ok(())
     };
-
+    
     drop(config);
 
     let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
-
     let sauces = msg
         .attachments
         .iter()
@@ -471,14 +471,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     }
 
     drop(req);
-
-    let reaction = EmojiIdentifier {
-        id: emoji_id,
-        name: String::from("sauce"),
-    };
-
     wait_for_react(ctx, msg, reaction, timeout, sauces).await?;
-
     Ok(())
 }
 
@@ -506,9 +499,9 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let emoji_id = match config.sadkaede.emoji {
-        Some(e) => e,
-        None => return Ok(()),
+    let reaction = match config.sadkaede.emoji.parse() {
+        Ok(r) => r,
+        Err(_) => return Ok(())
     };
 
     let timeout = Duration::from_secs(config.sadkaede.wait_duration as u64);
@@ -531,30 +524,76 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let reaction = EmojiIdentifier {
-        id: emoji_id,
-        name: String::from("sadkaede"),
-    };
-
     wait_for_react(ctx, msg, reaction, timeout, data).await?;
 
     Ok(())
 }
 
-async fn wait_for_react<D: Embedable>(
+// Simply a clone of the find_sauce due to similar functionality
+async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
+    use requester::nhentai::NhentaiScraper;
+    
+    let id = match msg.content.parse::<u64>() {
+        Ok(id) => id,
+        Err(_) => return Ok(()),
+    };
+    
+    let check_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
+    let check_own_msg = msg.is_own(&ctx);
+    let (nsfw ,own) = future::join(check_nsfw, check_own_msg).await;
+    
+    if !nsfw || own {
+        return Ok(())
+    }
+    
+    let config = crate::read_config().await;
+
+    let is_watching_channel = msg
+        .guild_id
+        .and_then(|v| config.guilds.get(&v))
+        .filter(|v| v.find_sadkaede.enable)
+        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
+        .is_some();
+
+    if !is_watching_channel {
+        return Ok(());
+    }
+
+    let reaction = match config.nhentai.emoji.parse() {
+        Ok(r) => r,
+        Err(_) => return Ok(())
+    };
+    
+    let timeout = Duration::from_secs(config.nhentai.wait_duration as u64);
+
+    drop(config);
+
+    let data = get_data::<ReqwestClient>(&ctx)
+        .await
+        .unwrap()
+        .gallery_by_id(id)
+        .await?;
+
+    if data.is_some() {
+        wait_for_react(ctx, msg, reaction, timeout, data).await?;
+    }
+
+    Ok(())
+}
+
+async fn wait_for_react<D: Embedable, I: IntoIterator<Item=D>>(
     ctx: &Context,
     msg: &Message,
-    emoji: EmojiIdentifier,
+    emoji: ReactionType,
     timeout: Duration,
-    data: Vec<D>,
+    data: I,
 ) -> Result<()> {
     msg.react(ctx, emoji.clone()).await?;
-
-    let emoji_id = emoji.id;
+    let emoji_data = emoji.as_data();
     let collector = msg
         .await_reaction(&ctx)
         .timeout(timeout)
-        .filter(move |v| matches!(v.emoji, ReactionType::Custom{ id, .. } if id == emoji_id))
+        .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
         .removed(false)
         .await;
 
@@ -567,7 +606,7 @@ async fn wait_for_react<D: Embedable>(
     }
 
     ctx.http
-        .delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji.into())
+        .delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji)
         .await?;
 
     Ok(())

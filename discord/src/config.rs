@@ -47,7 +47,7 @@ pub struct TouhouMusicQuest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Sauce {
     pub wait_duration: u16,
-    pub emoji: Option<EmojiId>,
+    pub emoji: String,
     pub thumbnail: String,
 }
 
@@ -55,8 +55,14 @@ pub struct Sauce {
 pub struct SadKaede {
     pub cookie: Option<String>,
     pub wait_duration: u16,
-    pub emoji: Option<EmojiId>,
+    pub emoji: String,
     pub thumbnail: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Nhentai {
+    pub wait_duration: u16,
+    pub emoji: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -92,6 +98,7 @@ pub struct Config {
     pub time: Time,
     pub sauce: Sauce,
     pub sadkaede: SadKaede,
+    pub nhentai: Nhentai,
     #[serde(default)]
     pub guilds: DashMap<GuildId, GuildConfig>,
     #[serde(default)]

@@ -57,15 +57,6 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         .intents(intents())
         .await?;
 
-    // Disable the default message cache and use our own. Just in case
-    client
-        .cache_and_http
-        .cache
-        .write()
-        .await
-        .settings_mut()
-        .max_messages(0);
-
     {
         let (mut data, config) = future::join(client.data.write(), read_config()).await;
 

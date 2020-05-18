@@ -220,8 +220,6 @@ pub async fn get_user_voice_channel(
     guild_id
         .to_guild_cached(&ctx)
         .await?
-        .read()
-        .await
         .voice_states
         .get(&mem)?
         .channel_id

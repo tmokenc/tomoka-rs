@@ -186,8 +186,8 @@ impl EventHandler for Handler {
         };
 
         let channel_id = event.channel_id;
-        let guild_id = match ctx.cache.read().await.guild_channel(channel_id.0) {
-            Some(channel) => channel.read().await.guild_id,
+        let guild_id = match ctx.cache.guild_channel(channel_id.0).await {
+            Some(channel) => channel.guild_id,
             None => return,
         };
 
@@ -334,8 +334,6 @@ async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
                 .guild(&ctx.cache)
                 .await
                 .unwrap()
-                .read()
-                .await
                 .name
                 .to_owned();
 
@@ -393,12 +391,9 @@ async fn _process_deleted(
         return Ok(());
     }
     
-    let (name, discriminator, is_bot) = match ctx.cache.read().await.user(msg.author_id) {
+    let (name, discriminator, is_bot) = match ctx.cache.user(msg.author_id).await {
         None => ("Unknown".to_string(), 0, false),
-        Some(user) => {
-            let info = user.read().await;
-            (info.name.to_owned(), info.discriminator, info.bot)
-        }
+        Some(info) => (info.name, info.discriminator, info.bot),
     };
     
     let color = crate::read_config().await.color.message_delete;
@@ -486,7 +481,7 @@ async fn reminder(ctx: Arc<Context>) {
                         }
                     }
 
-                    _ = notify.notified() => {}
+                    _= notify.notified() => {}
                 }
             }
 

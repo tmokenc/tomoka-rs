@@ -12,5 +12,6 @@ import_all! {
 #[group]
 #[prefixes("guild_option", "option", "opt")]
 #[only_in("guilds")]
+#[owner_privilege]
 #[sub_groups(Prefix, Logger, FindSauce, FindSadKaede, RepeatWords)]
 struct GuildMaster;

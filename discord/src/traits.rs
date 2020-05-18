@@ -255,3 +255,52 @@ impl Embedable for requester::ehentai::Gmetadata {
         embed
     }
 }
+
+impl Embedable for requester::nhentai::NhentaiGallery {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        let metadata = self.metadata();
+        let mut description = format!(
+            "**Category**: {}\n**Language**: {}\n**Total Pages**: {}\n",
+            metadata.categories.join(", "),
+            metadata.languages.join(", "),
+            self.images.pages.len(),
+        );
+        
+        if let Some(parodies) = metadata.parodies {
+            let data = format!("**Parody**: {}\n", parodies.join(", "));
+            description.push_str(&data);
+        }
+        
+        if let Some(characters) = metadata.characters {
+            let data = format!("**Characters**: {}\n", characters.join(", "));
+            description.push_str(&data);
+        }
+        
+        if let Some(groups) = metadata.groups {
+            let data = format!("**Groups**: {}\n", groups.join(", "));
+            description.push_str(&data);
+        }
+        
+        if let Some(artists) = metadata.artists {
+            let data = format!("**Artists**: {}\n", artists.join(", "));
+            description.push_str(&data);
+        }
+        
+        let color = {
+            let num_length = (self.id as f32 + 1.0).log10().ceil() as u64;
+            self.media_id * num_length + self.id
+        };
+        
+        embed.title(&self.title.pretty);
+        embed.url(self.url());
+        embed.thumbnail(self.thumbnail());
+        embed.description(description);
+        embed.color(color & 0xffffff);
+        
+        if let Some(tags) = metadata.tags {
+            embed.field("Tags", tags.join(", "), false);
+        }
+        
+        embed
+    }
+}
