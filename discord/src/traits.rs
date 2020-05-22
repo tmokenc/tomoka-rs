@@ -20,6 +20,14 @@ pub trait Embedable: Send {
     }
 }
 
+pub trait Paginator {
+    /// Notice that the page start at 1
+    fn append_page_data<'a>(&self, page: usize, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed;
+    fn total_pages(&self) -> Option<usize> {
+        None
+    }
+}
+
 impl Embedable for requester::saucenao::SauceNao {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();
@@ -263,7 +271,7 @@ impl Embedable for requester::nhentai::NhentaiGallery {
             "**Category**: {}\n**Language**: {}\n**Total Pages**: {}\n",
             metadata.categories.join(", "),
             metadata.languages.join(", "),
-            self.images.pages.len(),
+            self.total_pages(),
         );
         
         if let Some(parodies) = metadata.parodies {
@@ -272,17 +280,17 @@ impl Embedable for requester::nhentai::NhentaiGallery {
         }
         
         if let Some(characters) = metadata.characters {
-            let data = format!("**Characters**: {}\n", characters.join(", "));
+            let data = format!("**Character**: {}\n", characters.join(", "));
             description.push_str(&data);
         }
         
         if let Some(groups) = metadata.groups {
-            let data = format!("**Groups**: {}\n", groups.join(", "));
+            let data = format!("**Group**: {}\n", groups.join(", "));
             description.push_str(&data);
         }
         
         if let Some(artists) = metadata.artists {
-            let data = format!("**Artists**: {}\n", artists.join(", "));
+            let data = format!("**Artist**: {}\n", artists.join(", "));
             description.push_str(&data);
         }
         
@@ -302,5 +310,48 @@ impl Embedable for requester::nhentai::NhentaiGallery {
         }
         
         embed
+    }
+}
+
+impl<E: Embedable> Paginator for Vec<E> {
+    fn append_page_data<'a>(&self, page: usize, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        match self.get(page - 1) {
+            Some(data) => data.append_to(embed),
+            None => embed.description("This page does not exist")
+        }
+    }
+    
+    #[inline]
+    fn total_pages(&self) -> Option<usize> {
+        Some(self.len())
+    }
+}
+
+impl Paginator for requester::nhentai::NhentaiGallery {
+    fn append_page_data<'a>(&self, page: usize, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        let total_pages = self.total_pages();
+        let color = {
+            let num_length = (self.id as f32 + 1.0).log10().ceil() as u64;
+            self.media_id * num_length + self.id
+        };
+        
+        embed.title(&self.title.pretty);
+        embed.url(self.url());
+        embed.thumbnail(self.thumbnail());
+        embed.color(color & 0xffffff);
+        embed.footer(|f| {
+            f.text(format!("id: {} | Page {} / {}", self.id, page, total_pages))
+        });
+        
+        match self.page(page) {
+            Some(p) => embed.image(p),
+            None => embed.description(format!("Out of page, this gallery has only {} pages", total_pages))
+        };
+        
+        embed
+    }
+    
+    fn total_pages(&self) -> Option<usize> {
+        Some(self.total_pages())
     }
 }

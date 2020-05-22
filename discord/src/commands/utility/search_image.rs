@@ -1,4 +1,5 @@
 use crate::commands::prelude::*;
+use crate::traits::Embedable;
 use requester::GoogleScraper as _;
 // use requester::DuckDuckGoScraper as _;
 use requester::google::GoogleImageData;
@@ -46,13 +47,16 @@ async fn search_image(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         .map(|v| ImageSearch::from(v))
         .collect::<Vec<_>>();
     
-    paginator(ctx, msg, data, embed_data).await?;
+    paginator(ctx, msg, data).await?;
     Ok(())
 }
 
-fn embed_data<'a>(embed: &'a mut CreateEmbed, data: &ImageSearch) -> &'a mut CreateEmbed {
-    embed.title(&data.title);
-    embed.url(&data.url);
-    embed.image(&data.image);
-    embed
+impl Embedable for ImageSearch {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        embed.title(&self.title);
+        embed.url(&self.url);
+        embed.image(&self.image);
+        embed
+        
+    }
 }

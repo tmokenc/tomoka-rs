@@ -21,9 +21,9 @@ use colorful::RGB;
 use crate::storages::*;
 use crate::types::GuildConfig;
 use crate::Result;
+use crate::traits::Paginator;
 
 use serenity::{
-    builder::CreateEmbed,
     client::Context,
     model::{
         channel::{Message, ReactionType},
@@ -110,34 +110,133 @@ pub fn colored_name_user(user: &User) -> CString {
     name.color(color)
 }
 
-pub async fn paginator<C: Borrow<Context>, T>(
+// pub async fn paginator<C: Borrow<Context>, T>(
+//     ctx: C,
+//     msg: &Message,
+//     data: Vec<T>,
+//     f: for<'a> fn(&'a mut CreateEmbed, &T) -> &'a mut CreateEmbed,
+// ) -> Result<()> {
+//     const REACTIONS: &[&str] = &["◀️", "▶️", "❌"];
+//     const WAIT_TIME: Duration = Duration::from_secs(30);
+// 
+//     let val = match data.get(0) {
+//         Some(v) => v,
+//         None => return Ok(()),
+//     };
+// 
+//     let ctx = ctx.borrow();
+//     let total = data.len();
+//     let mut current_page = 1;
+//     let mut mess = msg
+//         .channel_id
+//         .send_message(ctx, move |message| {
+//             let reactions = REACTIONS
+//                 .iter()
+//                 .map(|&s| ReactionType::try_from(s).unwrap());
+// 
+//             message.reactions(reactions);
+//             message.embed(move |embed| {
+//                 embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
+//                 f(embed, val)
+//             });
+//             message
+//         })
+//         .await?;
+// 
+//     let mut collector = mess
+//         .await_reactions(&ctx)
+//         .author_id(msg.author.id)
+//         .filter(|reaction| {
+//             matches!(&reaction.emoji, ReactionType::Unicode(s) if REACTIONS.contains(&s.as_str()))
+//         })
+//         .await;
+// 
+//     while let Ok(Some(reaction)) = timeout(WAIT_TIME, collector.next()).await {
+//         let reaction = reaction.as_inner_ref();
+// 
+//         let http = Arc::clone(&ctx.http);
+//         let react = reaction.to_owned();
+//         tokio::spawn(async move {
+//             react.delete(http).await.ok();
+//         });
+// 
+//         let emoji = match &reaction.emoji {
+//             ReactionType::Unicode(s) => s,
+//             _ => continue,
+//         };
+// 
+//         match emoji.as_str() {
+//             "◀️" => {
+//                 if current_page == 1 {
+//                     continue;
+//                 }
+// 
+//                 current_page -= 1;
+//             }
+// 
+//             "▶️" => {
+//                 if total == current_page {
+//                     continue;
+//                 }
+// 
+//                 current_page += 1;
+//             }
+// 
+//             "❌" => {
+//                 mess.delete(ctx).await?;
+//                 return Ok(());
+//             }
+//             _ => continue,
+//         }
+// 
+//         let val = unsafe { data.get_unchecked(current_page - 1) };
+// 
+//         mess.edit(ctx, move |message| {
+//             message.embed(|embed| {
+//                 embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
+//                 f(embed, val)
+//             });
+//             message
+//         })
+//         .await?;
+//     }
+// 
+//     drop(collector);
+// 
+//     let futs = REACTIONS
+//         .into_iter()
+//         .map(|&s| ReactionType::try_from(s).unwrap())
+//         .map(|s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
+// 
+//     futures::future::join_all(futs).await;
+//     Ok(())
+// }
+
+pub async fn paginator<C: Borrow<Context>, P: Paginator>(
     ctx: C,
     msg: &Message,
-    data: Vec<T>,
-    f: for<'a> fn(&'a mut CreateEmbed, &T) -> &'a mut CreateEmbed,
+    data: P,
 ) -> Result<()> {
     const REACTIONS: &[&str] = &["◀️", "▶️", "❌"];
     const WAIT_TIME: Duration = Duration::from_secs(30);
 
-    let val = match data.get(0) {
-        Some(v) => v,
-        None => return Ok(()),
-    };
-
     let ctx = ctx.borrow();
-    let total = data.len();
+    let total = data.total_pages();
     let mut current_page = 1;
     let mut mess = msg
         .channel_id
-        .send_message(ctx, move |message| {
+        .send_message(ctx, |message| {
             let reactions = REACTIONS
                 .iter()
                 .map(|&s| ReactionType::try_from(s).unwrap());
 
             message.reactions(reactions);
-            message.embed(move |embed| {
-                embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
-                f(embed, val)
+            message.embed(|embed| {
+                if let Some(total) = total {
+                    embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
+                }
+                
+                data.append_page_data(current_page, embed)
             });
             message
         })
@@ -175,7 +274,7 @@ pub async fn paginator<C: Borrow<Context>, T>(
             }
 
             "▶️" => {
-                if total == current_page {
+                if matches!(total, Some(max) if current_page >= max) {
                     continue;
                 }
 
@@ -189,12 +288,13 @@ pub async fn paginator<C: Borrow<Context>, T>(
             _ => continue,
         }
 
-        let val = unsafe { data.get_unchecked(current_page - 1) };
-
-        mess.edit(ctx, move |message| {
+        mess.edit(ctx, |message| {
             message.embed(|embed| {
-                embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
-                f(embed, val)
+                if let Some(total) = total {
+                    embed.footer(|f| f.text(format!("{}/{}", current_page, total)));
+                }
+                
+                data.append_page_data(current_page, embed)
             });
             message
         })
