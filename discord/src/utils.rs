@@ -89,10 +89,9 @@ pub fn parse_eh_token(content: &str) -> Vec<(u32, String)> {
     KAEDE_REG
         .captures_iter(content)
         .filter_map(|res| {
-            res.get(2)
-                .and_then(|v| v.as_str().parse::<u32>().ok())
-                .and_then(|v| res.get(3).map(|x| (v, x)))
-                .map(|(v, x)| (v, x.as_str().to_string()))
+            let id = res.get(2)?.as_str().parse::<u32>().ok()?;
+            let token = res.get(3)?.as_str().to_string();
+            Some((id, token))
         })
         .collect()
 }

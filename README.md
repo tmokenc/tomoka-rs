@@ -19,7 +19,7 @@ cd tomoka-rs
 ```
 And then build the bot
 ```bash
-cargo build --release --bin tomoka_rs
+cargo build --release
 ```
 *You may see some warning about unused variable stuff due to the incomplete `radio` command*
  
@@ -28,7 +28,7 @@ The whole process should be
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://gitlab.com/tmokenc/tomoka-rs
 cd tomoka-rs
-cargo build --release --bin tomoka_rs
+cargo build --release
 ```
 ## Usage
 
@@ -41,10 +41,8 @@ export DISCORD_TOKEN="your-extremely-secret-token"
 Then run it
 
 ```bash
-cargo run --release --bin tomoka_rs
+cargo run --release
 ```
-
-*There are a bunch of useless binaries in the codebase, so we must specific the bot binary here*
 
 ## Structure
 
@@ -52,7 +50,6 @@ The structure of this codebase (kind of mess though) <br>
 (*Navigate into each folder to read its README*) <br>
 (*Still nothing yet ~~thanks to my laziness~~*)
 + [Discord](discord) (The main bot source code)
-+ [Server](server) (The web server for the bot, but nothing is there yet)
 + [Db](db) (Database related stuff)
 + [Bins](bins) (useless binaries)
 
@@ -86,9 +83,6 @@ The structure of this codebase (kind of mess though) <br>
     - [ ] Decode
 - [ ] Better guild option
 - [ ] Better documentation
-- [ ] Web server 
-    - [ ] GitLab webhook
-    - [ ] Web documentation
 
 ## Support
 
