@@ -266,6 +266,11 @@ impl Embedable for requester::nhentai::NhentaiGallery {
             self.total_pages(),
         );
         
+        if !self.scanlator.is_empty() {
+            let data = format!("**Scanlator**: {}\n", &self.scanlator);
+            description.push_str(&data);
+        }
+        
         if let Some(parodies) = metadata.parodies {
             let data = format!("**Parody**: {}\n", parodies.join(", "));
             description.push_str(&data);
@@ -296,6 +301,7 @@ impl Embedable for requester::nhentai::NhentaiGallery {
         embed.thumbnail(self.thumbnail());
         embed.description(description);
         embed.color(color & 0xffffff);
+        embed.timestamp(Utc.timestamp(self.upload_date as _, 0).to_rfc3339());
         
         if let Some(tags) = metadata.tags {
             embed.field("Tags", tags.join(", "), false);

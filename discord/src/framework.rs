@@ -15,7 +15,7 @@ use serenity::model::{
 use crate::{
     commands::*,
     storages::{AIStore, InforKey, ReqwestClient},
-    traits::Embedable,
+    traits::{Embedable, Paginator},
     utils::*,
     Result,
 };
@@ -568,14 +568,36 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
 
     drop(config);
 
-    let data = get_data::<ReqwestClient>(&ctx)
+    let data = get_data::<ReqwestClient>(ctx)
         .await
         .unwrap()
         .gallery_by_id(id)
         .await?;
 
-    if data.is_some() {
-        wait_for_react(ctx, msg, reaction, timeout, data).await?;
+    if let Some(g) = data {
+        let msgs = wait_for_react(ctx, msg, reaction, timeout, Some(g.clone())).await?;
+        
+        if let Some(message) = msgs.as_ref().and_then(|v| v.get(0)) {
+            let emoji = ReactionType::Unicode(String::from("📖"));
+            let emoji_data = emoji.as_data();
+            
+            message.react(ctx, emoji.clone()).await?;
+            
+            let collector = message
+                .await_reaction(ctx)
+                .timeout(Duration::from_secs(30))
+                .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
+                .removed(false)
+                .await;
+        
+            ctx.http
+                .delete_reaction(msg.channel_id.0, message.id.0, None, &emoji)
+                .await?;
+                
+            if collector.is_some() {
+                g.pagination(ctx, msg).await?;
+            }
+        }
     }
 
     Ok(())
@@ -587,7 +609,7 @@ async fn wait_for_react<D: Embedable, I: IntoIterator<Item=D>>(
     emoji: ReactionType,
     timeout: Duration,
     data: I,
-) -> Result<()> {
+) -> Result<Option<Vec<Message>>> {
     msg.react(ctx, emoji.clone()).await?;
     let emoji_data = emoji.as_data();
     let collector = msg
@@ -597,17 +619,25 @@ async fn wait_for_react<D: Embedable, I: IntoIterator<Item=D>>(
         .removed(false)
         .await;
 
+    let mut messages = None;
+    
     if collector.is_some() {
+        let mut msgs = Vec::new();
+        
         for d in data {
-            msg.channel_id
+            let mess = msg.channel_id
                 .send_message(&ctx, |m| m.embed(|embed| d.append_to(embed)))
                 .await?;
+                
+            msgs.push(mess);
         }
+        
+        messages = Some(msgs);
     }
 
     ctx.http
         .delete_reaction(msg.channel_id.0, msg.id.0, None, &emoji)
         .await?;
 
-    Ok(())
+    Ok(messages)
 }

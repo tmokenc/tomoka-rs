@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::traits::Embedable;
+use crate::traits::{Embedable, Paginator};
 use serenity::model::channel::ReactionType;
 use std::time::Duration;
 use requester::NhentaiScraper;
@@ -37,7 +37,7 @@ async fn nhentai(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
             .await?;
             
         if collector.is_some() {
-            paginator(ctx, msg, g).await?;
+            g.pagination(ctx, msg).await?;
         }
     } else {
         return Err(format!("Cannot find any with the magic number {}", id.unwrap_or(0)).into())

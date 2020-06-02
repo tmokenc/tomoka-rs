@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::traits::Embedable;
+use crate::traits::{Embedable, Paginator};
 use requester::GoogleScraper as _;
 // use requester::DuckDuckGoScraper as _;
 use requester::google::GoogleImageData;
@@ -37,17 +37,18 @@ impl From<DuckDuckGoImageData> for ImageSearch {
 async fn search_image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let text = args.rest();
     let sfw = !is_nsfw_channel(&ctx, msg.channel_id).await;
-    let data = get_data::<ReqwestClient>(&ctx)
+    
+    get_data::<ReqwestClient>(&ctx)
         .await
         .ok_or(magic::Error)?
         .google_image(text, sfw)
-        //.duck_image(text, 0, true)
         .await?
         .into_iter()
-        .map(|v| ImageSearch::from(v))
-        .collect::<Vec<_>>();
+        .map(ImageSearch::from)
+        .collect::<Vec<_>>()
+        .pagination(ctx, msg)
+        .await?;
     
-    paginator(ctx, msg, data).await?;
     Ok(())
 }
 
