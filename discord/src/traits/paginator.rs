@@ -159,8 +159,9 @@ pub trait Paginator {
         let mut mess = msg
             .channel_id
             .send_message(ctx, |message| {
+                let page = unsafe { NonZeroUsize::new_unchecked(current_page) };
                 message.reactions(reactions.iter().cloned());
-                message.embed(|embed| self.append_page_data(current_page, embed));
+                message.embed(|embed| self.append_page_data(page, embed));
                 message
             })
             .await?;
@@ -224,7 +225,7 @@ pub trait Paginator {
                 _ => continue,
             }
 
-            let page = unsafe { NoneZeroUsize::new_unchecked(current_page) };
+            let page = unsafe { NonZeroUsize::new_unchecked(current_page) };
             mess.edit(ctx, |m| m.embed(|e| self.append_page_data(page, e)))
                 .await?;
         }
