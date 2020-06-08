@@ -330,12 +330,7 @@ async fn get_colored_channel_info(ctx: &Context, c: ChannelId) -> String {
 
     match c.to_channel(ctx).await {
         Ok(Guild(channel)) => {
-            let guild_name = channel
-                .guild(&ctx.cache)
-                .await
-                .unwrap()
-                .name
-                .to_owned();
+            let guild_name = channel.guild(&ctx.cache).await.unwrap().name.to_owned();
 
             format!(
                 "channel {}({}) at server {}",
@@ -446,7 +441,10 @@ async fn reminder(ctx: Arc<Context>) {
     use tokio::sync::Notify;
 
     let notify = Arc::new(Notify::new());
-    ctx.data.write().await.insert::<ReminderNotify>(Arc::clone(&notify));
+    ctx.data
+        .write()
+        .await
+        .insert::<ReminderNotify>(Arc::clone(&notify));
     let db = get_data::<DatabaseKey>(&*ctx)
         .await
         .and_then(|db| db.open("Reminders").ok())
@@ -461,11 +459,11 @@ async fn reminder(ctx: Arc<Context>) {
                     Ok(d) => Duration::from_secs(d),
                     Err(_) => {
                         value.remind(&*ctx).await.ok();
-                        
+
                         if let Err(why) = db.remove(&timestamp) {
                             error!("Error while removing the reminder {:?}", why);
                         }
-                        
+
                         continue;
                     }
                 };
@@ -475,7 +473,7 @@ async fn reminder(ctx: Arc<Context>) {
                 tokio::select! {
                     _ = time::delay_for(duration) => {
                         value.remind(&*ctx).await.ok();
-                        
+
                         if let Err(why) = db.remove(&timestamp) {
                             error!("Error while removing the reminder {:?}", why);
                         }
@@ -485,7 +483,7 @@ async fn reminder(ctx: Arc<Context>) {
                 }
             }
 
-            None => notify.notified().await
+            None => notify.notified().await,
         }
     }
 }

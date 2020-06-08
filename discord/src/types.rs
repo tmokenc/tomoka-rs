@@ -96,23 +96,32 @@ impl Reminder {
 
 impl Embedable for Reminder {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
-        let guild = self.guild_id.map(|v| v.to_string()).unwrap_or_else(|| String::from("@me"));
+        let guild = self
+            .guild_id
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| String::from("@me"));
         let dur = humantime::format_duration(self.duration);
-        let url = format!("https://discord.com/channels/{}/{}/{}", guild, self.channel_id, self.msg_id);
-        let msg = format!("Just remind you that you have a [reminder]({}) from {} ago", url, dur);
+        let url = format!(
+            "https://discord.com/channels/{}/{}/{}",
+            guild, self.channel_id, self.msg_id
+        );
+        let msg = format!(
+            "Just remind you that you have a [reminder]({}) from {} ago",
+            url, dur
+        );
         let color = self.when.timestamp() as u64 & 0xffffff;
-        
+
         embed.title(":alarm_clock: REMINDERRRR!!!");
         embed.description(msg);
         embed.color(color);
         embed.image("https://cdn.discordapp.com/attachments/450521152272728065/708817978594033804/Diancie.gif");
-        
+
         if let Some(mess) = &self.content {
             embed.field("Message", mess, false);
         }
-        
+
         embed.field("When", self.when.format("%F %T UTC"), true);
-        
+
         embed
     }
 }

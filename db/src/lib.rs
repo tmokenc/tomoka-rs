@@ -37,13 +37,13 @@ impl Batch {
     pub fn new() -> Self {
         Default::default()
     }
-    
+
     pub fn remove<S: Serialize>(&mut self, key: &S) -> Result<()> {
         let data = ENCODER.serialize(key)?;
         self.0.remove(data);
         Ok(())
     }
-    
+
     pub fn insert<S: Serialize>(&mut self, key: &S, val: &S) -> Result<()> {
         let k = ENCODER.serialize(key)?;
         let v = ENCODER.serialize(val)?;
@@ -125,7 +125,7 @@ impl DbInstance {
         let manager = Arc::clone(&self.manager);
         Self::from_manager(manager, Some(tree))
     }
-    
+
     pub fn get<K, V>(&self, key: &K) -> Result<Option<V>>
     where
         K: Serialize,
@@ -165,19 +165,19 @@ impl DbInstance {
         self.tree().remove(&k)?;
         Ok(())
     }
-    
-    pub fn remove_many<K: Serialize, I: IntoIterator<Item=K>>(&self, keys: I) -> Result<()> {
+
+    pub fn remove_many<K: Serialize, I: IntoIterator<Item = K>>(&self, keys: I) -> Result<()> {
         let mut batch = sled::Batch::default();
-        
+
         for key in keys {
             let k = ENCODER.serialize(&key)?;
             batch.remove(k);
         }
-        
+
         self.tree().apply_batch(batch)?;
         Ok(())
     }
-    
+
     pub fn batch(&self, batch: Batch) -> Result<()> {
         self.tree().apply_batch(batch.into())?;
         Ok(())

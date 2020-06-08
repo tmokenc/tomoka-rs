@@ -443,9 +443,9 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     let timeout = Duration::from_secs(config.sauce.wait_duration as u64);
     let reaction = match config.sauce.emoji.parse() {
         Ok(r) => r,
-        Err(_) => return Ok(())
+        Err(_) => return Ok(()),
     };
-    
+
     drop(config);
 
     let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
@@ -501,7 +501,7 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
 
     let reaction = match config.sadkaede.emoji.parse() {
         Ok(r) => r,
-        Err(_) => return Ok(())
+        Err(_) => return Ok(()),
     };
 
     let timeout = Duration::from_secs(config.sadkaede.wait_duration as u64);
@@ -532,20 +532,20 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
 // Simply a clone of the find_sauce due to similar functionality
 async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
     use requester::nhentai::NhentaiScraper;
-    
+
     let id = match msg.content.parse::<u64>() {
         Ok(id) => id,
         Err(_) => return Ok(()),
     };
-    
+
     let check_nsfw = is_nsfw_channel(&ctx, msg.channel_id);
     let check_own_msg = msg.is_own(&ctx);
-    let (nsfw ,own) = future::join(check_nsfw, check_own_msg).await;
-    
+    let (nsfw, own) = future::join(check_nsfw, check_own_msg).await;
+
     if !nsfw || own {
-        return Ok(())
+        return Ok(());
     }
-    
+
     let config = crate::read_config().await;
 
     let is_watching_channel = msg
@@ -561,9 +561,9 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
 
     let reaction = match config.nhentai.emoji.parse() {
         Ok(r) => r,
-        Err(_) => return Ok(())
+        Err(_) => return Ok(()),
     };
-    
+
     let timeout = Duration::from_secs(config.nhentai.wait_duration as u64);
 
     drop(config);
@@ -576,24 +576,24 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
 
     if let Some(g) = data {
         let msgs = wait_for_react(ctx, msg, reaction, timeout, Some(g.clone())).await?;
-        
+
         if let Some(message) = msgs.as_ref().and_then(|v| v.get(0)) {
             let emoji = ReactionType::Unicode(String::from("📖"));
             let emoji_data = emoji.as_data();
-            
+
             message.react(ctx, emoji.clone()).await?;
-            
+
             let collector = message
                 .await_reaction(ctx)
                 .timeout(Duration::from_secs(30))
                 .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
                 .removed(false)
                 .await;
-        
+
             ctx.http
                 .delete_reaction(msg.channel_id.0, message.id.0, None, &emoji)
                 .await?;
-                
+
             if collector.is_some() {
                 g.pagination(ctx, msg).await?;
             }
@@ -603,7 +603,7 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
     Ok(())
 }
 
-async fn wait_for_react<D: Embedable, I: IntoIterator<Item=D>>(
+async fn wait_for_react<D: Embedable, I: IntoIterator<Item = D>>(
     ctx: &Context,
     msg: &Message,
     emoji: ReactionType,
@@ -620,18 +620,19 @@ async fn wait_for_react<D: Embedable, I: IntoIterator<Item=D>>(
         .await;
 
     let mut messages = None;
-    
+
     if collector.is_some() {
         let mut msgs = Vec::new();
-        
+
         for d in data {
-            let mess = msg.channel_id
+            let mess = msg
+                .channel_id
                 .send_message(&ctx, |m| m.embed(|embed| d.append_to(embed)))
                 .await?;
-                
+
             msgs.push(mess);
         }
-        
+
         messages = Some(msgs);
     }
 
