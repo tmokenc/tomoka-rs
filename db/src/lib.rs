@@ -7,16 +7,14 @@ use std::error::Error;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::sync::Arc;
+use bincode::config::{Options, DefaultOptions, WithOtherEndian, BigEndian};
 
 type Manager = Arc<Db>;
 type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
+type Encoder = WithOtherEndian<DefaultOptions, BigEndian>;
 
 lazy_static! {
-    static ref ENCODER: bincode::Config = {
-        let mut c = bincode::config();
-        c.big_endian();
-        c
-    };
+    static ref ENCODER: Encoder = DefaultOptions::new().with_big_endian();
 }
 
 pub struct DbInstance {
@@ -44,7 +42,7 @@ impl Batch {
         Ok(())
     }
 
-    pub fn insert<S: Serialize>(&mut self, key: &S, val: &S) -> Result<()> {
+    pub fn insert<K: Serialize, V: Serialize>(&mut self, key: &K, val: &V) -> Result<()> {
         let k = ENCODER.serialize(key)?;
         let v = ENCODER.serialize(val)?;
         self.0.insert(k, v);

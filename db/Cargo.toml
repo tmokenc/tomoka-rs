@@ -10,5 +10,5 @@ edition = "2018"
 serde = "1"
 bincode = "1"
 lazy_static = "1"
-sled = { version = "0.31", features = ["compression"] }
+sled = { version = "0.32", features = ["compression"] }
 log = "0.4"
