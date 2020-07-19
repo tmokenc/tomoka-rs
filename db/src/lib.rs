@@ -1,3 +1,4 @@
+use bincode::config::{BigEndian, DefaultOptions, Options, WithOtherEndian};
 use lazy_static::lazy_static;
 use log::error;
 use serde::de::DeserializeOwned;
@@ -7,7 +8,6 @@ use std::error::Error;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::sync::Arc;
-use bincode::config::{Options, DefaultOptions, WithOtherEndian, BigEndian};
 
 type Manager = Arc<Db>;
 type Result<T> = std::result::Result<T, Box<dyn Error + Sync + Send>>;
@@ -73,7 +73,7 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iter<K, V> {
             _marker: PhantomData,
         }
     }
-    
+
     pub fn keys(self) -> IterKey<K> {
         IterKey {
             iter: self.iter,
@@ -119,13 +119,11 @@ impl<K: DeserializeOwned> Iterator for IterKey<K> {
             .by_ref()
             .filter_map(|v| v.ok())
             .map(|(key, _)| key)
-            .find_map(|ref key| {
-                match ENCODER.deserialize(key) {
-                    Ok(e) => Some(e),
-                    Err(why) => {
-                        error!("Cannot deserialize key | {}", why);
-                        return None;
-                    }
+            .find_map(|ref key| match ENCODER.deserialize(key) {
+                Ok(e) => Some(e),
+                Err(why) => {
+                    error!("Cannot deserialize key | {}", why);
+                    return None;
                 }
             })
     }
@@ -178,7 +176,7 @@ impl DbInstance {
         let iter = self.tree().iter();
         Iter::<K, V>::new(iter)
     }
-    
+
     pub fn get_all_keys<K: DeserializeOwned>(&self) -> IterKey<K> {
         IterKey {
             iter: self.tree().iter(),

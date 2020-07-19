@@ -7,8 +7,8 @@ extern crate config as lib_config;
 
 mod cache;
 mod commands;
-mod constants;
 mod config;
+mod constants;
 mod events;
 mod framework;
 mod global;
@@ -71,7 +71,7 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
                 }
             }
         };
-        
+
         let req = Reqwest::new();
         fetch_guild_config_from_db(&db).await?;
         if let Err(why) = commands::pokemon::update_pokemon(&db, &req).await {
