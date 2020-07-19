@@ -1,6 +1,7 @@
 use crate::commands::prelude::*;
 use requester::smogon::{MoveSet, SmogonApi as _};
 use scraper::{Html, Selector};
+use magic::traits::MagicIter;
 
 #[command]
 #[aliases("smogon", "strategy")]
@@ -12,14 +13,11 @@ async fn smogon_strategy(ctx: &Context, msg: &Message, args: Args) -> CommandRes
     let strategies = get_data::<ReqwestClient>(&ctx)
         .await
         .unwrap()
-        .strategy(&aliasized, None)
+        .strategy(&aliasized, Default::default())
         .await?;
 
     if strategies.is_empty() {
-        let color = {
-            let config = crate::read_config().await;
-            config.color.error
-        };
+        let color = crate::read_config().await.color.error;
         
         msg.channel_id.send_message(&ctx, |m| {
             m.embed(|embed| {
@@ -98,7 +96,19 @@ fn format_moveset(m: &MoveSet) -> String {
         m.moveslots
             .iter()
             .zip(1..)
-            .map(|(v, i)| format!("{}. {}\n", i, v.join(" / ")))
+            .map(|(v, i)| {
+                let moves = v.iter().map(|v| {
+                    let mut res = v.name.to_owned();
+                    if let Some(ref typ) = v.typ {
+                        res.push(' ');
+                        res.push_str(typ);
+                    }
+                    res
+                }).join(" / ");
+                
+                format!("{}. {}\n", i, moves)
+                
+            })
             .collect::<String>(),
         m.items.join(" / "),
         m.nature(),

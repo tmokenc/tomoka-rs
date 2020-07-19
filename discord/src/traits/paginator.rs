@@ -33,9 +33,7 @@ pub enum PaginatorAction {
 impl FromStr for PaginatorAction {
     type Err = Void;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let s = s.to_lowercase();
-
-        let res = match s.trim() {
+        let res = match s.to_lowercase().trim() {
             "first" => Self::First,
             "previous" => Self::Previous,
             "next" => Self::Next,
@@ -208,8 +206,8 @@ pub trait Paginator {
                 },
 
                 PaginatorAction::Last => match total {
-                    Some(max) => current_page = max,
-                    None => continue,
+                    Some(max) if current_page != max => current_page = max,
+                    _ => continue,
                 },
 
                 PaginatorAction::Page(page) if current_page != page => match total {
@@ -248,7 +246,7 @@ impl<E: Embedable> Paginator for Vec<E> {
         page: NonZeroUsize,
         embed: &'a mut CreateEmbed,
     ) -> &'a mut CreateEmbed {
-        let page = page.get() - 1;
+        let page = page.get();
         embed.footer(|f| f.text(format!("{} / {}", page, self.len())));
         match self.get(page - 1) {
             Some(data) => data.append_to(embed),

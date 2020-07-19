@@ -20,6 +20,18 @@ pub trait Embedable: Send {
     }
 }
 
+impl Embedable for CreateEmbed {
+    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+        embed.0 = self.0.clone();
+        embed
+    }
+    
+    #[inline]
+    fn embed_data(&self) -> HashMap<&'static str, serde_json::Value> {
+        self.0.clone()
+    }
+}
+
 impl Embedable for requester::saucenao::SauceNao {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         let mut info = String::new();

@@ -34,8 +34,9 @@ db = { path = "../db" }
 
 [dependencies.requester]
 git = "https://gitlab.com/tmokenc/tomoreq"
+# path = "../../tomoreq"
 package = "tomoreq"
-features = ["full"]
+features = ["extra", "scrapers", "reqwest_client"]
 
 [dependencies.magic]
 git = "https://gitlab.com/tmokenc/crappy-magic"

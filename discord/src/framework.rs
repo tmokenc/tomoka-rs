@@ -441,7 +441,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     }
 
     let timeout = Duration::from_secs(config.sauce.wait_duration as u64);
-    let reaction = match config.sauce.emoji.parse() {
+    let reaction = match config.emoji.sauce.parse() {
         Ok(r) => r,
         Err(_) => return Ok(()),
     };
@@ -499,7 +499,7 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let reaction = match config.sadkaede.emoji.parse() {
+    let reaction = match config.emoji.sadkaede.parse() {
         Ok(r) => r,
         Err(_) => return Ok(()),
     };
@@ -559,7 +559,7 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let reaction = match config.nhentai.emoji.parse() {
+    let reaction = match config.emoji.nhentai.parse() {
         Ok(r) => r,
         Err(_) => return Ok(()),
     };

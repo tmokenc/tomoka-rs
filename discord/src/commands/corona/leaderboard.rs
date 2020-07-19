@@ -1,25 +1,19 @@
 use crate::commands::prelude::*;
+use crate::traits::Paginator;
 use crate::Result;
 use futures::future::TryFutureExt;
-use futures::stream::StreamExt;
 use magic::traits::MagicIter;
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
-use serenity::model::channel::ReactionType;
 use smallstr::SmallString;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::time::timeout;
-use std::convert::TryFrom as _;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const API: &str = "https://api.covid19api.com/summary";
 const THUMBNAIL: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Topeka-leaderboard.svg/200px-Topeka-leaderboard.svg.png";
-const WAIT_TIME: Duration = Duration::from_secs(30);
 const CACHE_TIME: u64 = 5 * 60;
 const DB_KEY: &str = "corona";
 const DB_TIME: &str = "c-time";
-
-const REACTIONS: &[&str] = &["◀️", "▶️", "❌"];
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -54,6 +48,101 @@ struct Country {
     // date: String,
 }
 
+struct CoronaPagination {
+    countries: Vec<Country>,
+    summary: String,
+    per_page: usize,
+}
+
+impl CoronaPagination {
+    fn new(data: CoronaSummary, per_page: usize) -> Self {
+        let total_c = data.global.total_confirmed;
+        let total_r = data.global.total_recovered;
+        let total_d = data.global.total_deaths;
+    
+        let rate_re = get_rate(total_c as f32, total_r as f32);
+        let rate_de = get_rate(total_c as f32, total_d as f32);
+    
+        let summary = format!(
+            "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)",
+            total_c, total_r, rate_re, total_d, rate_de,
+        );
+        
+        Self {
+            countries: data.countries,
+            summary,
+            per_page,
+        }
+    }
+}
+
+impl Paginator for CoronaPagination {
+    fn append_page_data<'a>(
+        &self,
+        page: core::num::NonZeroUsize,
+        embed: &'a mut CreateEmbed,
+    ) -> &'a mut CreateEmbed {
+        embed.title("Corona Leaderboard");
+        embed.timestamp(now());
+        embed.color(0x8b0000);
+        embed.thumbnail(THUMBNAIL);
+        embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
+        embed.description(&self.summary);
+        
+        let page = page.get() - 1;
+        let mut show_data = self
+            .countries
+            .iter()
+            .zip(1..)
+            .skip(page as usize * self.per_page)
+            .take(self.per_page);
+    
+        loop {
+            let mut ranking = None;
+            let mut many = 0;
+    
+            let data = show_data
+                .by_ref()
+                .take(10)
+                .map(|(v, i)| {
+                    if ranking.is_none() {
+                        ranking = Some(i);
+                    }
+    
+                    many += 1;
+                    let (rate_re, rate_de) = rate(&v);
+                    format!(
+                        "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)",
+                        i,
+                        code_to_emoji(&v.country_code),
+                        v.country,
+                        v.total_confirmed,
+                        v.total_recovered,
+                        rate_re,
+                        v.total_deaths,
+                        rate_de,
+                    )
+                })
+                .join('\n');
+    
+            match ranking {
+                Some(r) => {
+                    let name = format!("#{} - #{}", r, r + many - 1);
+                    embed.field(name, data, false);
+                }
+    
+                None => break,
+            }
+        }
+    
+        embed
+    }
+
+    fn total_pages(&self) -> Option<usize> {
+        Some((self.countries.len() / self.per_page) + 1)
+    }
+}
+
 #[command]
 #[aliases("corona", "top")]
 /// Get corona leaderboard
@@ -61,166 +150,14 @@ struct Country {
 /// `tomo>leaderboard 5` < this will only show 5 countries per page
 async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = get_corona_data(&ctx).await?;
-
-    let total_c = data.global.total_confirmed;
-    let total_r = data.global.total_recovered;
-    let total_d = data.global.total_deaths;
-
-    let rate_re = get_rate(total_c as f32, total_r as f32);
-    let rate_de = get_rate(total_c as f32, total_d as f32);
-
-    let info = format!(
-        "**Total:** {}\n**Recovered:** {} ({}%)\n**Deaths:** {} ({}%)",
-        total_c, total_r, rate_re, total_d, rate_de,
-    );
-
-    let per_page: u16 = args
-        .single::<u16>()
+    let per_page = args
+        .single::<usize>()
         .ok()
         .filter(|&v| v > 0 && v <= 50)
         .unwrap_or(10);
-    let mut current_page: u16 = 0;
-
-    macro_rules! append {
-        () => {
-            |embed| {
-                embed.title("Corona Leaderboard");
-                embed.timestamp(now());
-                embed.color(0x8b0000);
-                embed.thumbnail(THUMBNAIL);
-                embed.footer(|f| f.text("C = Confirmed | R = Recovered | D = Deaths"));
-
-                embed.description(&info);
-
-                let show_data = data
-                    .countries
-                    .iter()
-                    .zip(1..)
-                    .skip((current_page * per_page) as usize)
-                    .take(per_page as usize);
-
-                append_data(show_data, embed)
-            }
-        };
-    }
-
-    let mut mess = msg
-        .channel_id
-        .send_message(&ctx, |message| {
-            let reactions = REACTIONS
-                .iter()
-                .map(|&s| ReactionType::try_from(s).unwrap());
-                
-            message.reactions(reactions);
-            message.embed(append!());
-
-            message
-        })
-        .await?;
-
-    let mut collector = mess
-        .await_reactions(&ctx)
-        .author_id(msg.author.id)
-        .filter(|reaction| {
-            matches!(&reaction.emoji, ReactionType::Unicode(s) if REACTIONS.contains(&s.as_str()))
-        })
-        .await;
-
-    while let Ok(Some(reaction)) = timeout(WAIT_TIME, collector.next()).await {
-        let reaction = reaction.as_inner_ref();
-
-        let http = Arc::clone(&ctx.http);
-        let react = reaction.to_owned();
-        tokio::spawn(async move {
-            react.delete(http).await.ok();
-        });
-
-        let emoji = match &reaction.emoji {
-            ReactionType::Unicode(s) => s,
-            _ => continue,
-        };
-
-        match emoji.as_str() {
-            "◀️" => {
-                if current_page == 0 {
-                    continue;
-                }
-
-                current_page -= 1;
-            }
-
-            "▶️" => {
-                if data.countries.len() as u16 - (current_page * per_page) <= per_page {
-                    continue;
-                }
-
-                current_page += 1;
-            }
-
-            "❌" => break,
-            _ => continue,
-        }
-
-        mess.edit(ctx, |m| m.embed(append!())).await?;
-    }
-
-    drop(collector);
-
-    let futs = REACTIONS
-        .into_iter()
-        .map(|&s| ReactionType::try_from(s).unwrap())
-        .map(|s| msg.channel_id.delete_reaction(&ctx, mess.id.0, None, s));
-
-    futures::future::join_all(futs).await;
+        
+    CoronaPagination::new(data, per_page).pagination(ctx, msg).await?;
     Ok(())
-}
-
-fn append_data<'a, 'b, I: IntoIterator<Item = (&'a Country, usize)>>(
-    iter: I,
-    embed: &'b mut CreateEmbed,
-) -> &'b mut CreateEmbed {
-    let mut iter = iter.into_iter();
-    embed.0.remove("fields");
-
-    loop {
-        let mut ranking = None;
-        let mut many = 0;
-
-        let data = iter
-            .by_ref()
-            .take(10)
-            .map(|(v, i)| {
-                if ranking.is_none() {
-                    ranking = Some(i);
-                }
-
-                many += 1;
-                let (rate_re, rate_de) = rate(&v);
-                format!(
-                    "**{}. {} {}**: C: `{}` | R: `{}` ({}%) | D: `{}` ({}%)",
-                    i,
-                    code_to_emoji(&v.country_code),
-                    v.country,
-                    v.total_confirmed,
-                    v.total_recovered,
-                    rate_re,
-                    v.total_deaths,
-                    rate_de,
-                )
-            })
-            .join('\n');
-
-        match ranking {
-            Some(r) => {
-                let name = format!("#{} - #{}", r, r + many - 1);
-                embed.field(name, data, false);
-            }
-
-            None => break,
-        }
-    }
-
-    embed
 }
 
 async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {

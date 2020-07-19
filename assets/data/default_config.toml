@@ -26,17 +26,19 @@ zones = [
 
 [sauce]
 wait_duration = 30
-emoji = "🛸"
 thumbnail = "https://www.daringgourmet.com/wp-content/uploads/2017/04/Sweet-Sour-Sauce-1.jpg"
 
 [sadkaede]
 wait_duration = 30
-emoji = "🐼"
 thumbnail = "https://i.redd.it/4ghf7122u6721.jpg"
 
 [nhentai]
 wait_duration = 30
-emoji = "🕷"
+
+[emoji]
+nhentai = "🕷"
+sadkaede = "🐼"
+sauce = "🛸"
 
 # [rgb]
 # evidence = "/path/to/evidence"

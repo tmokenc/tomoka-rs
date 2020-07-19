@@ -26,6 +26,36 @@ pub struct Color {
     pub lovely: u64,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Emoji {
+    pub sauce: String,
+    pub nhentai: String,
+    pub sadkaede: String,
+    pub pokemon: Option<PokemonTypeEmoji>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PokemonTypeEmoji {
+    pub normal: String,
+    pub fire: String,
+    pub water: String,
+    pub grass: String,
+    pub poison: String,
+    pub dark: String,
+    pub ghost: String,
+    pub steel: String,
+    pub fighting: String,
+    pub flying: String,
+    pub dragon: String,
+    pub rock: String,
+    pub ground: String,
+    pub psychic: String,
+    pub electric: String,
+    pub ice: String,
+    pub bug: String,
+    pub fairy: String,
+}
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ApiKeys {
     pub google: Option<String>,
@@ -47,7 +77,6 @@ pub struct TouhouMusicQuest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Sauce {
     pub wait_duration: u16,
-    pub emoji: String,
     pub thumbnail: String,
 }
 
@@ -55,14 +84,12 @@ pub struct Sauce {
 pub struct SadKaede {
     pub cookie: Option<String>,
     pub wait_duration: u16,
-    pub emoji: String,
     pub thumbnail: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Nhentai {
     pub wait_duration: u16,
-    pub emoji: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -75,6 +102,33 @@ pub struct Time {
 pub struct TimeZone {
     pub name: Option<SmallString<[u8; 32]>>,
     pub zone: SmallString<[u8; 32]>,
+}
+
+impl PokemonTypeEmoji {
+    #[inline]
+    pub fn get(&self, t: &str) -> Option<&str> {
+        match t.to_lowercase().as_str() {
+            "fire" => Some(&self.fire),
+            "water" => Some(&self.water),
+            "grass" => Some(&self.grass),
+            "steel" => Some(&self.steel),
+            "normal" => Some(&self.normal),
+            "bug" => Some(&self.bug),
+            "electric" => Some(&self.electric),
+            "dragon" => Some(&self.dragon),
+            "dark" => Some(&self.dark),
+            "fighting" => Some(&self.fighting),
+            "psychic" => Some(&self.psychic),
+            "poison" => Some(&self.poison),
+            "ice" => Some(&self.ice),
+            "ghost" => Some(&self.ghost),
+            "ground" => Some(&self.ground),
+            "rock" => Some(&self.rock),
+            "flying" => Some(&self.flying),
+            "fairy" => Some(&self.fairy),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -95,6 +149,7 @@ pub struct Config {
     pub tmq: Option<TouhouMusicQuest>,
     pub database: Database,
     pub color: Color,
+    pub emoji: Emoji,
     pub time: Time,
     pub sauce: Sauce,
     pub sadkaede: SadKaede,

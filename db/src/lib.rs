@@ -61,10 +61,22 @@ pub struct Iter<K: DeserializeOwned, V: DeserializeOwned> {
     _marker: PhantomData<(K, V)>,
 }
 
+pub struct IterKey<K: DeserializeOwned> {
+    iter: sled::Iter,
+    _marker: PhantomData<K>,
+}
+
 impl<K: DeserializeOwned, V: DeserializeOwned> Iter<K, V> {
     pub(crate) fn new(iter: sled::Iter) -> Self {
         Self {
             iter,
+            _marker: PhantomData,
+        }
+    }
+    
+    pub fn keys(self) -> IterKey<K> {
+        IterKey {
+            iter: self.iter,
             _marker: PhantomData,
         }
     }
@@ -95,6 +107,26 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
                 };
 
                 Some((k, v))
+            })
+    }
+}
+
+impl<K: DeserializeOwned> Iterator for IterKey<K> {
+    type Item = K;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter
+            .by_ref()
+            .filter_map(|v| v.ok())
+            .map(|(key, _)| key)
+            .find_map(|ref key| {
+                match ENCODER.deserialize(key) {
+                    Ok(e) => Some(e),
+                    Err(why) => {
+                        error!("Cannot deserialize key | {}", why);
+                        return None;
+                    }
+                }
             })
     }
 }
@@ -145,6 +177,13 @@ impl DbInstance {
     {
         let iter = self.tree().iter();
         Iter::<K, V>::new(iter)
+    }
+    
+    pub fn get_all_keys<K: DeserializeOwned>(&self) -> IterKey<K> {
+        IterKey {
+            iter: self.tree().iter(),
+            _marker: PhantomData,
+        }
     }
 
     pub fn insert<K, V>(&self, key: &K, value: &V) -> Result<()>

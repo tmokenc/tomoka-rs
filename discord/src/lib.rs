@@ -7,6 +7,7 @@ extern crate config as lib_config;
 
 mod cache;
 mod commands;
+mod constants;
 mod config;
 mod events;
 mod framework;
@@ -60,13 +61,27 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     {
         let (mut data, config) = future::join(client.data.write(), read_config()).await;
 
-        let db = DbInstance::new(&config.database.path, None)?;
+        let db = loop {
+            match DbInstance::new(&config.database.path, None) {
+                Ok(db) => break db,
+                Err(why) => {
+                    error!("{}", why);
+                    let wait = core::time::Duration::from_secs(1);
+                    tokio::time::delay_for(wait).await;
+                }
+            }
+        };
+        
+        let req = Reqwest::new();
         fetch_guild_config_from_db(&db).await?;
+        if let Err(why) = commands::pokemon::update_pokemon(&db, &req).await {
+            error!("\n{}", why);
+        }
 
         data.insert::<CustomEventList>(custom_events_arc);
         data.insert::<DatabaseKey>(Arc::new(db));
         data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
-        data.insert::<ReqwestClient>(Arc::new(Reqwest::new()));
+        data.insert::<ReqwestClient>(Arc::new(req));
         data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
         data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
 
