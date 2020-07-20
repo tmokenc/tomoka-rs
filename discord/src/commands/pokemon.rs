@@ -4,8 +4,12 @@ use crate::Result;
 use futures::future;
 use magic::traits::MagicIter;
 use crate::constants::*;
+use crate::traits::Paginator;
 use db::DbInstance;
+use std::fmt::Write as _;
 use requester::Requester;
+use serenity::model::channel::ReactionType;
+use core::time::Duration;
 use requester::smogon::{
     SmogonApi, 
     Generation,
@@ -14,12 +18,12 @@ use requester::smogon::{
     Ability as SmogonAbility,
     Item as SmogonItem,
     SmogonCommon,
+    SmogonPokemon as SmogonPokemonDump,
 };
 use serenity::framework::standard::macros::group;
 use crate::commands::prelude::*;
 use crate::traits::Embedable;
 use serenity::builder::CreateEmbed;
-use serenity::model::id::ChannelId;
 
 import_all! {
     strategy,
@@ -98,7 +102,7 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
     }).await??;
     
-    process_data(ctx, key, msg.channel_id, Some(db)).await?;
+    process_data(ctx, key, msg, Some(db)).await?;
     
     Ok(())
 }
@@ -106,7 +110,7 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 async fn process_data(
     ctx: &Context,
     key: PokeKey,
-    channel_id: ChannelId,
+    msg: &Message,
     db: Option<DbInstance>,
 ) -> Result<bool> {
     let db = match db {
@@ -144,7 +148,7 @@ async fn process_data(
             
             let desc = desc.unwrap();
             
-            channel_id.send_message(ctx, |m| m.embed(|embed| {
+            msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
                 info.append_to(embed).description(desc.description);
                 
                 if let Some(pokemon) = desc.pokemon.filter(|v| !v.is_empty()) {
@@ -217,7 +221,7 @@ async fn process_data(
                     .join("\n"),
             };
             
-            channel_id.send_message(ctx, |m| m.embed(move |embed| {
+            let message = msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
                 embed.title(title);
                 embed.thumbnail(sprite);
                 embed.field("Type",  types, true);
@@ -237,6 +241,17 @@ async fn process_data(
                 
                 embed
             })).await?;
+            
+            let reaction = ReactionType::Unicode(String::from("⚔"));
+            let duration = Duration::from_secs(30);
+            let reacted = wait_a_reaction(ctx, &message, reaction, duration).await?;
+            
+            if reacted {
+                MovesPaginator::new(ctx, &info.name, key.gen, db)
+                    .await?
+                    .pagination(ctx, msg)
+                    .await?;
+            }
         },
     }
     
@@ -266,10 +281,7 @@ pub fn parse_args(args: &str) -> Option<(String, Generation)> {
     Some((data, gen))
 }
 
-pub async fn update_pokemon<R: Requester>(
-    db: &DbInstance,
-    req: &R,
-) -> Result<()> {
+pub async fn update_pokemon<R: Requester>(db: &DbInstance, req: &R) -> Result<()> {
     let requests = POKEMON_VERSIONS
         .iter()
         .map(|v| req.dump_basics(*v));
@@ -328,3 +340,141 @@ impl Embedable for SmogonItem {
         embed
     }
 }
+
+pub struct MovesPaginator {
+    pokemon: String,
+    gen: Generation,
+    list: std::sync::Mutex<Vec<(String, MoveFinding)>>,
+    len: usize,
+    db: DbInstance,
+    icons: Option<crate::config::PokemonEmoji>,
+}
+
+pub enum MoveFinding {
+    NotYet,
+    Found(SmogonMove),
+    NotFound,
+}
+
+
+impl MovesPaginator {
+    pub async fn new(
+        ctx: &Context,
+        pokemon: &str, 
+        gen: Generation, 
+        db: DbInstance,
+    ) -> Result<Self> {
+        let key = PokeKey::new(pokemon, gen, PokeKeyKind::Pokemon);
+    
+        let desc_db = db.open(SMOGON_DESCRIPTION)?;
+        
+        let learnset = match desc_db.get::<PokeKey, SmogonPokemonDump>(&key)? {
+            Some(pokemon) => pokemon.learnset,
+            None => {
+                let data = get_data::<ReqwestClient>(ctx)
+                    .await
+                    .unwrap()
+                    .dump_pokemon(&key.name, gen)
+                    .await?;
+                
+                desc_db.insert(&key, &data)?;
+                data.learnset
+            }
+        };
+        
+        let icons = crate::read_config().await.emoji.pokemon.to_owned();
+        let list: Vec<_> = learnset.into_iter().map(|v| (v, MoveFinding::NotYet)).collect();
+        let len = list.len();
+        
+        Ok(Self {
+            pokemon: pokemon.to_owned(),
+            gen,
+            list: std::sync::Mutex::new(list),
+            len,
+            db,
+            icons
+        })
+    }
+}
+
+impl Paginator for MovesPaginator {
+    fn append_page_data<'a>(
+        &mut self,
+        page: core::num::NonZeroUsize,
+        embed: &'a mut CreateEmbed,
+    ) -> &'a mut CreateEmbed {
+        let page = page.get();
+        let index = (page-1) * POKEMON_MOVE_PER_PAGE;
+        
+        let description = self
+            .list
+            .lock()
+            .unwrap()[index..]
+            .iter_mut()
+            .take(POKEMON_MOVE_PER_PAGE)
+            .map(|(name, ref mut desc)| {
+                if let MoveFinding::NotYet = desc {
+                    let key = PokeKey::new(&name, self.gen, PokeKeyKind::Move);
+                    *desc = match self.db.get::<PokeKey, SmogonMove>(&key) {
+                        Ok(Some(m)) => MoveFinding::Found(m),
+                        Ok(None) => MoveFinding::NotFound,
+                        Err(why) => {
+                            error!("Cannot get a pokemon move\n{:#?}", why);
+                            MoveFinding::NotYet
+                        }
+                    };
+                }
+                
+                match desc {
+                    MoveFinding::Found(m) => {
+                        let mut info = match &self.icons {
+                            Some(ref icons) => format!(
+                                "{} {}  **{}** -",
+                                icons.get(&m.kind).unwrap_or_default(),
+                                icons.get(&m.category).unwrap_or_default(),
+                                m.name,
+                            ),
+                            None => format!(
+                                "**{}** ({} {})",
+                                m.name,
+                                m.category,
+                                m.kind,
+                            )
+                        };
+                        
+                        if m.category != "Non-Damaging" {
+                            write!(&mut info, " Power: {},", m.power).unwrap();
+                        }
+                        
+                        if m.accuracy != 0 {
+                            write!(&mut info, " Accuracy: {}%", m.accuracy).unwrap();
+                        } else {
+                            info.push_str(" Accuracy: ---%");
+                        }
+                        
+                        if m.priority != 0 {
+                            write!(&mut info, ", Priority: {}", m.priority).unwrap();
+                        }
+                        
+                        write!(&mut info, "\n- {}", m.description).unwrap();
+                        
+                        info
+                    }
+                    _ => format!("- {} (Cannot find the information of this move)", name),
+                }
+            })
+            .join("\n\n");
+        
+        embed.title(format!("Learn set for {}", &self.pokemon));
+        embed.description(description);
+        embed.footer(|f| f.text(format!("Page {} / {}", page, self.total_pages().unwrap())));
+        
+        embed
+    }
+    
+    fn total_pages(&self) -> Option<usize> {
+        Some(((self.len - 1) / POKEMON_MOVE_PER_PAGE) + 1)
+    }
+}
+
+

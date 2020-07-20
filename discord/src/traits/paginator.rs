@@ -1,6 +1,5 @@
 use super::Embedable;
 use crate::Result;
-use async_trait::async_trait;
 use core::borrow::Borrow;
 use core::convert::TryFrom;
 use core::num::NonZeroUsize;
@@ -117,7 +116,7 @@ impl PaginatorReactions {
 pub trait Paginator {
     /// Notice that the page start at 1
     fn append_page_data<'a>(
-        &self,
+        &mut self,
         page: NonZeroUsize,
         embed: &'a mut CreateEmbed,
     ) -> &'a mut CreateEmbed;
@@ -142,7 +141,7 @@ pub trait Paginator {
         Default::default()
     }
 
-    async fn pagination<C: Borrow<Context> + Send>(&self, ctx: C, msg: &Message) -> Result<()> {
+    async fn pagination<C: Borrow<Context> + Send>(&mut self, ctx: C, msg: &Message) -> Result<()> {
         let ctx = ctx.borrow();
         let total = self.total_pages();
 
@@ -242,7 +241,7 @@ pub trait Paginator {
 
 impl<E: Embedable> Paginator for Vec<E> {
     fn append_page_data<'a>(
-        &self,
+        &mut self,
         page: NonZeroUsize,
         embed: &'a mut CreateEmbed,
     ) -> &'a mut CreateEmbed {
@@ -262,7 +261,7 @@ impl<E: Embedable> Paginator for Vec<E> {
 
 impl Paginator for requester::nhentai::NhentaiGallery {
     fn append_page_data<'a>(
-        &self,
+        &mut self,
         page: NonZeroUsize,
         embed: &'a mut CreateEmbed,
     ) -> &'a mut CreateEmbed {

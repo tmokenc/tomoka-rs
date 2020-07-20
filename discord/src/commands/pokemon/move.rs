@@ -9,6 +9,6 @@ async fn moves(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
     
     let key = PokeKey::new(&moves, gen, PokeKeyKind::Move);
-    process_data(ctx, key, msg.channel_id, None).await?;
+    process_data(ctx, key, msg, None).await?;
     Ok(())
 }

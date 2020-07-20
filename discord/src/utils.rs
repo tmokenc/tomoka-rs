@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
+use core::time::Duration;
 
 use bytes::Bytes;
 use futures::future::{self, TryFutureExt};
@@ -21,6 +22,7 @@ use serenity::{
     client::Context,
     model::{
         id::{ChannelId, GuildId, UserId},
+        channel::{ReactionType, Message},
         user::User,
     },
     prelude::TypeMapKey,
@@ -216,4 +218,31 @@ pub async fn get_dominant_color(url: &str) -> Result<Color> {
 #[inline]
 pub fn now() -> String {
     chrono::Utc::now().to_rfc3339()
+}
+
+pub async fn wait_a_reaction(
+    ctx: &Context,
+    msg: &Message,
+    reaction: ReactionType,
+    timeout: Duration,
+) -> Result<bool> {
+    msg.react(ctx, reaction.clone()).await?;
+    let emoji_data = reaction.as_data();
+    let reacted = msg
+        .await_reaction(&ctx)
+        .timeout(timeout)
+        .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
+        .removed(false)
+        .await
+        .is_some();
+
+    let http = Arc::clone(&ctx.http);
+    let channel_id = msg.channel_id.0;
+    let msg_id = msg.id.0;
+    
+    tokio::spawn(async move {
+        http.delete_reaction(channel_id, msg_id, None, &reaction).await.ok();
+    });
+        
+    Ok(reacted)
 }

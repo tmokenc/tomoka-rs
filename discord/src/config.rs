@@ -31,11 +31,15 @@ pub struct Emoji {
     pub sauce: String,
     pub nhentai: String,
     pub sadkaede: String,
-    pub pokemon: Option<PokemonTypeEmoji>,
+    pub pokemon: Option<PokemonEmoji>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PokemonTypeEmoji {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PokemonEmoji {
+    pub physical: String,
+    pub special: String,
+    pub status: String,
+    
     pub normal: String,
     pub fire: String,
     pub water: String,
@@ -104,10 +108,13 @@ pub struct TimeZone {
     pub zone: SmallString<[u8; 32]>,
 }
 
-impl PokemonTypeEmoji {
+impl PokemonEmoji {
     #[inline]
     pub fn get(&self, t: &str) -> Option<&str> {
         match t.to_lowercase().as_str() {
+            "physical" => Some(&self.physical),
+            "special" => Some(&self.special),
+            "status" | "non-damaging" => Some(&self.status),
             "fire" => Some(&self.fire),
             "water" => Some(&self.water),
             "grass" => Some(&self.grass),

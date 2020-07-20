@@ -574,7 +574,7 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
         .gallery_by_id(id)
         .await?;
 
-    if let Some(g) = data {
+    if let Some(mut g) = data {
         let msgs = wait_for_react(ctx, msg, reaction, timeout, Some(g.clone())).await?;
 
         if let Some(message) = msgs.as_ref().and_then(|v| v.get(0)) {

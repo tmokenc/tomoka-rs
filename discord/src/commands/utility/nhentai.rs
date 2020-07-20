@@ -18,7 +18,7 @@ async fn nhentai(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         .gallery(id)
         .await?;
     
-    if let Some(g) = gallery {
+    if let Some(mut g) = gallery {
         let emoji = ReactionType::Unicode(String::from("📖"));
         let sent = msg.channel_id.send_message(ctx, |m| {
             m.reactions(Some(emoji.clone())).embed(|e| g.append_to(e))

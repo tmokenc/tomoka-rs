@@ -31,7 +31,7 @@ struct Search {
 
 impl Paginator for Search {
     fn append_page_data<'a>(
-        &self, 
+        &mut self, 
         page: core::num::NonZeroUsize,
         embed: &'a mut CreateEmbed
     ) -> &'a mut CreateEmbed {
