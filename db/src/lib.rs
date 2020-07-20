@@ -237,6 +237,48 @@ impl DbInstance {
     }
 }
 
+// use tokio::runtime::Handle as TokioHandler;
+// impl DbInstance {
+//     #[inline]
+//     pub async fn get_async<K, V>(&self, key: &K) -> Result<Option<V>>
+//     where
+//         K: Serialize,
+//         V: DeserializeOwned,
+//     {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.get(key))
+//     }
+// 
+//     #[inline]
+//     pub async fn insert_async<K, V>(&self, key: &K, value: &V) -> Result<()>
+//     where
+//         K: Serialize,
+//         V: Serialize,
+//     {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.insert(key, value))
+//     }
+// 
+//     #[inline]
+//     pub async fn remove_async<K: Serialize>(&self, key: &K) -> Result<()> {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.remove(key))
+//     }
+// 
+//     #[inline]
+//     pub async fn remove_many_async<K: Serialize, I: IntoIterator<Item = K>>(&self, keys: I) -> Result<()> {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.remove_many(keys))
+//     }
+// 
+//     #[inline]
+//     pub async fn batch_async(&self, batch: Batch) -> Result<()> {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.batch(batch))
+//     }
+// 
+//     #[inline]
+//     pub async fn clear_async(&self) -> Result<()> {
+//         TokioHandler::try_current()?.spawn_blocking(move || self.clear())
+//     }
+// 
+// }
+
 #[inline]
 pub fn get_db_manager(path: impl AsRef<Path>) -> Result<Manager> {
     sled::Config::new()
