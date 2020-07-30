@@ -15,6 +15,7 @@ use colorful::Colorful;
 use colorful::RGB;
 
 use crate::storages::*;
+use crate::traits::{Paginator, PaginatorOption};
 use crate::types::GuildConfig;
 use crate::Result;
 
@@ -220,12 +221,12 @@ pub fn now() -> String {
     chrono::Utc::now().to_rfc3339()
 }
 
-pub async fn wait_a_reaction(
+pub async fn wait_for_reaction(
     ctx: &Context,
     msg: &Message,
     reaction: ReactionType,
     timeout: Duration,
-) -> Result<bool> {
+) -> Result<Option<UserId>> {
     msg.react(ctx, reaction.clone()).await?;
     let emoji_data = reaction.as_data();
     let reacted = msg
@@ -233,8 +234,7 @@ pub async fn wait_a_reaction(
         .timeout(timeout)
         .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
         .removed(false)
-        .await
-        .is_some();
+        .await;
 
     let http = Arc::clone(&ctx.http);
     let channel_id = msg.channel_id.0;
@@ -244,5 +244,22 @@ pub async fn wait_a_reaction(
         http.delete_reaction(channel_id, msg_id, None, &reaction).await.ok();
     });
         
-    Ok(reacted)
+    Ok(reacted.map(|v| v.as_inner_ref().user_id))
+}
+
+pub async fn react_to_pagination<P: Paginator + Send>(
+    ctx: &Context,
+    msg: &Message,
+    reaction: ReactionType,
+    timeout: Duration,
+    mut data: P,
+) -> Result<()> {
+    let reaction = wait_for_reaction(ctx, msg, reaction, timeout).await?;
+
+    if let Some(user) = reaction {
+        let opt = PaginatorOption::new(msg.channel_id, user);
+        data.pagination(ctx, opt).await?;
+    }
+
+    Ok(())
 }

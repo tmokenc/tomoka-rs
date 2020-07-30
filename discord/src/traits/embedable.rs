@@ -6,10 +6,14 @@ use magic::report_bytes;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use serenity::builder::CreateEmbed;
+use serenity::model::channel::Message;
+use serenity::model::id::ChannelId;
+use serenity::http::client::Http;
 use std::collections::HashMap;
 use std::fmt::{Display, Write as _};
 
 /// This trait exist due to the number of rewriting thanks to my stupid code
+#[async_trait]
 pub trait Embedable: Send {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed;
 
@@ -17,6 +21,14 @@ pub trait Embedable: Send {
         let mut embed = CreateEmbed::default();
         self.append_to(&mut embed);
         embed.0
+    }
+    
+    async fn send_embed<H: AsRef<Http> + Send + Sync>(
+        &self, 
+        http: H,
+        channel_id: ChannelId
+    ) -> serenity::Result<Message> {
+        channel_id.send_message(http, |m| m.embed(|e| self.append_to(e))).await
     }
 }
 

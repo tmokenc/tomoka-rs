@@ -102,7 +102,7 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
     }).await??;
     
-    process_data(ctx, key, msg, Some(db)).await?;
+    let _processed = process_data(ctx, key, msg, Some(db)).await?;
     
     Ok(())
 }
@@ -115,22 +115,18 @@ async fn process_data(
 ) -> Result<bool> {
     let db = match db {
         Some(d) => d,
-        None => {
-            let database = get_data::<DatabaseKey>(ctx).await.expect("Database not found");
-            tokio::task::spawn_blocking(move || database.open(SMOGON_POKEMON)).await??
-        }
+        None => get_data::<DatabaseKey>(ctx)
+            .await
+            .expect("Database not found")
+            .open(SMOGON_POKEMON)?
     };
 
     macro_rules! get_info {
-        () => ({
-            match db.get(&key)? {
+        ($x:ident, $dump:ident) => ({
+            let info: $x = match db.get(&key)? {
                 Some(d) => d,
                 None => return Ok(false),
-            }
-        });
-        
-        ($x:ident, $dump:ident) => ({
-            let info: $x = get_info!();
+            };
             
             let desc_db = db.open(SMOGON_DESCRIPTION)?;
             let mut desc: Option<SmogonCommon> = desc_db.get(&key)?;
@@ -173,89 +169,108 @@ async fn process_data(
                 
                 embed
             })).await?;
-        });
+        })
     }
     
     match key.kind {
+        PokeKeyKind::Pokemon => process_pokemon_data(ctx, msg, key, db).await?,
         PokeKeyKind::Item => get_info!(SmogonItem, dump_item),
         PokeKeyKind::Move => get_info!(SmogonMove, dump_move),
         PokeKeyKind::Ability => get_info!(SmogonAbility, dump_ability),
-        PokeKeyKind::Pokemon => {
-            let info: SmogonPokemon = get_info!();
-            
-            let abilities = info
-                .abilities
-                .iter()
-                .map(|abi| PokeKey::new(abi, key.gen, PokeKeyKind::Ability))
-                .map(|ref key| match db.get::<PokeKey, SmogonAbility>(key) {
-                    Ok(Some(ability)) => {
-                        format!("- {} ({})", ability.name, ability.description)
-                    }
-                    _ => String::from(&key.name),
-                })
-                .join("\n");
-                
-            let base_stats = format!(
-                "HP: {}\nAttack: {}\nDefense: {}\nSpecial Attack: {}\nSpecial Defense: {}\nSpeed: {}\n\n**Total**: {}",
-                info.hp,
-                info.atk,
-                info.def,
-                info.spa,
-                info.spd,
-                info.spe,
-                info.base_stats_total(),
-            );
-            
-            let sprite = format!("https://www.smogon.com/dex/media/sprites/xy/{}.gif", &key.name);
-            let title = match info.dex_number() {
-                Some(dex) => format!("#{} {}", dex, info.name),
-                None => info.name.to_owned(),
-            };
-            
-            let types = match crate::read_config().await.emoji.pokemon.as_ref() {
-                None => info.types.join("\n"),
-                Some(emoji) => info
-                    .types
-                    .iter()
-                    .map(|t| format!("{}  {}", emoji.get(&t).unwrap_or_default(), t))
-                    .join("\n"),
-            };
-            
-            let message = msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-                embed.title(title);
-                embed.thumbnail(sprite);
-                embed.field("Type",  types, true);
-                embed.field("Base Stats", base_stats, false);
-                embed.field("Abilities", abilities, false);
-                embed.footer(|f| f.text(format!("Generation: {}", key.gen)));
-                
-                if let Some(oob) = info.oob.as_ref() {
-                    if !oob.evos.is_empty() {
-                        embed.field("Next Evolution", oob.evos.join("\n"), true);
-                    }
-                    
-                    if !oob.alts.is_empty() {
-                        embed.field("Altenative Pokemon", oob.alts.join("\n"), true);
-                    }
-                }
-                
-                embed
-            })).await?;
-            
-            let reaction = ReactionType::Unicode(String::from("⚔"));
-            let duration = Duration::from_secs(30);
-            let reacted = wait_a_reaction(ctx, &message, reaction, duration).await?;
-            
-            if reacted {
-                MovesPaginator::new(ctx, &info.name, key.gen, db)
-                    .await?
-                    .pagination(ctx, msg)
-                    .await?;
-            }
-        },
     }
     
     Ok(true)
+}
+
+pub async fn process_pokemon_data(
+    ctx: &Context,
+    msg: &Message,
+    key: PokeKey,
+    db: DbInstance,
+) -> Result<()> {
+    let info: SmogonPokemon = match db.get(&key)? {
+        Some(d) => d,
+        None => return Ok(()),
+    };
+    
+    let abilities = info
+        .abilities
+        .iter()
+        .map(|abi| PokeKey::new(abi, key.gen, PokeKeyKind::Ability))
+        .map(|ref key| match db.get::<PokeKey, SmogonAbility>(key) {
+            Ok(Some(ability)) => {
+                format!("- {} ({})", ability.name, ability.description)
+            }
+            _ => String::from(&key.name),
+        })
+        .join("\n");
+        
+    let base_stats = format!(
+        "HP: {}\nAttack: {}\nDefense: {}\nSpecial Attack: {}\nSpecial Defense: {}\nSpeed: {}\n\n**Total**: {}",
+        info.hp,
+        info.atk,
+        info.def,
+        info.spa,
+        info.spd,
+        info.spe,
+        info.base_stats_total(),
+    );
+    
+    let sprite = format!("https://www.smogon.com/dex/media/sprites/xy/{}.gif", &key.name);
+    let title = match info.dex_number() {
+        Some(dex) => format!("#{} {}", dex, info.name),
+        None => info.name.to_owned(),
+    };
+    
+    let types = match crate::read_config().await.emoji.pokemon.as_ref() {
+        None => info.types.join("\n"),
+        Some(emoji) => info
+            .types
+            .iter()
+            .map(|t| format!("{}  {}", emoji.get(&t).unwrap_or_default(), t))
+            .join("\n"),
+    };
+    
+    let message = msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
+        embed.title(title);
+        embed.thumbnail(sprite);
+        embed.field("Type",  types, true);
+        embed.field("Base Stats", base_stats, false);
+        embed.field("Abilities", abilities, false);
+        embed.footer(|f| f.text(format!("Generation: {}", key.gen)));
+        
+        if let Some(oob) = info.oob.as_ref() {
+            if !oob.evos.is_empty() {
+                embed.field("Next Evolution", oob.evos.join("\n"), true);
+            }
+            
+            if !oob.alts.is_empty() {
+                embed.field("Altenative Pokemon", oob.alts.join("\n"), true);
+            }
+        }
+        
+        embed
+    })).await?;
+    
+    let reaction = ReactionType::Unicode(String::from("⚔"));
+    let duration = Duration::from_secs(30);
+    let reacted = wait_for_reaction(ctx, &message, reaction, duration).await?;
+    
+    if let Some(user) = reacted {
+        use crate::traits::paginator::PaginatorOption;
+        
+        let opt = PaginatorOption {
+            channel_id: msg.channel_id,
+            user
+        };
+        
+        MovesPaginator::new(ctx, &info.name, key.gen, db)
+            .await?
+            .pagination(ctx, opt)
+            .await?;
+    }
+    
+    Ok(())
 }
 
 pub fn parse_args(args: &str) -> Option<(String, Generation)> {

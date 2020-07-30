@@ -10,6 +10,7 @@ use magic::types::Void;
 use serenity::builder::CreateEmbed;
 use serenity::client::Context;
 use serenity::model::channel::{Message, ReactionType};
+use serenity::model::id::{ChannelId, UserId};
 use std::env;
 use std::sync::Arc;
 use tokio::time::timeout;
@@ -112,6 +113,30 @@ impl PaginatorReactions {
     }
 }
 
+pub struct PaginatorOption {
+    pub channel_id: ChannelId,
+    pub user: UserId,
+}
+
+impl PaginatorOption {
+    #[inline]
+    pub fn new(channel_id: ChannelId, user: UserId) -> Self {
+        Self {
+            channel_id,
+            user
+        }
+    }
+}
+
+impl From<&Message> for PaginatorOption {
+    fn from(m: &Message) -> Self {
+        Self {
+            channel_id: m.channel_id,
+            user: m.author.id,
+        }
+    }
+}
+
 #[async_trait]
 pub trait Paginator {
     /// Notice that the page start at 1
@@ -141,19 +166,32 @@ pub trait Paginator {
         Default::default()
     }
 
-    async fn pagination<C: Borrow<Context> + Send>(&mut self, ctx: C, msg: &Message) -> Result<()> {
+    async fn pagination<C, O>(&mut self, ctx: C, opt: O) -> Result<()> 
+    where C: Borrow<Context> + Send, 
+          O: Into<PaginatorOption> + Send
+    {
         let ctx = ctx.borrow();
+        let opt = opt.into();
         let total = self.total_pages();
 
         match total {
             Some(0) => return Ok(()),
+            Some(1) => {
+                let page = unsafe { NonZeroUsize::new_unchecked(1) };
+                
+                opt.channel_id
+                    .send_message(ctx, |m| m.embed(|e| self.append_page_data(page, e)))
+                    .await?;
+                    
+                return Ok(())
+            }
             _ => (),
         };
 
         let wait_time = self.timeout();
         let reactions = self.reactions();
         let mut current_page = self.default_page().get();
-        let mut mess = msg
+        let mut mess = opt
             .channel_id
             .send_message(ctx, |message| {
                 let page = unsafe { NonZeroUsize::new_unchecked(current_page) };
@@ -165,7 +203,7 @@ pub trait Paginator {
 
         let react_collector = mess
             .await_reactions(ctx)
-            .author_id(msg.author.id)
+            .author_id(opt.user)
             .await
             .filter_map(|reaction| {
                 let reaction = reaction.as_inner_ref().to_owned();
@@ -183,10 +221,10 @@ pub trait Paginator {
                 }
             });
 
-        let msg_collector = msg
+        let msg_collector = opt
             .channel_id
             .await_replies(ctx)
-            .author_id(msg.author.id)
+            .author_id(opt.user)
             .await
             .filter_map(|v| async move { v.content.parse::<PaginatorAction>().ok() });
 
@@ -232,7 +270,7 @@ pub trait Paginator {
         let futs = reactions
             .iter()
             .cloned()
-            .map(|s| msg.channel_id.delete_reaction(ctx, mess.id.0, None, s));
+            .map(|s| opt.channel_id.delete_reaction(ctx, mess.id.0, None, s));
 
         futures::future::join_all(futs).await;
         Ok(())
