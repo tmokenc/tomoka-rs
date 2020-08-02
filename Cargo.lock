@@ -1656,6 +1656,7 @@ dependencies = [
 [[package]]
 name = "pokemon_core"
 version = "0.1.0"
+source = "git+https://gitlab.com/tmokenc/pokemon_rs#6a1176a1f06db3e0ba60b460fec2e59e794ea100"
 
 [[package]]
 name = "ppv-lite86"

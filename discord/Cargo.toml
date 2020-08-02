@@ -32,8 +32,8 @@ tempdir = "0.3"
 db = { path = "../db" }
 
 [dependencies.pokemon_core]
-# git = "https://gitlab.com/tmokenc/pokemon_rs"
-path = "../../pokemon_rs"
+git = "https://gitlab.com/tmokenc/pokemon_rs"
+# path = "../../pokemon_rs"
 
 [dependencies.requester]
 git = "https://gitlab.com/tmokenc/tomoreq"
