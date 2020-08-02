@@ -29,8 +29,11 @@ serde_json = "1"
 smallstr = { version = "0.2", features = ["serde"] }
 sys-info = "0.5"
 tempdir = "0.3"
-pokemon_core = { git = "https://gitlab.com/tmokenc/pokemon_rs" }
 db = { path = "../db" }
+
+[dependencies.pokemon_core]
+# git = "https://gitlab.com/tmokenc/pokemon_rs"
+path = "../../pokemon_rs"
 
 [dependencies.requester]
 git = "https://gitlab.com/tmokenc/tomoreq"

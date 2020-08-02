@@ -45,6 +45,7 @@ const TYPING_LIST: &[&str] = &[
     "rotate",
     "saucenao",
     "info",
+    "pokemon"
 ];
 
 lazy_static! {

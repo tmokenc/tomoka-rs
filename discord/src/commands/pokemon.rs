@@ -21,6 +21,7 @@ use requester::smogon::{
     SmogonPokemon as SmogonPokemonDump,
 };
 use serenity::framework::standard::macros::group;
+use pokemon_core::types::Type;
 use crate::commands::prelude::*;
 use crate::traits::Embedable;
 use serenity::builder::CreateEmbed;
@@ -193,6 +194,9 @@ pub async fn process_pokemon_data(
         None => return Ok(()),
     };
     
+    let not_in_swsh = matches!(key.gen, Generation::SwordShield) 
+        && &info.is_nonestandard == "NatDex";
+    
     let abilities = info
         .abilities
         .iter()
@@ -222,13 +226,44 @@ pub async fn process_pokemon_data(
         None => info.name.to_owned(),
     };
     
+    let types: Vec<_> = info
+        .types
+        .iter()
+        .filter_map(|v| v.parse::<Type>().ok())
+        .collect();
+        
     let types = match crate::read_config().await.emoji.pokemon.as_ref() {
-        None => info.types.join("\n"),
-        Some(emoji) => info
-            .types
-            .iter()
-            .map(|t| format!("{}  {}", emoji.get(&t).unwrap_or_default(), t))
-            .join("\n"),
+        None => {
+            let mut data = info.types.join("   ");
+            data.push('\n');
+            data.push('\n');
+            
+            for (k, v) in type_effective(types.as_slice()) {
+                writeln!(&mut data, "**{}**: {}", k, v.iter().join(", "))?;
+            }
+            
+            data
+        }
+        
+        Some(emoji) => {
+            let format_type = |t: &Type| format!("{}  {}", emoji.get(&t.to_string()).unwrap_or_default(), t);
+            let mut data = types.iter().map(format_type).join("   ");
+            data.push('\n');
+            data.push('\n');
+                
+            for (k, v) in type_effective(types.as_slice()) {
+                let s = v.iter().map(format_type).join(", ");
+                writeln!(&mut data, "**{}**: {}", k, s)?;
+            }
+            
+            data
+        }
+    };
+    
+    let gen = if not_in_swsh {
+        Generation::SunMoon
+    } else {
+        key.gen
     };
     
     let message = msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
@@ -237,7 +272,11 @@ pub async fn process_pokemon_data(
         embed.field("Type",  types, true);
         embed.field("Base Stats", base_stats, false);
         embed.field("Abilities", abilities, false);
-        embed.footer(|f| f.text(format!("Generation: {}", key.gen)));
+        embed.footer(|f| f.text(format!("Generation: {}", gen)));
+        
+        if not_in_swsh {
+            embed.description("This pokemon isn't available in sword/shield yet...");
+        }
         
         if let Some(oob) = info.oob.as_ref() {
             if !oob.evos.is_empty() {
@@ -264,13 +303,61 @@ pub async fn process_pokemon_data(
             user
         };
         
-        MovesPaginator::new(ctx, &info.name, key.gen, db)
+        MovesPaginator::new(ctx, &info.name, gen, db)
             .await?
             .pagination(ctx, opt)
             .await?;
     }
     
     Ok(())
+}
+
+fn type_effective(types: &[Type]) -> Vec<(String, Vec<Type>)> {
+    let mut effective = Vec::new();
+    let mut ex_effective = Vec::new();
+    let mut not_effective = Vec::new();
+    let mut not_very_effective = Vec::new();
+    let mut immune = Vec::new();
+    
+    for t in Type::iter() {
+        let modifier: f32 = types
+            .iter()
+            .map(|v| t.effective(*v))
+            .map(f32::from)
+            .product();
+            
+        macro_rules! check_eff {
+            ($x:expr, $y:ident) => {
+                if modifier == $x {
+                    $y.push(t)
+                }
+            }
+        }
+            
+        check_eff!(0.25, not_very_effective);
+        check_eff!(0.50, not_effective);
+        check_eff!(2.00, effective);
+        check_eff!(4.00, ex_effective);
+        check_eff!(0.00, immune);
+    }
+    
+    let mut result = Vec::new();
+    
+    macro_rules! push_eff {
+        ($x:expr, $y:ident) => {
+            if !$y.is_empty() {
+                result.push(($x.to_owned(), $y));
+            }
+        }
+    }
+    
+    push_eff!("Strongly resists", not_very_effective);
+    push_eff!("Resists", not_effective);
+    push_eff!("Weak to", effective);
+    push_eff!("Very weak to", ex_effective);
+    push_eff!("Immune to", immune);
+    
+    result
 }
 
 pub fn parse_args(args: &str) -> Option<(String, Generation)> {
@@ -482,13 +569,22 @@ impl Paginator for MovesPaginator {
         
         embed.title(format!("Learn set for {}", &self.pokemon));
         embed.description(description);
-        embed.footer(|f| f.text(format!("Page {} / {}", page, self.total_pages().unwrap())));
+        embed.footer(|f| f.text(format!(
+            "Page {} / {} | Generation {}", 
+            page, 
+            self.total_pages().unwrap(),
+            self.gen
+        )));
         
         embed
     }
     
     fn total_pages(&self) -> Option<usize> {
-        Some(((self.len - 1) / POKEMON_MOVE_PER_PAGE) + 1)
+        if self.len == 0 {
+            Some(0)
+        } else {
+            Some(((self.len - 1) / POKEMON_MOVE_PER_PAGE) + 1)
+        }
     }
 }
 
