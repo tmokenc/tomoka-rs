@@ -189,7 +189,7 @@ impl Config {
     /// Data in environment variable will have priority over the config file
     pub fn init() -> Result<Self> {
         let mut config = LibConfig::new();
-        let default_config = include_str!("../../assets/data/default_config.toml");
+        let default_config = include_str!("../assets/data/default_config.toml");
 
         config.merge(File::from_str(default_config, FileFormat::Toml))?;
         config.merge(File::with_name("./config.toml").required(false))?;
@@ -206,7 +206,7 @@ impl Config {
     /// This *maybe* fix in the future
     pub fn reload(&mut self, db: &DbInstance) -> Result<()> {
         let mut config = LibConfig::new();
-        let default_config = include_str!("../../assets/data/default_config.toml");
+        let default_config = include_str!("../assets/data/default_config.toml");
 
         config.merge(File::from_str(default_config, FileFormat::Toml))?;
         config.merge(File::with_name("./config.toml"))?;

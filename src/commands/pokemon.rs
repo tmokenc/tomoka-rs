@@ -39,7 +39,7 @@ const POKEMON_VERSIONS: [Generation; 8] = [
 ];
 
 #[group]
-#[prefixes("pokemon")]
+#[prefixes("pokemon", "pkm")]
 #[default_command(pokemon)]
 #[commands(nature, ability, moves, smogon_strategy)]
 struct Pokemon;
@@ -197,12 +197,12 @@ pub async fn process_pokemon_data(
         .iter()
         .map(|abi| PokeKey::new(abi, key.gen, PokeKeyKind::Ability))
         .map(|ref key| match db.get::<PokeKey, SmogonAbility>(key) {
-            Ok(Some(ability)) => format!("- {} ({})", ability.name, ability.description),
+            Ok(Some(ability)) => format!("- **{}** ({})", ability.name, ability.description),
             _ => String::from(&key.name),
         })
         .join("\n");
 
-    let base_title = format!("Base Stats ({})", info.base_stats_total());
+    let base_title = format!("Base Stats  {}", info.base_stats_total());
     let base_stats = format!(
         "HP: {}\nAttack: {}\nDefense: {}\nSpecial Attack: {}\nSpecial Defense: {}\nSpeed: {}",
         info.hp, info.atk, info.def, info.spa, info.spd, info.spe,
