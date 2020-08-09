@@ -30,19 +30,13 @@ struct Search {
 }
 
 impl Paginator for Search {
-    fn append_page_data<'a>(
-        &mut self, 
-        page: core::num::NonZeroUsize,
-        embed: &'a mut CreateEmbed
-    ) -> &'a mut CreateEmbed {
+    fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         let data = &self.data[page.get() - 1];
         let description = format!("{}\n[[Link]]({})", data.description, data.link);
         embed.title(format!("Result for `{}`", self.text));
         embed.field(&data.title, description, false);
         embed.color(self.color);
         embed.footer(|f| f.text(format!("Result {} / {}", page, self.data.len())));
-        
-        embed
     }
     
     fn total_pages(&self) -> Option<usize> {

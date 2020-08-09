@@ -51,6 +51,12 @@ version = "0.2"
 features = ["fs", "sync", "stream", "signal", "io-util", "io-std", "rt-threaded", "macros"]
 
 [dependencies.serenity]
-git = "https://github.com/Lakelezz/serenity"
+# git = "https://github.com/Lakelezz/serenity"
+path = "../serenity"
 branch = "await"
 features = ["collector", "rustls_backend", "voice"]
+
+[dependencies.tomo-serenity-ext]
+# git = "https://github.com/acdenisSK/serenity"
+# branch = "await_next"
+path = "../tomo-serenity-ext"

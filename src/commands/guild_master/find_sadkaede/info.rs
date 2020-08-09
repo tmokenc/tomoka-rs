@@ -1,5 +1,6 @@
 use crate::commands::prelude::*;
 use crate::traits::Embedable as _;
+use crate::traits::ChannelExt as _;
 
 #[command]
 #[only_in("guilds")]
@@ -13,28 +14,27 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let config = crate::read_config().await;
     let data = config
         .guilds
-        .get(&guild_id)
-        .map(|g| g.find_sadkaede.embed_data());
+        .get(&guild_id);
         
-    let thumbnail = config.sadkaede.thumbnail.to_owned();
-    let color = config.color.information;
+    let mut send_embed = msg.channel_id
+        .send_embed(ctx)
+        .with_title("SadKaede-finder information")
+        .with_color(config.color.information)
+        .with_timestamp(now())
+        .with_thumbnail(&config.sadkaede.thumbnail);
         
+    if let Some(e) = &data {
+        e.find_sadkaede.append_to(send_embed.inner_embed());
+    } else {
+        send_embed
+            .inner_embed()
+            .description("The SadKaede-finder is disabled for this server");
+    }
+        
+    drop(data);
     drop(config);
-        
-    msg.channel_id.send_message(ctx, |m| m.embed(|mut embed| {
-        if let Some(g) = data {
-            embed.0 = g;
-        } else {
-            embed.description("The SadKaede-finder is disabled for this server");
-        }
-        
-        embed.title("SadKaede-finder information");
-        embed.thumbnail(thumbnail);
-        embed.color(color);
-        embed.timestamp(now());
-        
-        embed
-    })).await?;
+    
+    send_embed.await?;
     
     Ok(())
 }

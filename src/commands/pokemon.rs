@@ -3,6 +3,7 @@ use crate::constants::*;
 use crate::traits::Embedable;
 use crate::traits::Paginator;
 use crate::Result;
+use crate::types::Ref;
 use core::time::Duration;
 use db::DbInstance;
 use futures::future;
@@ -141,7 +142,7 @@ async fn process_data(
             let desc = desc.unwrap();
 
             msg.channel_id.send_message(ctx, |m| m.embed(|embed| {
-                info.append_to(embed).description(desc.description);
+                Ref(info).append_to(embed).description(desc.description);
 
                 if let Some(pokemon) = desc.pokemon.filter(|v| !v.is_empty()) {
                     let pokemons = if pokemon.len() > 50 {
@@ -412,7 +413,7 @@ pub async fn update_pokemon<R: Requester>(db: &DbInstance, req: &R) -> Result<()
     .await?
 }
 
-impl Embedable for SmogonMove {
+impl Embedable for Ref<SmogonMove> {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         embed.title(&self.name);
         embed.field("Category", &self.category, true);
@@ -425,13 +426,13 @@ impl Embedable for SmogonMove {
     }
 }
 
-impl Embedable for SmogonAbility {
+impl Embedable for Ref<SmogonAbility> {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         embed.title(&self.name);
         embed
     }
 }
-impl Embedable for SmogonItem {
+impl Embedable for Ref<SmogonItem> {
     fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
         embed.title(&self.name);
         embed
@@ -497,11 +498,7 @@ impl MovesPaginator {
 }
 
 impl Paginator for MovesPaginator {
-    fn append_page_data<'a>(
-        &mut self,
-        page: core::num::NonZeroUsize,
-        embed: &'a mut CreateEmbed,
-    ) -> &'a mut CreateEmbed {
+    fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         let page = page.get();
         let index = (page - 1) * POKEMON_MOVE_PER_PAGE;
 
@@ -566,8 +563,6 @@ impl Paginator for MovesPaginator {
                 self.gen
             ))
         });
-
-        embed
     }
 
     fn total_pages(&self) -> Option<usize> {

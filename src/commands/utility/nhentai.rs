@@ -3,6 +3,7 @@ use crate::traits::{Embedable, Paginator};
 use serenity::model::channel::ReactionType;
 use std::time::Duration;
 use requester::NhentaiScraper;
+use crate::types::Ref;
 
 #[command]
 #[aliases("nhen")]
@@ -16,7 +17,8 @@ async fn nhentai(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
         .await
         .ok_or(magic::Error)?
         .gallery(id)
-        .await?;
+        .await?
+        .map(Ref::from);
     
     if let Some(mut g) = gallery {
         let emoji = ReactionType::Unicode(String::from("📖"));

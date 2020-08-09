@@ -39,7 +39,7 @@ pub struct PokemonEmoji {
     pub physical: String,
     pub special: String,
     pub status: String,
-    
+
     pub normal: String,
     pub fire: String,
     pub water: String,

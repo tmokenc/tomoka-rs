@@ -2,6 +2,7 @@ use super::get_last_image_url;
 use crate::commands::prelude::*;
 use crate::traits::Embedable as _;
 use requester::SauceNaoScraper as _;
+use crate::types::Ref;
 
 #[command]
 #[aliases("sauce")]
@@ -29,7 +30,8 @@ async fn saucenao(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await
         .unwrap()
         .saucenao(&img, similarity)
-        .await?;
+        .await
+        .map(Ref::from)?;
 
     if data.not_found() {
         msg.channel_id.say(ctx, "Error 404: No sauce found").await?;

@@ -77,11 +77,7 @@ impl CoronaPagination {
 }
 
 impl Paginator for CoronaPagination {
-    fn append_page_data<'a>(
-        &mut self,
-        page: core::num::NonZeroUsize,
-        embed: &'a mut CreateEmbed,
-    ) -> &'a mut CreateEmbed {
+    fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         embed.title("Corona Leaderboard");
         embed.timestamp(now());
         embed.color(0x8b0000);
@@ -134,8 +130,6 @@ impl Paginator for CoronaPagination {
                 None => break,
             }
         }
-    
-        embed
     }
 
     fn total_pages(&self) -> Option<usize> {

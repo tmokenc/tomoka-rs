@@ -300,7 +300,6 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 [[package]]
 name = "command_attr"
 version = "0.2.0"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#a2e8cdedd0a42e31f83c668a80aa3a39ae0a37f3"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -2116,7 +2115,6 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.8.6"
-source = "git+https://github.com/Lakelezz/serenity?branch=await#a2e8cdedd0a42e31f83c668a80aa3a39ae0a37f3"
 dependencies = [
  "async-tls",
  "async-trait",
@@ -2497,6 +2495,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tomo-serenity-ext"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "crappy_magic",
+ "futures",
+ "serde_json",
+ "serenity",
+ "tokio",
+]
+
+[[package]]
 name = "tomoka_rs"
 version = "0.1.0"
 dependencies = [
@@ -2528,6 +2538,7 @@ dependencies = [
  "sys-info",
  "tempdir",
  "tokio",
+ "tomo-serenity-ext",
  "tomoreq",
 ]
 

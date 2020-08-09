@@ -3,6 +3,7 @@
 use crate::traits::Embedable;
 use crate::Result;
 use chrono::{DateTime, Utc};
+use core::ops::{Deref, DerefMut};
 use core::time::Duration;
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
@@ -21,6 +22,28 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use magic::traits::MagicBool as _;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
+
+pub(crate) struct Ref<T>(pub T);
+
+impl<T> From<T> for Ref<T> {
+    fn from(s: T) -> Self {
+        Self(s)
+    }
+}
+
+impl<T> Deref for Ref<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for Ref<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub struct Information {
     pub booted_on: DateTime<Utc>,

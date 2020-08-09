@@ -1,6 +1,6 @@
+use core::time::Duration;
 use std::path::Path;
 use std::sync::Arc;
-use core::time::Duration;
 
 use bytes::Bytes;
 use futures::future::{self, TryFutureExt};
@@ -22,8 +22,8 @@ use crate::Result;
 use serenity::{
     client::Context,
     model::{
+        channel::{Message, ReactionType},
         id::{ChannelId, GuildId, UserId},
-        channel::{ReactionType, Message},
         user::User,
     },
     prelude::TypeMapKey,
@@ -239,15 +239,17 @@ pub async fn wait_for_reaction(
     let http = Arc::clone(&ctx.http);
     let channel_id = msg.channel_id.0;
     let msg_id = msg.id.0;
-    
+
     tokio::spawn(async move {
-        http.delete_reaction(channel_id, msg_id, None, &reaction).await.ok();
+        http.delete_reaction(channel_id, msg_id, None, &reaction)
+            .await
+            .ok();
     });
-        
+
     Ok(reacted.map(|v| v.as_inner_ref().user_id))
 }
 
-pub async fn react_to_pagination<P: Paginator + Send>(
+pub async fn react_to_pagination<P: Paginator + Send + Sync>(
     ctx: &Context,
     msg: &Message,
     reaction: ReactionType,

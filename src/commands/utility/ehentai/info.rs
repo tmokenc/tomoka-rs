@@ -3,6 +3,7 @@ use crate::traits::Embedable as _;
 use requester::ehentai::EhentaiApi as _;
 use serenity::model::id::ChannelId;
 use crate::Result;
+use crate::types::Ref;
 
 #[command]
 #[min_args(1)]
@@ -24,6 +25,7 @@ async fn info(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .await?
         .into_iter()
         .filter(|v| nsfw || v.is_sfw())
+        .map(Ref::from)
         .collect::<Vec<_>>();
 
     if data.is_empty() {

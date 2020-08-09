@@ -16,6 +16,7 @@ use crate::{
     commands::*,
     storages::{AIStore, InforKey, ReqwestClient},
     traits::Embedable,
+    types::Ref,
     utils::*,
     Result,
 };
@@ -45,7 +46,7 @@ const TYPING_LIST: &[&str] = &[
     "rotate",
     "saucenao",
     "info",
-    "pokemon"
+    "pokemon",
 ];
 
 lazy_static! {
@@ -465,6 +466,7 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
         .into_iter()
         .filter_map(|v| v.ok())
         .filter(|v| v.found())
+        .map(Ref)
         .collect();
 
     if sauces.is_empty() {
@@ -519,6 +521,7 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
     let data: Vec<_> = data
         .into_iter()
         .filter(|data| is_channel_nsfw || data.is_sfw())
+        .map(Ref)
         .collect();
 
     if data.is_empty() {
@@ -573,15 +576,19 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
         .await
         .unwrap()
         .gallery_by_id(id)
-        .await?;
-        
+        .await?
+        .map(Ref);
+
     if let Some(gallery) = data {
-        if wait_for_reaction(ctx, msg, reaction, timeout).await?.is_some() {
-           let reaction = ReactionType::Unicode(String::from("📖"));
-           let message = gallery.send_embed(ctx, msg.channel_id).await?;
-           react_to_pagination(ctx, &message, reaction, timeout, gallery).await?;
+        if wait_for_reaction(ctx, msg, reaction, timeout)
+            .await?
+            .is_some()
+        {
+            let reaction = ReactionType::Unicode(String::from("📖"));
+            let message = gallery.send_embed(ctx, msg.channel_id).await?;
+            react_to_pagination(ctx, &message, reaction, timeout, gallery).await?;
         }
     }
-    
+
     Ok(())
 }
