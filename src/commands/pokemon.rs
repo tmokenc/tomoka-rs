@@ -94,7 +94,9 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
         key.map(|k| (k, database)).ok_or_else(|| {
             use serenity::framework::standard::CommandError;
-            CommandError(format!("Cannot find the `{}` in my database", text))
+            use magic::ErrorMessage;
+            let err = ErrorMessage(format!("Cannot find the `{}` in my database", text));
+            Box::new(err) as CommandError
         })
     })
     .await??;

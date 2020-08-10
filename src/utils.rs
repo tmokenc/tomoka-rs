@@ -246,7 +246,7 @@ pub async fn wait_for_reaction(
             .ok();
     });
 
-    Ok(reacted.map(|v| v.as_inner_ref().user_id))
+    Ok(reacted.and_then(|v| v.as_inner_ref().user_id))
 }
 
 pub async fn react_to_pagination<P: Paginator + Send + Sync>(

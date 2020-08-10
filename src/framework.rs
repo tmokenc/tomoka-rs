@@ -71,7 +71,8 @@ async fn stolen_help(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    help_commands::with_embeds(context, msg, args, help_options, groups, owners).await
+    help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+    Ok(())
 }
 
 pub fn get_framework() -> impl Framework {
@@ -121,7 +122,8 @@ fn framwork_config(config: &mut Configuration) -> &mut Configuration {
         .case_insensitivity(true)
         .by_space(true)
         .no_dm_prefix(true)
-        .dynamic_prefixes([normal_prefix, master_prefix].iter().map(|&v| v as _))
+        .dynamic_prefix(normal_prefix)
+        .dynamic_prefix(master_prefix)
 }
 
 #[hook]
@@ -184,7 +186,7 @@ async fn after_cmd(ctx: &Context, msg: &Message, cmd: &str, err: CommandResult) 
         }
         Err(why) => {
             error!("Couldn't execute the command {}\n{:#?}", cmd.magenta(), why);
-            let mess = format!("Cannot execute the command **__{}__**```{}```", cmd, why.0);
+            let mess = format!("Cannot execute the command **__{}__**```{:#?}```", cmd, why);
             let color = crate::read_config().await.color.error;
 
             msg.channel_id
