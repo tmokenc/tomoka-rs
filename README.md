@@ -44,15 +44,6 @@ Then run it
 cargo run --release
 ```
 
-## Structure
-
-The structure of this codebase (kind of mess though) <br>
-(*Navigate into each folder to read its README*) <br>
-(*Still nothing yet ~~thanks to my laziness~~*)
-+ [Discord](discord) (The main bot source code)
-+ [Db](db) (Database related stuff)
-+ [Bins](bins) (useless binaries)
-
 ## Todo
 
 - [ ] Music
