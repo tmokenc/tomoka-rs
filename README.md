@@ -57,10 +57,11 @@ cargo run --release
     - [ ] PokemonBattle (maybe it never done though)
 - [ ] Pokemon
     - [x] Smogon strategy
-    - [ ] Pokemon info
-    - [ ] Ability
+    - [x] Pokemon info
+    - [x] Ability
     - [x] Nature
-    - [ ] Move
+    - [x] Move
+    - [ ] Combine all of them into a single command
 - [ ] Utility
     - [ ] Time
         - [x] Display time in multiple timezone
