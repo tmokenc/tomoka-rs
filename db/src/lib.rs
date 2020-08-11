@@ -90,23 +90,19 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
             .by_ref()
             .filter_map(|v| v.ok())
             .find_map(|(ref key, ref val)| {
-                let k = match ENCODER.deserialize(key) {
-                    Ok(e) => e,
+                let data = (|| {
+                    let k = ENCODER.deserialize(key)?;
+                    let v = ENCODER.deserialize(val)?;
+                    bincode::Result::<(K, V)>::Ok((k, v))
+                })();
+                
+                match data {
+                    Ok(e) => Some(e),
                     Err(why) => {
                         error!("Cannot deserialize data | {}", why);
-                        return None;
+                        None
                     }
-                };
-
-                let v = match ENCODER.deserialize(val) {
-                    Ok(e) => e,
-                    Err(why) => {
-                        error!("Cannot deserialize data | {}", why);
-                        return None;
-                    }
-                };
-
-                Some((k, v))
+                }
             })
     }
 }
@@ -123,7 +119,7 @@ impl<K: DeserializeOwned> Iterator for IterKey<K> {
                 Ok(e) => Some(e),
                 Err(why) => {
                     error!("Cannot deserialize key | {}", why);
-                    return None;
+                    None
                 }
             })
     }
