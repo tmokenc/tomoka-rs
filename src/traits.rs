@@ -7,7 +7,6 @@ use core::num::NonZeroUsize;
 use magic::dark_magic::report_bytes;
 use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
-use serenity::builder::CreateEmbed;
 use std::fmt::{Display, Write};
 
 impl Embedable for Ref<requester::saucenao::SauceNao> {

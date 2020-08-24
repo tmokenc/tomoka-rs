@@ -118,7 +118,7 @@ impl Reminder {
 }
 
 impl Embedable for Reminder {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         let guild = self
             .guild_id
             .map(|v| v.to_string())
@@ -144,8 +144,6 @@ impl Embedable for Reminder {
         }
 
         embed.field("When", self.when.format("%F %T UTC"), true);
-
-        embed
     }
 }
 
@@ -188,7 +186,7 @@ pub struct FindSauce {
 }
 
 impl Embedable for FindSauce {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The saucing service is disabled for this server");
         } else if self.all {
@@ -203,8 +201,6 @@ impl Embedable for FindSauce {
             embed.description(mess);
             embed.field("Saucing channels", s, true);
         }
-
-        embed
     }
 }
 
@@ -227,7 +223,7 @@ impl Default for FindSadKaede {
 }
 
 impl Embedable for FindSadKaede {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         if !self.enable || (self.channels.is_empty() && !self.all) {
             embed.description("The SadKaede-finder service is disabled for this server");
         } else if self.all {
@@ -244,8 +240,6 @@ impl Embedable for FindSadKaede {
             embed.description(mess);
             embed.field("SadKaede channels", s, true);
         }
-
-        embed
     }
 }
 
@@ -256,7 +250,7 @@ pub struct RepeatWords {
 }
 
 impl Embedable for RepeatWords {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         use magic::traits::MagicIter as _;
 
         if !self.enable {
@@ -274,8 +268,6 @@ impl Embedable for RepeatWords {
             ));
             embed.field("Words", words, false);
         }
-
-        embed
     }
 }
 

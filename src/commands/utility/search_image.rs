@@ -2,8 +2,8 @@ use crate::commands::prelude::*;
 use crate::traits::{Embedable, Paginator};
 use requester::GoogleScraper as _;
 // use requester::DuckDuckGoScraper as _;
-use requester::google::GoogleImageData;
 use requester::duckduckgo::DuckDuckGoImageData;
+use requester::google::GoogleImageData;
 use serenity::builder::CreateEmbed;
 
 struct ImageSearch {
@@ -37,7 +37,7 @@ impl From<DuckDuckGoImageData> for ImageSearch {
 async fn search_image(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let text = args.rest();
     let sfw = !is_nsfw_channel(&ctx, msg.channel_id).await;
-    
+
     get_data::<ReqwestClient>(&ctx)
         .await
         .ok_or(magic::Error)?
@@ -48,16 +48,14 @@ async fn search_image(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         .collect::<Vec<_>>()
         .pagination(ctx, msg)
         .await?;
-    
+
     Ok(())
 }
 
 impl Embedable for ImageSearch {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         embed.title(&self.title);
         embed.url(&self.url);
         embed.image(&self.image);
-        embed
-        
     }
 }

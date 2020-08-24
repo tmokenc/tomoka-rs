@@ -1,9 +1,9 @@
 use crate::commands::prelude::*;
-use crate::constants::*;
-use crate::traits::{Embedable, Paginator, ChannelExt};
 use crate::config::PokemonEmoji;
-use crate::Result;
+use crate::constants::*;
+use crate::traits::{ChannelExt, Embedable, Paginator};
 use crate::types::Ref;
+use crate::Result;
 use core::time::Duration;
 use db::DbInstance;
 use futures::future;
@@ -95,24 +95,27 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             .map(|k| (k, database))
     })
     .await?;
-    
+
     if let Some((key, db)) = db_data {
         let processed = process_data(ctx, key, msg, Some(db)).await?;
-        
+
         if processed {
-            return Ok(())
+            return Ok(());
         }
     }
-    
+
     if process_nature(ctx, msg, &args).await? {
-        return Ok(())
+        return Ok(());
     }
-    
+
     if process_types(ctx, msg, &args).await? {
-        return Ok(())
+        return Ok(());
     }
-    
-    let error = magic::ErrorMessage(format!("Cannot not find the `{}` in my almighty database", args));
+
+    let error = magic::ErrorMessage(format!(
+        "Cannot not find the `{}` in my almighty database",
+        args
+    ));
     Err(Box::new(error) as Box<_>)
 }
 
@@ -131,7 +134,7 @@ async fn process_data(
     };
 
     macro_rules! get_info {
-        ($x:ident, $dump:ident) => ({
+        ($x:ident, $dump:ident) => {{
             let info: $x = match db.get(&key)? {
                 Some(d) => d,
                 None => return Ok(false),
@@ -152,12 +155,13 @@ async fn process_data(
             }
 
             let desc = desc.unwrap();
-            
-            let mut send_embed = msg.channel_id
+
+            let mut send_embed = msg
+                .channel_id
                 .send_embed(ctx)
                 .with_embedable_object(Ref(info))
                 .with_description(desc.description);
-            
+
             if let Some(pokemon) = desc.pokemon.filter(|v| !v.is_empty()) {
                 let pokemons = if pokemon.len() > 50 {
                     format!(
@@ -177,9 +181,9 @@ async fn process_data(
 
                 send_embed.field("Pokemons", pokemons, false);
             }
-            
+
             send_embed.await?;
-        })
+        }};
     }
 
     match key.kind {
@@ -272,7 +276,7 @@ pub async fn process_pokemon_data(
     } else {
         key.gen
     };
-    
+
     let mut send_embed = msg
         .channel_id
         .send_embed(ctx)
@@ -282,11 +286,11 @@ pub async fn process_pokemon_data(
         .with_field(base_title, base_stats, false)
         .with_field("Abilities", abilities, false)
         .with_footer_text(format!("Generation: {}", gen));
-        
+
     if not_in_swsh {
         send_embed.description("This pokemon isn't available in sword/shield yet...");
     }
-        
+
     if let Some(oob) = info.oob.as_ref() {
         if !oob.evos.is_empty() {
             send_embed.field("Next Evolution", oob.evos.join("\n"), true);
@@ -296,7 +300,7 @@ pub async fn process_pokemon_data(
             send_embed.field("Altenative Pokemon", oob.alts.join("\n"), true);
         }
     }
-    
+
     let message = send_embed.await?;
     let reaction = ReactionType::Unicode(String::from("⚔"));
     let duration = Duration::from_secs(30);
@@ -321,13 +325,13 @@ pub async fn process_pokemon_data(
 
 async fn process_nature(ctx: &Context, msg: &Message, args: &str) -> Result<bool> {
     let filter = nature::Filter::from(args);
-    
+
     if filter.is_empty() {
-        return Ok(false)
+        return Ok(false);
     }
-    
+
     let mut data = String::new();
-    
+
     pokemon_core::Nature::iter()
         .filter(|&v| filter.can_pass(v))
         .for_each(|v| nature::write_nature(&mut data, v));
@@ -336,46 +340,46 @@ async fn process_nature(ctx: &Context, msg: &Message, args: &str) -> Result<bool
         data = format!("Cannot find any nature with `{}`", args);
     }
 
-    msg.channel_id.send_embed(ctx).with_description(data).await?;
-    
+    msg.channel_id
+        .send_embed(ctx)
+        .with_description(data)
+        .await?;
+
     Ok(true)
 }
 
 fn styled_type(t: Type, emoji: Option<&PokemonEmoji>) -> String {
     match emoji.and_then(|v| v.get(&t.to_string())) {
         Some(s) => format!("{}    {}", s, t),
-        None => t.to_string()
+        None => t.to_string(),
     }
 }
 
 fn write_type(s: &mut String, t: Type, emoji: Option<&PokemonEmoji>) {
     match emoji.and_then(|v| v.get(&t.to_string())) {
         Some(emoji) => write!(s, "{}   {}", emoji, t).unwrap(),
-        None => write!(s, "{}", t).unwrap()
+        None => write!(s, "{}", t).unwrap(),
     };
 }
-    
+
 async fn process_types(ctx: &Context, msg: &Message, args: &str) -> Result<bool> {
     let mut types = Vec::new();
-    
+
     for s in args.split_whitespace() {
         match s.parse::<Type>() {
             Ok(t) => types.push(t),
             _ => return Ok(false),
         }
-        
+
         if types.len() == MAX_TYPES_PER_PAGE {
             break;
         }
     }
-    
+
     let emoji = crate::read_config().await.emoji.pokemon.to_owned();
-    
-    let mut types_paginator = TypePagination {
-        types,
-        emoji,
-    };
-    
+
+    let mut types_paginator = TypePagination { types, emoji };
+
     types_paginator.pagination(ctx, msg).await?;
     Ok(true)
 }
@@ -483,7 +487,7 @@ pub async fn update_pokemon<R: Requester>(db: &DbInstance, req: &R) -> Result<()
 }
 
 impl Embedable for Ref<SmogonMove> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         embed.title(&self.name);
         embed.field("Category", &self.category, true);
         embed.field("Power", self.power, true);
@@ -491,20 +495,17 @@ impl Embedable for Ref<SmogonMove> {
         embed.field("Priority", self.priority, true);
         embed.field("Type", &self.kind, true);
         embed.field("PP", self.pp, true);
-        embed
     }
 }
 
 impl Embedable for Ref<SmogonAbility> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         embed.title(&self.name);
-        embed
     }
 }
 impl Embedable for Ref<SmogonItem> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         embed.title(&self.name);
-        embed
     }
 }
 
@@ -660,25 +661,25 @@ impl Paginator for TypePagination {
     }
     fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         let start_index = (page.get() - 1) * MAX_TYPES_PER_PAGE;
-        
+
         for t in self.types[start_index..].iter().take(MAX_TYPES_PER_PAGE) {
             let title = styled_type(*t, self.emoji.as_ref());
             let mut description = String::new();
-    
+
             macro_rules! write_desc {
-                ($x:expr, $y:ident) => ({
+                ($x:expr, $y:ident) => {{
                     let data = t.$y();
                     if !data.is_empty() {
                         let s = data
                             .into_iter()
                             .map(|v| styled_type(v, self.emoji.as_ref()))
                             .join(" ");
-                     
+
                         writeln!(&mut description, "**{}**: {}", $x, s).ok();
                     }
-                })
+                }};
             }
-    
+
             write_desc!("Weakness", weaknesses);
             write_desc!("Resistance", resistances);
             write_desc!("Immune", immune);
@@ -686,9 +687,8 @@ impl Paginator for TypePagination {
             write_desc!("Not effective to", weak_to);
             write_desc!("No damage to", no_damage_to);
             description.push('\n');
-            
+
             embed.field(title, description, false);
         }
-        
     }
 }

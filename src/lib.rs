@@ -99,10 +99,10 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
         futures::future::select(sig.as_mut(), ctrl_c).await;
         info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
         shard_manager.lock().await.shutdown_all().await;
-        info!("{}", "BYE".underlined().gradient(Color::Red));
     });
 
     client.start().await?;
+    info!("{}", "BYE".underlined().gradient(Color::Red));
     Ok(())
 }
 

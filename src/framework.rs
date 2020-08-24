@@ -86,6 +86,7 @@ pub fn get_framework() -> impl Framework {
         .group(&CORONA_GROUP)
         .group(&GAME_GROUP)
         .group(&POKEMON_GROUP)
+        .group(&OSU_GROUP)
         .group(&UTILITY_GROUP)
         .group(&IMAGE_GROUP)
         .group(&RGB_GROUP)

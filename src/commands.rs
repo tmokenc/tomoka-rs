@@ -13,5 +13,6 @@ pub_import_all! {
     pokemon,
     rgb,
     utility,
+    osu,
     corona,
 }
