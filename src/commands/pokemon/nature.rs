@@ -1,4 +1,5 @@
 use crate::commands::prelude::*;
+use crate::traits::ChannelExt;
 use pokemon_core::{Flavor, Nature, Stat};
 use std::fmt::Write;
 use std::str::FromStr;
@@ -18,6 +19,11 @@ pub enum FilterData {
 }
 
 impl Filter {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.natures.is_empty() && self.data.is_empty()
+    }
+    
     pub fn can_pass(&self, nature: Nature) -> bool {
         (self.natures.is_empty() && self.data.is_empty())
         || self.natures.iter().any(|&v| v == nature)
@@ -114,13 +120,13 @@ async fn nature(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         data = format!("Cannot find any nature with `{}`", args);
     }
 
-    msg.channel_id.say(&ctx, data).await?;
+    msg.channel_id.send_embed(ctx).with_description(data).await?;
 
     Ok(())
 }
 
 #[inline]
-fn write_nature(f: &mut String, nature: Nature) {
+pub(super) fn write_nature(f: &mut String, nature: Nature) {
     writeln!(
         f,
         "**{}**> 🔼 {} | 🔻 {} | 👍 {} | 👎 {}",

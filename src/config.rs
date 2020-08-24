@@ -63,6 +63,7 @@ pub struct PokemonEmoji {
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ApiKeys {
     pub google: Option<String>,
+    pub osu: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

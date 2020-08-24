@@ -15,7 +15,7 @@ use serenity::model::{
 use crate::{
     commands::*,
     storages::{AIStore, InforKey, ReqwestClient},
-    traits::Embedable,
+    traits::{ChannelExt, Embedable},
     types::Ref,
     utils::*,
     Result,
@@ -186,13 +186,12 @@ async fn after_cmd(ctx: &Context, msg: &Message, cmd: &str, err: CommandResult) 
         }
         Err(why) => {
             error!("Couldn't execute the command {}\n{:#?}", cmd.magenta(), why);
-            let mess = format!("Cannot execute the command **__{}__**```{:#?}```", cmd, why);
-            let color = crate::read_config().await.color.error;
+            let mess = format!("Cannot execute the command **__{}__**```{}```", cmd, why);
 
             msg.channel_id
-                .send_message(&ctx, move |m| {
-                    m.embed(|embed| embed.color(color).description(mess))
-                })
+                .send_embed(ctx)
+                .with_color(crate::read_config().await.color.error)
+                .with_description(mess)
                 .await
                 .ok();
         }

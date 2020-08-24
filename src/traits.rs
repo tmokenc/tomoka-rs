@@ -11,7 +11,7 @@ use serenity::builder::CreateEmbed;
 use std::fmt::{Display, Write};
 
 impl Embedable for Ref<requester::saucenao::SauceNao> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         let mut info = String::new();
 
         match self.characters.len() {
@@ -123,12 +123,12 @@ impl Embedable for Ref<requester::saucenao::SauceNao> {
             .url(self.url())
             .thumbnail(self.img_url())
             .timestamp(now())
-            .footer(|f| f.text("Powered by SauceNao"))
+            .footer(|f| f.text("Powered by SauceNao"));
     }
 }
 
 impl Embedable for Ref<requester::ehentai::Gmetadata> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         let tags = self.parse_tags();
         let mut info = String::new();
 
@@ -241,13 +241,11 @@ impl Embedable for Ref<requester::ehentai::Gmetadata> {
             f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")
                 .text(url)
         });
-
-        embed
     }
 }
 
 impl Embedable for Ref<requester::nhentai::NhentaiGallery> {
-    fn append_to<'a>(&self, embed: &'a mut CreateEmbed) -> &'a mut CreateEmbed {
+    fn append(&self, embed: &mut CreateEmbed) {
         let metadata = self.metadata();
         let mut description = format!(
             "**Category**: {}\n**Language**: {}\n**Total Pages**: {}\n",
@@ -296,8 +294,6 @@ impl Embedable for Ref<requester::nhentai::NhentaiGallery> {
         if let Some(tags) = metadata.tags {
             embed.field("Tags", tags.join(", "), false);
         }
-
-        embed
     }
 }
 
