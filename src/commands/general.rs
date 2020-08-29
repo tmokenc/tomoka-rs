@@ -10,9 +10,10 @@ import_all! {
     kanji,
     urban,
     love,
-    info
+    info,
+    invite,
 }
 
 #[group]
-#[commands(avatar, say, love, choose, ping, kanji, urban, info, uptime)]
+#[commands(avatar, say, love, choose, ping, kanji, urban, invite, info, uptime)]
 struct General;

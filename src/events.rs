@@ -8,10 +8,14 @@ use serenity::model::{
     user::OnlineStatus,
 };
 
-use crate::cache::MessageCache;
-use crate::storages::{CacheStorage, DatabaseKey, ReminderNotify};
-use crate::types::Reminder;
-use crate::{utils::*, Result};
+use crate::{
+    cache::MessageCache,
+    storages::{CacheStorage, DatabaseKey, ReminderNotify},
+    types::Reminder,
+    traits::ChannelExt,
+    utils::*,
+    Result,
+};
 
 use chrono::Utc;
 use colorful::{Color, Colorful};
@@ -218,20 +222,15 @@ impl EventHandler for Handler {
             None => to_say.push_str("\nBut I cannot remember how it was..."),
         };
 
-        let color = crate::read_config().await.color.message_update;
+        let send_embed = log_channel
+            .send_embed(&ctx)
+            .with_description(to_say)
+            .with_current_timestamp()
+            .with_fields(fields)
+            .with_color(crate::read_config().await.color.message_update)
+            .await;
 
-        let send = log_channel.send_message(&ctx, |m| {
-            m.embed(|embed| {
-                embed.description(to_say);
-                embed.timestamp(now());
-                embed.fields(fields);
-                embed.color(color);
-
-                embed
-            })
-        });
-
-        if let Err(why) = send.await {
+        if let Err(why) = send_embed {
             error!("Cannot send the message update log\n{:#?}", why);
         }
     }
@@ -387,8 +386,6 @@ async fn _process_deleted(
         Some(info) => (info.name, info.discriminator, info.bot),
     };
     
-    let color = crate::read_config().await.color.message_delete;
-    
     let mut fields = Vec::new();
        
     let typed = if is_empty_content { "file" } else {
@@ -406,18 +403,12 @@ async fn _process_deleted(
         channel_id.0
     );
 
-    log_channel.send_message(&ctx, |message| {
-        message.embed(|embed| {
-            embed.description(content);
-            embed.timestamp(now());
-            embed.fields(fields);
-            embed.color(color);
-            
-            embed
-        });
-        
-        message
-    }).await?;
+    log_channel.send_embed(&ctx)
+        .with_description(content)
+        .with_fields(fields)
+        .with_color(crate::read_config().await.color.message_delete)
+        .with_current_timestamp()
+        .await?;
     
     if !msg.attachments.is_empty() {
         log_channel.send_message(ctx, |message| {
@@ -433,19 +424,17 @@ async fn _process_deleted(
     Ok(())
 }
 
+
 async fn reminder(ctx: Arc<Context>) {
     use tokio::sync::Notify;
-
+    
     let notify = Arc::new(Notify::new());
-    ctx.data
-        .write()
-        .await
-        .insert::<ReminderNotify>(Arc::clone(&notify));
-    let db = get_data::<DatabaseKey>(&*ctx)
-        .await
-        .and_then(|db| db.open("Reminders").ok())
-        .unwrap();
-
+    let mut data = ctx.data.write().await;
+    let db = data.get::<DatabaseKey>().and_then(|db| db.open("Reminders").ok()).unwrap();
+        
+    data.insert::<ReminderNotify>(Arc::clone(&notify));
+    drop(data);
+    
     loop {
         let first_reminder = db.get_all::<i64, Reminder>().next();
         match first_reminder {
@@ -485,10 +474,13 @@ async fn reminder(ctx: Arc<Context>) {
 }
 
 async fn read_input(ctx: Arc<Context>) {
-    use tokio::io::AsyncBufReadExt;
+    use futures::io::AsyncBufReadExt;
+    use blocking::Unblock;
+    use futures::stream::StreamExt;
+    
 
-    let stdin = tokio::io::stdin();
-    let reader = tokio::io::BufReader::new(stdin);
+    let stdin = Unblock::new(std::io::stdin());
+    let reader = futures::io::BufReader::new(stdin);
     let mut lines = reader.lines();
 
     let mut data = InputData {
@@ -497,7 +489,7 @@ async fn read_input(ctx: Arc<Context>) {
     };
 
     loop {
-        if let Ok(Some(line)) = lines.next_line().await {
+        if let Some(Ok(line)) = lines.next().await {
             if let Ok(i) = Input::parse(&line) {
                 if let Err(why) = process_input(Arc::clone(&ctx), &i, &mut data).await {
                     error!("{:?} > {:?}", i, why)
@@ -505,6 +497,7 @@ async fn read_input(ctx: Arc<Context>) {
             }
         }
     }
+    
 }
 
 async fn process_input<'a>(
@@ -517,18 +510,25 @@ async fn process_input<'a>(
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
             channel.broadcast_typing(&ctx).await?;
 
-            time::delay_for(Duration::from_millis(1500)).await;
+            let typing_time = Duration::from_millis(s.len() as u64 * 200);
+            println!("Sending a message to channel {}\n> {}", channel, s);
+            time::delay_for(typing_time).await;
+            
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));
 
             if data.messages.len() > data.max_history {
                 data.messages.remove(0);
             }
+            
+            println!("Sent");
         }
 
         Input::Edit(s) => {
             if let Some((channel, msg)) = data.messages.last() {
+                println!("Editing the message {} on channel {}\n> {}", msg, channel, s);
                 channel.edit_message(ctx, msg, |m| m.content(s)).await?;
+                println!("Edited")
             }
         }
 
@@ -546,9 +546,13 @@ async fn process_input<'a>(
             if let Some(channel) = c {
                 CURRENT_CHANNEL.store(channel.0, Ordering::SeqCst);
             }
+            println!("Locked message list to channel {}", CURRENT_CHANNEL.load(Ordering::SeqCst));
         }
 
-        Input::Unlock => LOCKED.store(false, Ordering::SeqCst),
+        Input::Unlock => {
+            LOCKED.store(false, Ordering::SeqCst);
+            println!("Unlock the message list");
+        }
     }
 
     Ok(())

@@ -1,4 +1,5 @@
 use crate::commands::prelude::*;
+use crate::traits::ChannelExt;
 
 #[command]
 #[aliases("information")]
@@ -15,15 +16,10 @@ async fn info(ctx: &Context, msg: &Message, _arg: Args) -> CommandResult {
         my_info.description,
     );
     
-    msg.channel_id.send_message(&ctx, |m| {
-        m.embed(|embed| {
-            embed.description(description).field(
-                "Executed commands",
-                user_info.executed_commands(),
-                true,
-            )
-        })
-    }).await?;
+    msg.channel_id.send_embed(ctx)
+        .with_description(description)
+        .with_field("Executed commands", user_info.executed_commands(), true)
+        .await?;
 
     Ok(())
 }

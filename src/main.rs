@@ -7,5 +7,7 @@ fn main() -> Result<()> {
     dotenv().ok();
     let token = env::var("DISCORD_TOKEN")?;
     tomoka_rs::logger::init()?;
-    Runtime::new()?.block_on(tomoka_rs::start(token))
+    Runtime::new()?.block_on(tomoka_rs::start(token))?;
+    println!("BYE! for real");
+    Ok(())
 }

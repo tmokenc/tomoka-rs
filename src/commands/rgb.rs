@@ -12,5 +12,6 @@ import_all! {
 #[prefix("rgb")]
 #[default_command(evidence)]
 #[commands(add, remove, count, evidence)]
+#[owner_privilege]
 struct RGB;
 

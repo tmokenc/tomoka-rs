@@ -29,6 +29,7 @@ serde_json = "1"
 smallstr = { version = "0.2", features = ["serde"] }
 sys-info = "0.5"
 tempdir = "0.3"
+blocking = "0.6"
 db = { path = "./db" }
 
 [dependencies.pokemon_core]
@@ -48,7 +49,7 @@ features = ["full"]
 
 [dependencies.tokio]
 version = "0.2"
-features = ["fs", "sync", "stream", "signal", "io-util", "io-std", "rt-threaded", "macros"]
+features = ["fs", "sync", "signal", "rt-threaded", "macros"]
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
