@@ -15,8 +15,7 @@ use crate::{utils::*, Result};
 
 use chrono::Utc;
 use colorful::{Color, Colorful};
-use futures::future::BoxFuture;
-use futures::future::{self, FutureExt, TryFutureExt};
+use futures::future;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -28,7 +27,6 @@ use tokio::time;
 static CURRENT_CHANNEL: AtomicU64 = AtomicU64::new(450521152272728065);
 static LOCKED: AtomicBool = AtomicBool::new(false);
 
-type EventHook = for<'fut> fn(&'fut Context, &'fut Event) -> BoxFuture<'fut, Result<()>>;
 pub struct RawHandler {
     pub handler: Arc<RawEvents>,
 }
@@ -53,12 +51,12 @@ impl RawEventHandler for RawHandler {
 }
 
 pub struct RawEvents {
-    events: RwLock<HashMap<String, EventHook>>,
+    events: RwLock<HashMap<String, Box<dyn RawEventHandler>>>,
     actions: Mutex<Vec<Action>>,
 }
 
 enum Action {
-    Add(String, EventHook),
+    Add(String, Box<dyn RawEventHandler>),
     Remove(String),
 }
 
@@ -70,15 +68,17 @@ impl RawEvents {
         }
     }
 
-    pub async fn add(&self, name: impl ToString, fut: EventHook) {
+    pub async fn add<H: RawEventHandler + 'static>(&self, name: impl ToString, handler: H) {
         let timeout = Duration::from_millis(50);
         let name = name.to_string();
 
+        let handler = Box::new(handler) as Box<_>;
+
         match time::timeout(timeout, self.events.write()).await {
             Ok(ref mut events) => {
-                events.insert(name, fut);
+                events.insert(name, handler);
             }
-            Err(_) => self.actions.lock().await.push(Action::Add(name, fut)),
+            Err(_) => self.actions.lock().await.push(Action::Add(name, handler)),
         }
     }
 
@@ -98,13 +98,9 @@ impl RawEvents {
         let handlers = self.events.read().await;
         let fut = handlers
             .iter()
-            .map(|(k, v)| v(&ctx, &ev).map_err(move |e| (k, e)).boxed());
+            .map(|(k, v)| v.raw_event(ctx.clone(), ev.clone()));
 
-        future::join_all(fut)
-            .await
-            .into_iter()
-            .filter_map(|f| f.err())
-            .for_each(|(n, e)| error!("Cannot execute the event {}\n{:#?}", n, e));
+        future::join_all(fut).await;
 
         drop(handlers);
 

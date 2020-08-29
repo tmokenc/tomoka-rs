@@ -14,6 +14,7 @@ mod framework;
 mod global;
 mod storages;
 mod traits;
+mod tui;
 mod types;
 mod utils;
 
