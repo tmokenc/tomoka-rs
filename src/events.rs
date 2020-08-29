@@ -514,18 +514,25 @@ async fn process_input<'a>(
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
             channel.broadcast_typing(&ctx).await?;
 
-            time::delay_for(Duration::from_millis(1500)).await;
+            let typing_time = Duration::from_millis(s.len() as u64 * 200);
+            println!("Sending a message to channel {}\n> {}", channel, s);
+            time::delay_for(typing_time).await;
+            
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));
 
             if data.messages.len() > data.max_history {
                 data.messages.remove(0);
             }
+            
+            println!("Sent");
         }
 
         Input::Edit(s) => {
             if let Some((channel, msg)) = data.messages.last() {
+                println!("Editing the message {} on channel {}\n> {}", msg, channel, s);
                 channel.edit_message(ctx, msg, |m| m.content(s)).await?;
+                println!("Edited")
             }
         }
 
@@ -543,9 +550,13 @@ async fn process_input<'a>(
             if let Some(channel) = c {
                 CURRENT_CHANNEL.store(channel.0, Ordering::SeqCst);
             }
+            println!("Locked message list to channel {}", CURRENT_CHANNEL.load(Ordering::SeqCst));
         }
 
-        Input::Unlock => LOCKED.store(false, Ordering::SeqCst),
+        Input::Unlock => {
+            LOCKED.store(false, Ordering::SeqCst);
+            println!("Unlock the message list");
+        }
     }
 
     Ok(())
