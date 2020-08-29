@@ -3,6 +3,7 @@ use crate::types::GuildConfig;
 
 #[command]
 #[only_in(guilds)]
+#[owner_privilege]
 #[required_permissions(MANAGE_ROLES)]
 /// Add roles to the almighty RGB databse
 async fn add(ctx: &Context, msg: &Message, _: Args) -> CommandResult {

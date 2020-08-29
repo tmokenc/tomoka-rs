@@ -2,6 +2,7 @@ use crate::commands::prelude::*;
 
 #[command]
 #[only_in(guilds)]
+#[owner_privilege]
 #[required_permissions(MANAGE_ROLES)]
 /// Remove roles from the almighty RGB database
 async fn remove(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
