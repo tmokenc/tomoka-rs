@@ -83,7 +83,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         if collector.is_empty() {
             let custom_events = get_data::<CustomEventList>(&ctx).await.unwrap();
 
-            custom_events.add("tmq", tmq_event_handler).await;
+            custom_events.add("tmq", TmqEventHandler).await;
         }
 
         collector.insert(msg.channel_id, HashMap::new());
@@ -277,7 +277,17 @@ fn touhou_emoji(version: &str) -> EmojiIdentifier {
     }
 }
 
-#[crate::hook]
+pub(crate) struct TmqEventHandler;
+
+#[async_trait::async_trait]
+impl crate::events::RawEventHandlerRef for TmqEventHandler {
+    async fn raw_event_ref(&self, ctx: &Context, ev: &Event) {
+        if let Err(why) = tmq_event_handler(ctx, ev).await {
+            error!("Error with TmQ:\n{:#?}", why);
+        }
+    }
+}
+
 async fn tmq_event_handler(ctx: &Context, ev: &Event) -> Result<()> {
     match ev {
         Event::MessageCreate(event) => {

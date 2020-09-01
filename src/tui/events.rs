@@ -18,6 +18,7 @@ impl RawEventHandler for TuiEventHandler {
             Event::MessageCreate(e) => {
                 self.messages.write().await.push(e.message);
             }
+            _ => {}
         }
     }
 }

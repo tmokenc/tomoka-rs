@@ -31,6 +31,18 @@ use tokio::time;
 static CURRENT_CHANNEL: AtomicU64 = AtomicU64::new(450521152272728065);
 static LOCKED: AtomicBool = AtomicBool::new(false);
 
+#[async_trait]
+pub trait RawEventHandlerRef: Send + Sync {
+    async fn raw_event_ref(&self, ctx: &Context, ev: &Event);
+}
+
+#[async_trait]
+impl RawEventHandler for dyn RawEventHandlerRef {
+    async fn raw_event(&self, ctx: Context, ev: Event) {
+        self.raw_event_ref(&ctx, &ev).await
+    }
+}
+
 pub struct RawHandler {
     pub handler: Arc<RawEvents>,
 }
@@ -55,12 +67,12 @@ impl RawEventHandler for RawHandler {
 }
 
 pub struct RawEvents {
-    events: RwLock<HashMap<String, Box<dyn RawEventHandler>>>,
+    events: RwLock<HashMap<String, Box<dyn RawEventHandlerRef>>>,
     actions: Mutex<Vec<Action>>,
 }
 
 enum Action {
-    Add(String, Box<dyn RawEventHandler>),
+    Add(String, Box<dyn RawEventHandlerRef>),
     Remove(String),
 }
 
@@ -72,7 +84,7 @@ impl RawEvents {
         }
     }
 
-    pub async fn add<H: RawEventHandler + 'static>(&self, name: impl ToString, handler: H) {
+    pub async fn add<H: RawEventHandlerRef + 'static>(&self, name: impl ToString, handler: H) {
         let timeout = Duration::from_millis(50);
         let name = name.to_string();
 
@@ -102,7 +114,7 @@ impl RawEvents {
         let handlers = self.events.read().await;
         let fut = handlers
             .iter()
-            .map(|(k, v)| v.raw_event(ctx.clone(), ev.clone()));
+            .map(|(k, v)| v.raw_event_ref(&ctx, &ev));
 
         future::join_all(fut).await;
 
@@ -125,6 +137,7 @@ pub struct Handler {
     resume: AtomicU64,
     connected: AtomicBool,
 }
+
 impl Handler {
     pub fn new() -> Self {
         Self {

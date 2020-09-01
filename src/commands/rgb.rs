@@ -3,7 +3,9 @@ use magic::import_all;
 
 import_all! {
     add,
+    add_member,
     remove,
+    remove_member,
     count,
     evidence,
 }
@@ -11,7 +13,7 @@ import_all! {
 #[group]
 #[prefix("rgb")]
 #[default_command(evidence)]
-#[commands(add, remove, count, evidence)]
+#[commands(add, remove, add_member, remove_member, count, evidence)]
 #[owner_privilege]
 struct RGB;
 
