@@ -1,5 +1,4 @@
 use crate::commands::prelude::*;
-use magic::ErrorMessage;
 
 #[command]
 #[only_in(guilds)]
@@ -7,10 +6,10 @@ use magic::ErrorMessage;
 #[required_permissions(MANAGE_ROLES)]
 async fn remove_member(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.mentions.is_empty() {
-        return Err(Box::new(ErrorMessage::from("Someone must be mentioned to be in the @RGB group")) as Box<_>);
+        return Err("Someone must be mentioned to be removed in the @RGB group".into());
     }
     
-    let guild_id = msg.guild_id.ok_or_else(|| ErrorMessage::from("This must be use in guilds"))?;
+    let guild_id = msg.guild_id.ok_or("This must be use in guilds")?;
     
     let config = crate::read_config().await;
     let guilds = config.guilds.get(&guild_id);

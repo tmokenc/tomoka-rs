@@ -1,5 +1,4 @@
 use crate::cache::MyCache;
-use crate::events::RawEvents;
 use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
@@ -11,9 +10,9 @@ use tokio::sync::Mutex;
 
 type MutexData<T> = Arc<Mutex<T>>;
 
-pub struct CustomEventList;
-impl TypeMapKey for CustomEventList {
-    type Value = Arc<RawEvents>;
+pub struct RawEventList;
+impl TypeMapKey for RawEventList {
+    type Value = tomo_serenity_ext::MultiRawHandler;
 }
 
 pub struct InforKey;

@@ -1,5 +1,5 @@
 [package]
-name = "db"
+name = "server"
 version = "0.1.0"
 authors = ["tmokenc <tmokenc@protonmail.com>"]
 edition = "2018"
@@ -7,9 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = "1"
-bincode = "1"
-lazy_static = "1"
-sled = { version = "0.32", features = ["compression"] }
-log = "0.4"
-tokio = { version = "0.2", features = ["time"] }
+
+
+[dependencies.warp]
+version = "0.2"
+
+[dependencies.tokio]
+version = "0.2"
+features = []

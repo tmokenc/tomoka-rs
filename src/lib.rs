@@ -29,9 +29,10 @@ use std::error::Error;
 use std::sync::Arc;
 
 use crate::config::Config;
+use crate::logger::EventLogger;
 use cache::MyCache;
 use db::DbInstance;
-use events::{Handler, RawHandler};
+use events::Handler;
 use storages::*;
 use types::*;
 
@@ -45,33 +46,24 @@ use serenity::Client;
 use tokio::signal::{self, unix};
 use tokio::sync::Mutex;
 
-pub async fn start(token: impl AsRef<str>) -> Result<()> {
+pub async fn start_with_db(token: impl AsRef<str>, db: Arc<DbInstance>) -> Result<()> {
     let handler = Handler::new();
-    let raw_handler = RawHandler::new();
-    let custom_events_arc = raw_handler.handler.clone();
+    let raw_handler = tomo_serenity_ext::MultiRawHandler::new();
+    let raw_handler_clone = raw_handler.clone();
     let framework = framework::get_framework();
+    
+    raw_handler.add("Logger", EventLogger::new()).await;
 
     let mut client = Client::new(token.as_ref())
         .guild_subscriptions(false)
         .framework(framework)
         .event_handler(handler)
-        .raw_event_handler(raw_handler)
+        .raw_event_handler(raw_handler_clone)
         .intents(intents())
         .await?;
 
     {
         let (mut data, config) = future::join(client.data.write(), read_config()).await;
-
-        let db = loop {
-            match DbInstance::new(&config.database.path, None) {
-                Ok(db) => break db,
-                Err(why) => {
-                    error!("{}", why);
-                    let wait = core::time::Duration::from_secs(1);
-                    tokio::time::delay_for(wait).await;
-                }
-            }
-        };
 
         let req = Reqwest::new();
         fetch_guild_config_from_db(&db).await?;
@@ -79,8 +71,8 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
             error!("\n{}", why);
         }
 
-        data.insert::<CustomEventList>(custom_events_arc);
-        data.insert::<DatabaseKey>(Arc::new(db));
+        data.insert::<RawEventList>(raw_handler);
+        data.insert::<DatabaseKey>(db);
         data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
         data.insert::<ReqwestClient>(Arc::new(req));
         data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
@@ -105,6 +97,15 @@ pub async fn start(token: impl AsRef<str>) -> Result<()> {
     client.start().await?;
     info!("{}", "BYE".underlined().gradient(Color::Red));
     Ok(())
+}
+
+pub async fn start(token: impl AsRef<str>) -> Result<()> {
+    let db = db::get_db_instance(&read_config().await.database.path, None)
+        .await
+        .map(Arc::new)
+        .ok_or("Cannot get the DbInstance")?;
+    
+    start_with_db(token, db).await
 }
 
 #[inline]

@@ -1,5 +1,5 @@
 use crate::commands::prelude::*;
-use crate::storages::CustomEventList;
+use crate::storages::RawEventList;
 use crate::Result;
 use colorful::Colorful;
 use lazy_static::lazy_static;
@@ -81,7 +81,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
     {
         let mut collector = TMQ_COLLECTOR.lock().await;
         if collector.is_empty() {
-            let custom_events = get_data::<CustomEventList>(&ctx).await.unwrap();
+            let custom_events = get_data::<RawEventList>(&ctx).await.unwrap();
 
             custom_events.add("tmq", TmqEventHandler).await;
         }
@@ -157,7 +157,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         collector.remove(&msg.channel_id);
 
         if collector.is_empty() {
-            if let Some(events) = get_data::<CustomEventList>(&ctx).await {
+            if let Some(events) = get_data::<RawEventList>(&ctx).await {
                 events.remove("tmq").await;
             }
         }
@@ -272,6 +272,7 @@ fn touhou_emoji(version: &str) -> EmojiIdentifier {
     let name = format!("th{}", version.replace(".", "_"));
 
     EmojiIdentifier {
+        animated: false,
         id: EmojiId(*id),
         name,
     }
@@ -280,7 +281,7 @@ fn touhou_emoji(version: &str) -> EmojiIdentifier {
 pub(crate) struct TmqEventHandler;
 
 #[async_trait::async_trait]
-impl crate::events::RawEventHandlerRef for TmqEventHandler {
+impl crate::traits::RawEventHandlerRef for TmqEventHandler {
     async fn raw_event_ref(&self, ctx: &Context, ev: &Event) {
         if let Err(why) = tmq_event_handler(ctx, ev).await {
             error!("Error with TmQ:\n{:#?}", why);

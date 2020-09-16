@@ -112,11 +112,7 @@ async fn pokemon(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return Ok(());
     }
 
-    let error = magic::ErrorMessage(format!(
-        "Cannot not find the `{}` in my almighty database",
-        args
-    ));
-    Err(Box::new(error) as Box<_>)
+    Err(format!("Cannot not find the `{}` in my almighty database", args).into())
 }
 
 async fn process_data(

@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use serenity::client::{Context, EventHandler, RawEventHandler};
+use serenity::client::{Context, EventHandler};
 use serenity::model::{
     channel::{Channel, Message},
-    event::{Event, MessageUpdateEvent, ResumedEvent},
+    event::{MessageUpdateEvent, ResumedEvent},
     gateway::{Activity, Ready},
     id::{ChannelId, GuildId, MessageId},
     user::OnlineStatus,
@@ -19,118 +19,14 @@ use crate::{
 
 use chrono::Utc;
 use colorful::{Color, Colorful};
-use futures::future;
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{Mutex, RwLock};
 use tokio::time;
 
 static CURRENT_CHANNEL: AtomicU64 = AtomicU64::new(450521152272728065);
 static LOCKED: AtomicBool = AtomicBool::new(false);
-
-#[async_trait]
-pub trait RawEventHandlerRef: Send + Sync {
-    async fn raw_event_ref(&self, ctx: &Context, ev: &Event);
-}
-
-#[async_trait]
-impl RawEventHandler for dyn RawEventHandlerRef {
-    async fn raw_event(&self, ctx: Context, ev: Event) {
-        self.raw_event_ref(&ctx, &ev).await
-    }
-}
-
-pub struct RawHandler {
-    pub handler: Arc<RawEvents>,
-}
-
-impl RawHandler {
-    pub fn new() -> Self {
-        Self {
-            handler: Arc::new(RawEvents::new()),
-        }
-    }
-}
-
-#[async_trait]
-impl RawEventHandler for RawHandler {
-    async fn raw_event(&self, ctx: Context, ev: Event) {
-        if let Event::Unknown(event) = &ev {
-            debug!("An unknown event\n{:#?}", event);
-        }
-
-        self.handler.execute(ctx, ev).await;
-    }
-}
-
-pub struct RawEvents {
-    events: RwLock<HashMap<String, Box<dyn RawEventHandlerRef>>>,
-    actions: Mutex<Vec<Action>>,
-}
-
-enum Action {
-    Add(String, Box<dyn RawEventHandlerRef>),
-    Remove(String),
-}
-
-impl RawEvents {
-    pub fn new() -> Self {
-        Self {
-            events: RwLock::new(HashMap::new()),
-            actions: Mutex::new(Vec::new()),
-        }
-    }
-
-    pub async fn add<H: RawEventHandlerRef + 'static>(&self, name: impl ToString, handler: H) {
-        let timeout = Duration::from_millis(50);
-        let name = name.to_string();
-
-        let handler = Box::new(handler) as Box<_>;
-
-        match time::timeout(timeout, self.events.write()).await {
-            Ok(ref mut events) => {
-                events.insert(name, handler);
-            }
-            Err(_) => self.actions.lock().await.push(Action::Add(name, handler)),
-        }
-    }
-
-    pub async fn remove(&self, name: impl ToString) {
-        let timeout = Duration::from_millis(50);
-        let name = name.to_string();
-
-        match time::timeout(timeout, self.events.write()).await {
-            Ok(ref mut events) => {
-                events.remove(&name);
-            }
-            Err(_) => self.actions.lock().await.push(Action::Remove(name)),
-        }
-    }
-
-    pub async fn execute(&self, ctx: Context, ev: Event) {
-        let handlers = self.events.read().await;
-        let fut = handlers
-            .iter()
-            .map(|(k, v)| v.raw_event_ref(&ctx, &ev));
-
-        future::join_all(fut).await;
-
-        drop(handlers);
-
-        let timeout = Duration::from_millis(1);
-        if let Ok(ref mut map) = time::timeout(timeout, self.events.write()).await {
-            for action in self.actions.lock().await.drain(..) {
-                match action {
-                    Action::Add(name, fut) => map.insert(name, fut),
-                    Action::Remove(name) => map.remove(&name),
-                };
-            }
-        }
-    }
-}
 
 pub struct Handler {
     ready: AtomicU64,
@@ -263,12 +159,6 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        info!(
-            "{} is now available on {} servers",
-            ready.user.name,
-            ready.guilds.len()
-        );
-
         let mess = {
             let resume = self.resume.load(Ordering::SeqCst);
             let count = self.ready.fetch_add(1, Ordering::SeqCst) + 1;
@@ -312,7 +202,6 @@ impl EventHandler for Handler {
         let status = OnlineStatus::DoNotDisturb;
 
         ctx.set_presence(Some(activity), status).await;
-        debug!("Resumed; trace: {:?}", resume.trace);
     }
 }
 

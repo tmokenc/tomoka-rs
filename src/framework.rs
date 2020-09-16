@@ -332,6 +332,7 @@ async fn respect(ctx: &Context, msg: &Message) -> Result<()> {
     let emoji = match crate::read_config().await.respect_emoji {
         None => ReactionType::from('🇫'),
         Some(id) => ReactionType::from(EmojiIdentifier {
+            animated: false,
             id,
             name: "f_".to_string(),
         }),

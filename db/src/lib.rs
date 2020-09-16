@@ -284,3 +284,34 @@ pub fn get_db_manager(path: impl AsRef<Path>) -> Result<Manager> {
         .map(Arc::new)
         .map_err(|v| Box::new(v) as Box<_>)
 }
+
+/// Retry until we able to get to database
+/// Return `None` if cannot get the instance after the retry counts
+/// Passing `None` to the `retry` will make the loop run forever until we have the database instance
+pub async fn get_db_instance<P, R>(path: P, retry: R) -> Option<DbInstance> 
+    where
+        P: AsRef<Path>,
+        R: Into<Option<usize>>,
+{
+    let mut retry = retry.into();
+    let path = path.as_ref().to_owned();
+
+    loop {
+        match DbInstance::new(&path, None) {
+            Ok(db) => break Some(db),
+            Err(why) => {
+                log::error!("{}", why);
+                if let Some(retry) = retry.as_mut() {
+                    if *retry == 0 {
+                        break None
+                    }
+
+                    *retry -= 1;
+                }
+
+                let wait = core::time::Duration::from_millis(500);
+                tokio::time::delay_for(wait).await;
+            }
+        }
+    }
+}

@@ -4,13 +4,6 @@ use tokio::process::Command;
 const ERROR_MESSAGE = "Cannot find any code in your message.
 Please make sure you wrap them inside the \\`\\`\\`your code\\`\\`\`";
 
-macro_rules! return_err {
-    () => {
-        return Err(magic::ErrorMessage::from(ErrorMessage))
-    }
-}
-
-
 #[command]
 async fn execute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
@@ -42,10 +35,10 @@ fn match_code(s: &str) -> Option<(&str, Language)> {
 #[aliases("js")]
 async fn javascript(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let file = todo!();
-    let code = match match_code(s) {
-        Some((code, _)) => code,
-        None => return_err!(),
-    };
+    
+    let code = match_code(s)
+        .map(|(code, _)| code)
+        .ok_or_else(|| ERROR_MESSAGE.into())?;
     
     let mut process = Command::new("deno")
         .arg("run")
@@ -58,10 +51,9 @@ async fn javascript(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[aliases("rs")]
 async fn rust(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let code = match match_code(s) {
-        Some((code, _)) => code,
-        None => return_err!(),
-    };
+    let code = match_code(s)
+        .map(|(code, _)| code)
+        .ok_or_else(|| ERROR_MESSAGE.into())?;
     
     Ok(())
 }
