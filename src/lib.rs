@@ -14,7 +14,6 @@ mod framework;
 mod global;
 mod storages;
 mod traits;
-mod tui;
 mod types;
 mod utils;
 
@@ -40,13 +39,27 @@ use colorful::{Color, Colorful};
 use eliza::Eliza;
 use futures::future;
 use magic::dark_magic::has_external_command;
-use serenity::client::bridge::gateway::GatewayIntents;
+use serenity::client::bridge::gateway::{GatewayIntents, ShardManager};
 use serenity::model::id::GuildId;
 use serenity::Client;
 use tokio::signal::{self, unix};
 use tokio::sync::Mutex;
 
-pub async fn start_with_db(token: impl AsRef<str>, db: Arc<DbInstance>) -> Result<()> {
+// pub struct DiscordInstance {
+//     shard_manager: Arc<serenity::prelude::Mutex<ShardManager>>,
+// }
+// 
+// impl DiscordInstance {
+//     pub async fn shutdown(&self) {
+//         log::info!("Shutting down the discord instance");
+//         self.shard_manager.lock().await.shutdown_all().await;
+//     }
+// }
+
+pub async fn start_with_db(
+    token: impl AsRef<str>, 
+    db: Arc<DbInstance>
+) -> Result<()> {
     let handler = Handler::new();
     let raw_handler = tomo_serenity_ext::MultiRawHandler::new();
     let raw_handler_clone = raw_handler.clone();

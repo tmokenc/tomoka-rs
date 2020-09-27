@@ -429,7 +429,7 @@ async fn process_input<'a>(
         Input::Edit(s) => {
             if let Some((channel, msg)) = data.messages.last() {
                 println!("Editing the message {} on channel {}\n> {}", msg, channel, s);
-                channel.edit_message(ctx, msg, |m| m.content(s)).await?;
+                channel.edit_message(&*ctx, *msg).with_content(s).await?;
                 println!("Edited")
             }
         }

@@ -58,5 +58,5 @@ branch = "next"
 features = ["collector", "rustls_backend", "voice"]
 
 [dependencies.tomo-serenity-ext]
-git = "https://gitlab.com/tmokenc/tomo-serenity-ext"
-# path = "../tomo-serenity-ext"
+# git = "https://gitlab.com/tmokenc/tomo-serenity-ext"
+path = "../tomo-serenity-ext"

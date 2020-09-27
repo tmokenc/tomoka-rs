@@ -374,7 +374,7 @@ async fn process_types(ctx: &Context, msg: &Message, args: &str) -> Result<bool>
 
     let emoji = crate::read_config().await.emoji.pokemon.to_owned();
 
-    let mut types_paginator = TypePagination { types, emoji };
+    let types_paginator = TypePagination { types, emoji };
 
     types_paginator.pagination(ctx, msg).await?;
     Ok(true)
@@ -564,7 +564,7 @@ impl MovesPaginator {
 }
 
 impl Paginator for MovesPaginator {
-    fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
+    fn append_page(&self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         let page = page.get();
         let index = (page - 1) * POKEMON_MOVE_PER_PAGE;
 
@@ -655,7 +655,7 @@ impl Paginator for TypePagination {
             Some(((self.types.len() - 1) / MAX_TYPES_PER_PAGE) + 1)
         }
     }
-    fn append_page(&mut self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
+    fn append_page(&self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {
         let start_index = (page.get() - 1) * MAX_TYPES_PER_PAGE;
 
         for t in self.types[start_index..].iter().take(MAX_TYPES_PER_PAGE) {

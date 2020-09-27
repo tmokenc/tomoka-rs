@@ -355,8 +355,7 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
 
     if msg.mentions_user_id(me) {
         let input = remove_mention(&msg.content);
-        let response = get_data::<AIStore>(&ctx)
-            .await
+        let response = data.get::<AIStore>()
             .expect("Expected brain in ShareMap.")
             .lock()
             .await
@@ -475,9 +474,180 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     if sauces.is_empty() {
         return Ok(());
     }
+    
+    let data = sauces.get(0).cloned();
+    
+    let fut_a = async {
+        if let Some(sauce) = data {
+            post_to_fb(ctx, msg, sauce, req).await?;
+        }
+        
+        crate::Result::Ok(())
+    };
+    
+    let fut_b = react_to_pagination(ctx, msg, reaction, timeout, sauces);   
+    
+    let (a, b) = future::join(fut_a, fut_b).await;
+    
+    a?;
+    b?;
+    
+    Ok(())
+}
 
-    drop(req);
-    react_to_pagination(ctx, msg, reaction, timeout, sauces).await?;
+use requester::saucenao::SauceNao;
+use serenity::prelude::TypeMapKey;
+use serenity::model::id::{ChannelId, GuildId};
+use serenity::http::Http;
+use serde::Deserialize;
+
+#[inline]
+fn is_acceptable_size(msg: &Message, data: &Ref<SauceNao>) -> bool {
+    const MAX_FB_IMG_SIZE: u64 = 4 * 1024 * 1024;
+    
+    msg.attachments
+        .iter()
+        .find(|v| v.url.as_str() == data.img_url())
+        .filter(|v| v.size < MAX_FB_IMG_SIZE)
+        .is_some()
+}
+
+async fn post_to_fb(
+    ctx: &Context,
+    msg: &Message,
+    data: Ref<SauceNao>, 
+    req: <ReqwestClient as TypeMapKey>::Value
+) -> Result<()> {
+    if !matches!(msg.guild_id, Some(GuildId(418811018244784129))) {
+        return Ok(())
+    }
+    
+    if data.sources.is_empty() || !is_acceptable_size(msg, &data) {
+        return Ok(())
+    }
+    
+    let reaction = ReactionType::Unicode(String::from("💟"));
+    let timeout = Duration::from_secs(30);
+    
+    let author = match wait_for_reaction(ctx, msg, reaction, timeout).await? {
+        Some(UserId(239825449637642240)) => "tmokenc",
+        Some(UserId(353026384601284609)) => "myon",
+        Some(UserId(303146279884685314)) => "Kai",
+        _ => return Ok(())
+    };
+    
+    let (url, query) = {
+        let config = crate::read_config().await;
+        match config.apikeys.facebook.as_ref() {
+            Some(page) => {
+                let mut description = String::new();
+                
+                if let Some(title) = &data.title {
+                    writeln!(&mut description, "{}", title)?;
+                }
+                
+                let parodies = data.parody.iter().filter(|v| v.as_str() != "original").collect::<Vec<_>>();
+                if !parodies.is_empty() {
+                    description.push_str("\nParody\n");
+                    for parody in parodies {
+                        writeln!(&mut description, "{}", parody)?;
+                    }
+                }
+                
+                description.push_str("<3\n\nSource\n");
+                for (name, sauce) in data.sources.iter() {
+                    writeln!(&mut description, "{}: {}", name, sauce)?;
+                }
+                
+                write!(&mut description, "\n#{}", author)?;
+                
+                let url = format!("https://graph.facebook.com/{}/photos", page.id);
+                let mut query = std::collections::HashMap::new();
+                
+                query.insert("url", data.img_url().to_owned());
+                query.insert("access_token", page.token.to_owned());
+                query.insert("caption", description);
+                
+                (url, query)
+            }
+                
+            None => return Ok(()),
+        }
+    };
+    
+    #[derive(Deserialize)]
+    struct PagePhotoPost {
+        id: String,
+        post_id: String,
+    }
+    
+    let content = format!("Posting to Loli Chronicle as **#{}**", author);
+    
+    let mess = msg.channel_id.send_embed(ctx)
+        .with_description(&content)
+        .with_thumbnail(data.img_url())
+        .with_color(crate::read_config().await.color.information)
+        .with_current_timestamp();
+    
+    let post = async {
+        req.post(&url).query(&query).send().await?.text().await
+    };
+    
+    let (mess, post) = future::join(mess, post).await;
+    let mut embed = serenity::builder::CreateEmbed::default();
+    
+    embed.timestamp(now());
+    embed.thumbnail(data.img_url());
+    
+    let text = post?;
+    let post = serde_json::from_str::<PagePhotoPost>(&text);
+    
+    match post {
+        Ok(_post) => {
+            embed.description(format!(
+                "Successfully posted as **#{}**!!!", 
+                author
+            ));
+            embed.color(crate::read_config().await.color.success);
+            
+            match mess {
+                Ok(mess) => mess
+                    .channel_id
+                    .0
+                    .edit_message(ctx, mess.id)
+                    .with_embed(embed)
+                    .await?,
+                    
+                Err(_) => msg
+                    .channel_id
+                    .send_embed(ctx)
+                    .with_embedable_object(embed)
+                    .await?,
+            };
+        }
+        
+        Err(why) => {
+            log::error!("Error while posting image to facebook\n{:#?}", text);
+            embed.description(format!("Error while posting the image```{:#?}```", why));
+            embed.color(crate::read_config().await.color.error);
+            match mess {
+                Ok(mess) => mess
+                    .channel_id
+                    .0
+                    .edit_message(ctx, mess.id)
+                    .with_embed(embed)
+                    .await?,
+                    
+                Err(_) => msg
+                    .channel_id
+                    .send_embed(ctx)
+                    .with_embedable_object(embed)
+                    .await?,
+            };
+            
+        }
+    }
+    
     Ok(())
 }
 
@@ -595,3 +765,4 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
 
     Ok(())
 }
+

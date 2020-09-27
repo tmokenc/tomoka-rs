@@ -32,6 +32,8 @@ pub fn init() -> Result<()> {
         .format(console_format)
         .level(LevelFilter::Info)
         .level_for("tomoka_rs", LevelFilter::Trace)
+        .level_for("tracing", LevelFilter::Error)
+        .level_for("serenity", LevelFilter::Error)
         .filter(|meta| meta.level() > LevelFilter::Warn)
         .chain(io::stdout());
 
@@ -43,7 +45,7 @@ pub fn init() -> Result<()> {
     let file = fern::Dispatch::new()
         .format(file_format)
         .level(LevelFilter::Warn)
-        .level_for("serenity", LevelFilter::Trace)
+        //.level_for("serenity", LevelFilter::Trace)
         .level_for("tomoka_rs", LevelFilter::Debug)
         .chain(fern::DateBased::new("logs/", "tomo-%F.log"));
 

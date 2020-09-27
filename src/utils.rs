@@ -254,7 +254,7 @@ pub async fn react_to_pagination<P: Paginator + Send + Sync>(
     msg: &Message,
     reaction: ReactionType,
     timeout: Duration,
-    mut data: P,
+    data: P,
 ) -> Result<()> {
     let reaction = wait_for_reaction(ctx, msg, reaction, timeout).await?;
 

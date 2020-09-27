@@ -31,6 +31,12 @@ impl<T> From<T> for Ref<T> {
     }
 }
 
+impl<T: Clone> Clone for Ref<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
 impl<T> Deref for Ref<T> {
     type Target = T;
 

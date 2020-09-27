@@ -20,6 +20,7 @@ pub struct Database {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Color {
     pub information: u64,
+    pub success: u64,
     pub error: u64,
     pub message_update: u64,
     pub message_delete: u64,
@@ -64,6 +65,13 @@ pub struct PokemonEmoji {
 pub struct ApiKeys {
     pub google: Option<String>,
     pub osu: Option<String>,
+    pub facebook: Option<FacebookPage>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct FacebookPage {
+    pub id: u64,
+    pub token: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

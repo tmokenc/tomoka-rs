@@ -297,7 +297,7 @@ impl Embedable for Ref<requester::nhentai::NhentaiGallery> {
 }
 
 impl Paginator for Ref<requester::nhentai::NhentaiGallery> {
-    fn append_page(&mut self, page: NonZeroUsize, embed: &mut CreateEmbed) {
+    fn append_page(&self, page: NonZeroUsize, embed: &mut CreateEmbed) {
         let total_pages = (&**self).total_pages();
         let page = page.get();
         let color = {
