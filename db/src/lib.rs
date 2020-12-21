@@ -17,6 +17,8 @@ lazy_static! {
     static ref ENCODER: Encoder = DefaultOptions::new().with_big_endian();
 }
 
+#[derive(Clone)]
+/// It's safe to clone because all the inners are already inside Arcs
 pub struct DbInstance {
     tree: Option<Tree>,
     manager: Manager,
@@ -95,7 +97,7 @@ impl<K: DeserializeOwned, V: DeserializeOwned> Iterator for Iter<K, V> {
                     let v = ENCODER.deserialize(val)?;
                     bincode::Result::<(K, V)>::Ok((k, v))
                 })();
-                
+
                 match data {
                     Ok(e) => Some(e),
                     Err(why) => {
@@ -288,10 +290,10 @@ pub fn get_db_manager(path: impl AsRef<Path>) -> Result<Manager> {
 /// Retry until we able to get to database
 /// Return `None` if cannot get the instance after the retry counts
 /// Passing `None` to the `retry` will make the loop run forever until we have the database instance
-pub async fn get_db_instance<P, R>(path: P, retry: R) -> Option<DbInstance> 
-    where
-        P: AsRef<Path>,
-        R: Into<Option<usize>>,
+pub async fn get_db_instance<P, R>(path: P, retry: R) -> Option<DbInstance>
+where
+    P: AsRef<Path>,
+    R: Into<Option<usize>>,
 {
     let mut retry = retry.into();
     let path = path.as_ref().to_owned();
@@ -303,7 +305,7 @@ pub async fn get_db_instance<P, R>(path: P, retry: R) -> Option<DbInstance>
                 log::error!("{}", why);
                 if let Some(retry) = retry.as_mut() {
                     if *retry == 0 {
-                        break None
+                        break None;
                     }
 
                     *retry -= 1;

@@ -9,6 +9,9 @@ use magic::traits::MagicIter as _;
 use magic::traits::MagicStr as _;
 use std::fmt::{Display, Write};
 
+const NHENTAI_ICON: &str =
+    "https://cdn.discordapp.com/attachments/513304527064006656/766670086928859146/nhen.png";
+
 impl Embedable for Ref<requester::saucenao::SauceNao> {
     fn append(&self, embed: &mut CreateEmbed) {
         let mut info = String::new();
@@ -238,7 +241,7 @@ impl Embedable for Ref<requester::ehentai::Gmetadata> {
         embed.url(&url);
         embed.footer(|f| {
             f.icon_url("https://cdn.discordapp.com/emojis/676135471566290985.png")
-                .text(url)
+                .text(&url[21..])
         });
     }
 }
@@ -289,6 +292,7 @@ impl Embedable for Ref<requester::nhentai::NhentaiGallery> {
         embed.description(description);
         embed.color(color & 0xffffff);
         embed.timestamp(Utc.timestamp(self.upload_date as _, 0).to_rfc3339());
+        embed.footer(|f| f.text(format!("ID: {}", self.id)).icon_url(NHENTAI_ICON));
 
         if let Some(tags) = metadata.tags {
             embed.field("Tags", tags.join(", "), false);
@@ -314,6 +318,7 @@ impl Paginator for Ref<requester::nhentai::NhentaiGallery> {
                 "ID: {} | Page: {} / {}",
                 self.id, page, total_pages
             ))
+            .icon_url(NHENTAI_ICON)
         });
 
         match self.page(page) {

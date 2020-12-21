@@ -15,9 +15,8 @@ mod global;
 mod storages;
 mod traits;
 mod types;
+mod logger;
 mod utils;
-
-pub mod logger;
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -42,83 +41,98 @@ use magic::dark_magic::has_external_command;
 use serenity::client::bridge::gateway::{GatewayIntents, ShardManager};
 use serenity::model::id::GuildId;
 use serenity::Client;
-use tokio::signal::{self, unix};
+use songbird::serenity::SerenityInit;
+use tokio::runtime::Handle as TokioHandle;
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 
-// pub struct DiscordInstance {
-//     shard_manager: Arc<serenity::prelude::Mutex<ShardManager>>,
-// }
-// 
-// impl DiscordInstance {
-//     pub async fn shutdown(&self) {
-//         log::info!("Shutting down the discord instance");
-//         self.shard_manager.lock().await.shutdown_all().await;
-//     }
-// }
-
-pub async fn start_with_db(
-    token: impl AsRef<str>, 
-    db: Arc<DbInstance>
-) -> Result<()> {
-    let handler = Handler::new();
-    let raw_handler = tomo_serenity_ext::MultiRawHandler::new();
-    let raw_handler_clone = raw_handler.clone();
-    let framework = framework::get_framework();
-    
-    raw_handler.add("Logger", EventLogger::new()).await;
-
-    let mut client = Client::new(token.as_ref())
-        .guild_subscriptions(false)
-        .framework(framework)
-        .event_handler(handler)
-        .raw_event_handler(raw_handler_clone)
-        .intents(intents())
-        .await?;
-
-    {
-        let (mut data, config) = future::join(client.data.write(), read_config()).await;
-
-        let req = Reqwest::new();
-        fetch_guild_config_from_db(&db).await?;
-        if let Err(why) = commands::pokemon::update_pokemon(&db, &req).await {
-            error!("\n{}", why);
-        }
-
-        data.insert::<RawEventList>(raw_handler);
-        data.insert::<DatabaseKey>(db);
-        data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
-        data.insert::<ReqwestClient>(Arc::new(req));
-        data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
-        data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
-
-        if has_external_command("ffmpeg") {
-            data.insert::<VoiceManager>(Arc::clone(&client.voice_manager));
-            // data.insert::<MusicManager>(mutex_data(HashMap::new()));
-        }
-    }
-
-    let shard_manager = Arc::clone(&client.shard_manager);
-    let mut term_sig = unix::signal(unix::SignalKind::terminate())?;
-    tokio::spawn(async move {
-        let mut sig = Box::pin(term_sig.recv());
-        let ctrl_c = Box::pin(signal::ctrl_c());
-        futures::future::select(sig.as_mut(), ctrl_c).await;
-        info!("{}", "RECEIVED THE EXIT SIGNAL".red().bold().underlined());
-        shard_manager.lock().await.shutdown_all().await;
-    });
-
-    client.start().await?;
-    info!("{}", "BYE".underlined().gradient(Color::Red));
-    Ok(())
+pub type Shard = Arc<serenity::prelude::Mutex<ShardManager>>;
+pub struct Instance {
+    db: DbInstance,
+    rt: TokioHandle,
+    task: Option<JoinHandle<serenity::Result<()>>>,
+    shard: Option<Shard>,
 }
 
-pub async fn start(token: impl AsRef<str>) -> Result<()> {
-    let db = db::get_db_instance(&read_config().await.database.path, None)
-        .await
-        .map(Arc::new)
-        .ok_or("Cannot get the DbInstance")?;
-    
-    start_with_db(token, db).await
+impl Drop for Instance {
+    fn drop(&mut self) {
+        if let Some(shard) = self.shard.take() {
+            self.rt.block_on(async { shard.lock().await.shutdown_all().await })
+        }
+    }
+}
+
+impl Instance {
+    pub async fn start_with_db(token: &str, db: DbInstance) -> Result<Self> {
+        let rt = TokioHandle::try_current()?;
+        let handler = Handler::new();
+        let raw_handler = tomo_serenity_ext::MultiRawHandler::new();
+        let raw_handler_clone = raw_handler.clone();
+        let framework = framework::get_framework();
+
+        raw_handler.add("Logger", EventLogger::new()).await;
+
+        let mut client = Client::builder(token)
+            .framework(framework)
+            .event_handler(handler)
+            .raw_event_handler(raw_handler_clone)
+            .intents(intents())
+            .register_songbird()
+            .await?;
+
+        {
+            let (mut data, config) = future::join(client.data.write(), read_config()).await;
+
+            let req = Reqwest::new();
+            fetch_guild_config_from_db(&db).await?;
+            if let Err(why) = commands::pokemon::update_pokemon(&db, &req).await {
+                error!("\n{}", why);
+            }
+
+            data.insert::<RawEventList>(raw_handler);
+            data.insert::<DatabaseKey>(db.clone());
+            data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
+            data.insert::<ReqwestClient>(Arc::new(req));
+            data.insert::<CacheStorage>(Arc::new(MyCache::new(config.temp_dir.as_ref())?));
+            data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
+
+            if has_external_command("ffmpeg") {
+                // data.insert::<MusicManager>(mutex_data(HashMap::new()));
+            }
+        }
+
+        let shard_manager = Arc::clone(&client.shard_manager);
+        let task = rt.spawn(async move { client.start().await });
+
+        Ok(Self {
+            db: db,
+            shard: Some(shard_manager),
+            task: Some(task),
+            rt,
+        })
+    }
+
+    pub async fn start(token: &str) -> Result<Self> {
+        let db = db::get_db_instance(&read_config().await.database.path, None)
+            .await
+            .ok_or("Cannot get the DbInstance")?;
+
+        Self::start_with_db(token, db).await
+    }
+
+    /// Take out the shard
+    #[inline]
+    pub fn shard(&mut self) -> Option<Shard> {
+        self.shard.take()
+    }
+
+    pub async fn wait(mut self) -> Result<()> {
+        if let Some(task) = self.task.take() {
+            task.await??;
+        }
+
+        Ok(())
+    }
 }
 
 #[inline]
@@ -150,7 +164,6 @@ async fn fetch_guild_config_from_db(db: &DbInstance) -> Result<()> {
 #[inline]
 fn intents() -> GatewayIntents {
     GatewayIntents::all()
-        // & !GatewayIntents::GUILD_MEMBERS
         & !GatewayIntents::GUILD_BANS
         & !GatewayIntents::GUILD_EMOJIS
         & !GatewayIntents::GUILD_INTEGRATIONS

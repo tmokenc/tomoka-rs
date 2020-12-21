@@ -7,10 +7,11 @@ import_all! {
     search,
     search_image,
     reminder,
-    time
+    time,
+    translate,
 }
 
 #[group]
-#[commands(search, search_image, time, nhentai)]
+#[commands(search, search_image, time, nhentai, translate)]
 #[sub_groups(Ehentai, reminder)]
 struct Utility;

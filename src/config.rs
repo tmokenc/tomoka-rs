@@ -78,6 +78,7 @@ pub struct FacebookPage {
 pub struct Rgb {
     pub evidence: PathBuf,
     pub tu: Vec<SmallString<[u8; 8]>>,
+    pub tu_server: Vec<GuildId>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

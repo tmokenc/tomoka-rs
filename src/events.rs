@@ -11,8 +11,8 @@ use serenity::model::{
 use crate::{
     cache::MessageCache,
     storages::{CacheStorage, DatabaseKey, ReminderNotify},
-    types::Reminder,
     traits::ChannelExt,
+    types::Reminder,
     utils::*,
     Result,
 };
@@ -144,12 +144,12 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId) {
+    async fn message_delete(&self, ctx: Context, channel: ChannelId, msg: MessageId, _: Option<GuildId>) {
         trace!("A message with id {} has been deleted", msg.0);
         process_deleted_message(&ctx, channel, Some(msg)).await; // Option also an iterator
     }
 
-    async fn message_delete_bulk(&self, ctx: Context, channel_id: ChannelId, msgs: Vec<MessageId>) {
+    async fn message_delete_bulk(&self, ctx: Context, channel_id: ChannelId, msgs: Vec<MessageId>, _: Option<GuildId>) {
         trace!(
             "OMG, there are {} messages has been killed by one slash",
             msgs.len()
@@ -177,8 +177,10 @@ impl EventHandler for Handler {
                 let config = crate::read_config().await;
                 let shard = &ctx.shard;
 
-                let ids = config.guilds.iter().map(|v| *v.key());
-                shard.chunk_guilds(ids, None, None);
+                for guild in config.guilds.iter() {
+                    let filter = serenity::client::bridge::gateway::ChunkGuildFilter::None;
+                    shard.chunk_guild(*guild.key(), None, filter, None);
+                }
             }
 
             if let Ok(info) = ctx.http.get_current_application_info().await {
@@ -326,17 +328,19 @@ async fn _process_deleted(
     Ok(())
 }
 
-
 async fn reminder(ctx: Arc<Context>) {
     use tokio::sync::Notify;
-    
+
     let notify = Arc::new(Notify::new());
     let mut data = ctx.data.write().await;
-    let db = data.get::<DatabaseKey>().and_then(|db| db.open("Reminders").ok()).unwrap();
-        
+    let db = data
+        .get::<DatabaseKey>()
+        .and_then(|db| db.open("Reminders").ok())
+        .unwrap();
+
     data.insert::<ReminderNotify>(Arc::clone(&notify));
     drop(data);
-    
+
     loop {
         let first_reminder = db.get_all::<i64, Reminder>().next();
         match first_reminder {
@@ -376,10 +380,9 @@ async fn reminder(ctx: Arc<Context>) {
 }
 
 async fn read_input(ctx: Arc<Context>) {
-    use futures::io::AsyncBufReadExt;
     use blocking::Unblock;
+    use futures::io::AsyncBufReadExt;
     use futures::stream::StreamExt;
-    
 
     let stdin = Unblock::new(std::io::stdin());
     let reader = futures::io::BufReader::new(stdin);
@@ -399,7 +402,6 @@ async fn read_input(ctx: Arc<Context>) {
             }
         }
     }
-    
 }
 
 async fn process_input<'a>(
@@ -412,23 +414,31 @@ async fn process_input<'a>(
             let channel = ChannelId(CURRENT_CHANNEL.load(Ordering::SeqCst));
             channel.broadcast_typing(&ctx).await?;
 
-            let typing_time = Duration::from_millis(s.len() as u64 * 200);
+            let typing_time = if s.len() * 200 > 5000 {
+                Duration::from_secs(5)
+            } else {
+                Duration::from_millis(s.len() as u64 * 200)
+            };
+            
             println!("Sending a message to channel {}\n> {}", channel, s);
             time::delay_for(typing_time).await;
-            
+
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));
 
             if data.messages.len() > data.max_history {
                 data.messages.remove(0);
             }
-            
+
             println!("Sent");
         }
 
         Input::Edit(s) => {
             if let Some((channel, msg)) = data.messages.last() {
-                println!("Editing the message {} on channel {}\n> {}", msg, channel, s);
+                println!(
+                    "Editing the message {} on channel {}\n> {}",
+                    msg, channel, s
+                );
                 channel.edit_message(&*ctx, *msg).with_content(s).await?;
                 println!("Edited")
             }
@@ -448,7 +458,10 @@ async fn process_input<'a>(
             if let Some(channel) = c {
                 CURRENT_CHANNEL.store(channel.0, Ordering::SeqCst);
             }
-            println!("Locked message list to channel {}", CURRENT_CHANNEL.load(Ordering::SeqCst));
+            println!(
+                "Locked message list to channel {}",
+                CURRENT_CHANNEL.load(Ordering::SeqCst)
+            );
         }
 
         Input::Unlock => {

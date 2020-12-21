@@ -14,10 +14,12 @@ use colorful::core::color_string::CString;
 use colorful::Colorful;
 use colorful::RGB;
 
-use crate::storages::*;
-use crate::traits::{Paginator, PaginatorOption};
-use crate::types::GuildConfig;
-use crate::Result;
+use crate::{
+    storages::*,
+    traits::{Embedable, Paginator, PaginatorOption},
+    types::GuildConfig,
+    Result,
+};
 
 use serenity::{
     client::Context,
@@ -229,10 +231,20 @@ pub async fn wait_for_reaction(
 ) -> Result<Option<UserId>> {
     msg.react(ctx, reaction.clone()).await?;
     let emoji_data = reaction.as_data();
+    let bot_id = {
+        let data = ctx.data.read().await;
+        data.get::<InforKey>().map(|v| v.user_id)
+    };
+
     let reacted = msg
         .await_reaction(&ctx)
         .timeout(timeout)
-        .filter(move |v| v.emoji.as_data().as_str() == &emoji_data)
+        .filter(move |v| {
+            let emo_check = v.emoji.as_data().as_str() == &emoji_data;
+            let user_check = v.user_id != bot_id;
+
+            emo_check && user_check
+        })
         .removed(false)
         .await;
 
@@ -261,6 +273,25 @@ pub async fn react_to_pagination<P: Paginator + Send + Sync>(
     if let Some(user) = reaction {
         let opt = PaginatorOption::new(msg.channel_id, user);
         data.pagination(ctx, opt).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn react_to_embed_then_pagination<P: Paginator + Embedable + Send + Sync>(
+    ctx: &Context,
+    msg: &Message,
+    reaction: ReactionType,
+    timeout: Duration,
+    data: P,
+) -> Result<()> {
+    if wait_for_reaction(ctx, msg, reaction, timeout)
+        .await?
+        .is_some()
+    {
+        let reaction = ReactionType::Unicode(String::from("📖"));
+        let message = data.send_embed(ctx, msg.channel_id).await?;
+        react_to_pagination(ctx, &message, reaction, timeout, data).await?;
     }
 
     Ok(())

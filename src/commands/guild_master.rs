@@ -4,7 +4,7 @@ use magic::import_all;
 import_all! {
     repeat_words,
     find_sauce,
-    find_sadkaede,
+    // find_sadkaede,
     prefix,
     logger
 }
@@ -13,5 +13,5 @@ import_all! {
 #[prefixes("guild_option", "option", "opt")]
 #[only_in("guilds")]
 #[owner_privilege]
-#[sub_groups(Prefix, Logger, FindSauce, FindSadKaede, RepeatWords)]
+#[sub_groups(Prefix, Logger, FindSauce, RepeatWords)]
 struct GuildMaster;

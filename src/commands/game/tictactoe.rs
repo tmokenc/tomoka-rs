@@ -1,137 +1,58 @@
 use crate::commands::prelude::*;
 use lazy_static::lazy_static;
 
-#[derive(Debug)]
-struct TicTacToe {
-    board: [Option<Mark>; 9],
-    move_played: Vec<Coordinate>,
-}
-
-type Coordinate = (u8, u8);
-
-enum GameState {
-    Playing,
-    GameOver(GameOver),
-}
-
-#[derive(Debug)]
-enum Mark {
-    X,
-    O,
-}
-
-#[derive(Debug)]
-enum GameOver {
-    Draw,
-    X(Coordinate),
-    O(Coordinate),
-}
-
-impl TicTacToe {
-    fn new_game(p1: UserId, p2: UserId) -> Self {
-        Self { 
-            board: [None; 9],
-            move_played: Vec::new(),
-        }
-    }
-
-    fn whose_move(&self) -> Mark {
-        if self.move_played.len() % 2 == 0 {
-            Mark::O
-        } else {
-            Mark::X
-        }
-    }
-
-    fn parse_input(s: impl AsRef<str>) -> Option<Coordinate> {
-        let mut input = s.as_ref().bytes();
-        let x = input.next();
-        let y = input.next();
-
-        if let (Some(x), Some(y)) = (x, y) {
-            let x = match x {
-                1 | 97 => 0,
-                2 | 98 => 1,
-                3 | 99 => 2,
-                _ => return None,
-            };
-
-            if y != 1 || y != 2 || y != 3 {
-                return None
-            }
-
-            Some((x, y-1))
-        } else {
-            None
-        }
-    }
-
-    fn play(&mut self, input: impl AsRef<str>) -> bool {
-        let coor: Coordinate = match Self::parse_input(input) {
-            Some(c) => c,
-            None => return None,
-        };
-
-        let index = (coor.0 * coor.1) + coor.1; 
-
-        let mark = self.whose_move();
-
-        if let Some(cell) =  board.get_mut(index as usize) {
-            match cell {
-                Some(_) => return false,
-                None => {
-                    *cell = Some(mark);
-                }
-            }
-        }
-
-        self.move_played.push(coor);
-        true
-    }
-
-    #[inline]
-    fn board(&self) -> [Option<Mark>; 9] {
-        self.board
-    }
-
-    fn is_game_over(&self) -> Option<GameOver> {
-        if self.move_count < 5 {
-            return None    
-        }
-        
-        let winner_hang = self
-            .board
-            .windows(3)
-            .find(|v| v.dedup() == 1);
-
-        if winner_hang.is_some() {
-           return winner_hang;
-        }
-
-        let winner_cot = (0..3)
-            .map(|v| [self.board[v], self.board[v + 3], self.board[v + 3 + 3]])
-            .find(|v| v.dedup() == 1);
-
-        if winner_cot.is_some() {
-            return winner_cot;
-        }
-
-        let check_cheo1 = self.board[0] == self.board[4] == self.board[8];
-        let check_cheo2 = self.board[2] == self.board[4] == self.board[6];
-
-        if check_cheo1 || check_cheo2 {
-            return self.board[4]
-        }
-
-        if self.board.iter().all(|v| v.is_some()) {
-            GameOver::Hoa
-        }
-    }
-}
-
 use core::time::Duration;
 use thread;
 const wait_time = Duration::from_secs(60);
+
+struct TicTacToe {
+    board: [Option<Player>; 9],
+    current: Option<Player>,
+}
+
+#[derive(Clone, Copy)]
+enum Player {
+    X,
+    Y
+}
+
+#[derive(Clone, Copy)]
+enum GameResult {
+    PlayerA,
+    PlayerB,
+    Daw,
+}
+
+impl TicTacToe {
+    fn current_player(&self) -> Option<Player> {
+        self.current
+    }
+    
+    fn make_move(&mut self, x: usize, y: usize) -> Option<GameResult> {
+        let index = (y * 3) + x - 1;
+        
+        if self.board[index].is_some() {
+            return None;
+        }
+        
+        *self.board[index] = Some(self.current_player());
+        *self.current_player = match self.current_player {
+            Player::X => Player::Y,
+            Player::Y => Player::X,
+        };
+        
+        Some(self.game_state())
+    }
+    
+    fn check_game_state(&self) -> GameResult {
+        const CHECK_INDEX: [(usize, usize, usize); 8] 
+            (0, 1, 2),
+            (3, 4, 5),
+            (6, 7, 8),
+            
+        ];
+    }
+}
 
 enum GameState {
     Waiting((UserId,bool), (UserId,bool),

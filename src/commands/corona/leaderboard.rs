@@ -156,7 +156,7 @@ async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandRes
 
 async fn get_corona_data(ctx: &Context) -> Result<CoronaSummary> {
     let db = get_data::<DatabaseKey>(&ctx).await.unwrap();
-    let db_ref = Arc::clone(&db);
+    let db_ref = db.clone();
 
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
     let last: u64 = tokio::task::spawn_blocking(move || db_ref.get(&DB_TIME))

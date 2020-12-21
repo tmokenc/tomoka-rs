@@ -3,7 +3,6 @@ use crate::types::*;
 use db::DbInstance;
 use eliza::Eliza;
 use requester::Reqwest;
-use serenity::client::bridge::voice::ClientVoiceManager;
 use serenity::prelude::TypeMapKey;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -27,12 +26,7 @@ impl TypeMapKey for ReqwestClient {
 
 pub struct DatabaseKey;
 impl TypeMapKey for DatabaseKey {
-    type Value = Arc<DbInstance>;
-}
-
-pub struct VoiceManager;
-impl TypeMapKey for VoiceManager {
-    type Value = Arc<serenity::prelude::Mutex<ClientVoiceManager>>;
+    type Value = DbInstance;
 }
 
 pub struct ReminderNotify;

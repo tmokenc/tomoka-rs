@@ -29,7 +29,7 @@ serde_json = "1"
 smallstr = { version = "0.2", features = ["serde"] }
 sys-info = "0.5"
 tempdir = "0.3"
-blocking = "0.6"
+blocking = "1"
 db = { path = "./db" }
 
 [dependencies.pokemon_core]
@@ -37,8 +37,8 @@ git = "https://gitlab.com/tmokenc/pokemon_rs"
 # path = "../pokemon_rs"
 
 [dependencies.requester]
-git = "https://gitlab.com/tmokenc/tomoreq"
-# path = "../tomoreq"
+# git = "https://gitlab.com/tmokenc/tomoreq"
+path = "../tomoreq"
 package = "tomoreq"
 features = ["extra", "scrapers", "reqwest_client"]
 
@@ -48,14 +48,20 @@ package = "crappy_magic"
 features = ["full"]
 
 [dependencies.tokio]
+# version = "0.3"
+# features = ["fs", "sync", "signal", "rt", "rt-multi-thread", "io-util", "stream", "macros"]
 version = "0.2"
 features = ["fs", "sync", "signal", "rt-threaded", "macros"]
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
-branch = "next"
+branch = "current"
 # path = "../serenity"
 features = ["collector", "rustls_backend", "voice"]
+
+[dependencies.songbird]
+git = "https://github.com/serenity-rs/songbird"
+branch = "current"
 
 [dependencies.tomo-serenity-ext]
 # git = "https://gitlab.com/tmokenc/tomo-serenity-ext"

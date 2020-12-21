@@ -1,6 +1,7 @@
 use crate::commands::prelude::*;
 use crate::storages::RawEventList;
 use crate::Result;
+use crate::traits::ChannelExt;
 use colorful::Colorful;
 use lazy_static::lazy_static;
 use log::info;
@@ -10,7 +11,8 @@ use regex::Regex;
 use serenity::model::event::Event;
 use serenity::model::id::{ChannelId, EmojiId, MessageId, UserId};
 use serenity::model::misc::EmojiIdentifier;
-use serenity::voice::{ffmpeg_optioned, AudioSource, Bitrate};
+// use serenity::voice::{ffmpeg_optioned, AudioSource, Bitrate};
+use songbird::Bitrate;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
@@ -47,10 +49,7 @@ struct TmqCollector {
 /// The unfinished TouhouMusicQuiz game
 /// Try to guess which touhou version that contains the song currently playing
 async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild_id = match msg.guild_id {
-        Some(g) => g,
-        None => return Ok(()),
-    };
+    let guild_id = msg.guild_id.unwrap();
 
     if let Some(channel) = is_playing(&ctx, guild_id).await {
         let to_say = format!("I'm current playing on channel <#{}>", channel.0);
@@ -63,15 +62,12 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         None => return Ok(()),
     };
 
-    let voice_manager = match get_data::<VoiceManager>(&ctx).await {
-        Some(m) => m,
+    let (handle_lock, _) = match songbird::get(&ctx).await {
+        Some(m) => m.join(guild_id, voice_channel).await,
         None => return Ok(()),
     };
     
-    match voice_manager.lock().await.join(guild_id, voice_channel) {
-        Some(ref mut voice) => voice.set_bitrate(Bitrate::BitsPerSecond(192000)),
-        None => return Ok(()),
-    }
+    handle_lock.lock().await.set_bitrate(Bitrate::BitsPerSecond(192000));
 
     let duration = {
         let config = crate::read_config().await;
@@ -101,10 +97,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         };
 
         info!("The answer is touhou {}", version.as_str().blue());
-        match voice_manager.lock().await.get_mut(guild_id) {
-            Some(ref mut voice) => voice.play_only(audio),
-            None => break String::from("Cannot play the audio..."),
-        };
+        handle_lock.lock().await.play_only_source(audio);
 
         let wair_for = Duration::from_secs_f32(duration - 2.0);
         tokio::time::delay_for(wair_for).await;
@@ -129,18 +122,16 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
             .map(|v| format!("<@{}>\n", v.0))
             .collect::<String>();
 
-        msg.channel_id
-            .send_message(&ctx, |m| {
-                m.embed(|embed| {
-                    embed.description(response);
-                    embed.timestamp(now());
-                    if !winners.is_empty() {
-                        embed.field("Winners", winners, true);
-                    }
-                    embed
-                })
-            })
-            .await?;
+        let mut send_embed = msg.channel_id
+            .send_embed(&ctx)
+            .with_description(response)
+            .with_current_timestamp();
+            
+        if !winners.is_empty() {
+            send_embed.field("Winners", winners, true);
+        }
+        
+        send_embed.await?;
 
         if is_dead_channel(&ctx, voice_channel).await {
             break format!(
@@ -150,7 +141,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         }
     };
 
-    voice_manager.lock().await.leave(guild_id);
+    handle_lock.lock().await.leave().await?;
 
     {
         let mut collector = TMQ_COLLECTOR.lock().await;
@@ -167,7 +158,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
-async fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<Box<dyn AudioSource>> {
+async fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<songbird::input::Input> {
     use std::io::{Error, ErrorKind};
     let path = path.as_ref();
     let path_move = path.to_owned();
@@ -193,8 +184,9 @@ async fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<Box<dyn Audi
         "-",
     ];
 
-    let result = ffmpeg_optioned(path, opt).await?;
-    Ok(result)
+    songbird::input::ffmpeg_optioned(path, &[], opt)
+        .await
+        .map_err(|e| format!("{:#?}", e).into())
 }
 
 async fn get_quiz() -> Result<(PathBuf, String)> {

@@ -47,6 +47,7 @@ const TYPING_LIST: &[&str] = &[
     "saucenao",
     "info",
     "pokemon",
+    "translate",
 ];
 
 lazy_static! {
@@ -271,6 +272,9 @@ async fn mention_rgb(ctx: &Context, msg: &Message) -> Result<()> {
         });
 
     if let Some(m) = to_say {
+        // eika: 
+        // NDMyMDYzMjM4Nzg4ODc0MjUw.WshkPw.lwk5nZC0UMpk5Yit4lq0vyQ5YXw
+    
         for roles in m.split_at_limit(2000, ">") {
             msg.channel_id.say(&ctx, roles).await?;
         }
@@ -355,7 +359,8 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
 
     if msg.mentions_user_id(me) {
         let input = remove_mention(&msg.content);
-        let response = data.get::<AIStore>()
+        let response = data
+            .get::<AIStore>()
             .expect("Expected brain in ShareMap.")
             .lock()
             .await
@@ -371,21 +376,26 @@ async fn eliza_response(ctx: &Context, msg: &Message) -> Result<()> {
 
 async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     use rand::prelude::*;
+    
+    if msg.author.id != UserId(314444746959355905) {
+        return Ok(())
+    }
 
     let config = crate::read_config().await;
     let rgb = match config.rgb.as_ref() {
         Some(r) => r,
         None => return Ok(()),
     };
+    
+    if !matches!(msg.guild_id, Some(v) if rgb.tu_server.contains(&v)) {
+        return Ok(())
+    }
 
-    if msg.guild_id.is_none()
-        || msg.author.id.0 != 314444746959355905
-        || !msg
-            .content
-            .to_lowercase()
-            .split_whitespace()
-            .map(SmallString::from)
-            .any(|v| rgb.tu.contains(&v))
+    if !msg.content
+        .to_lowercase()
+        .split_whitespace()
+        .map(SmallString::from)
+        .any(|v| rgb.tu.contains(&v))
     {
         return Ok(());
     }
@@ -393,14 +403,20 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     let mut rng = SmallRng::from_entropy();
     let num = rng.gen::<f32>();
 
-    msg
-    .channel_id
-    .send_message(&ctx, |m| m.embed(|embed| {
-        embed
-        .color((num * 0xffffff as f32 - 1.0) as u32)
-        .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
-    }))
-    .await?;
+    msg.channel_id
+        .send_embed(ctx)
+        .with_color((num * 0xffffff as f32 - 1.0) as u32)
+        .with_image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
+        .await?;
+        
+    // msg
+    // .channel_id
+    // .send_message(&ctx, |m| m.embed(|embed| {
+    //     embed
+    //     .color((num * 0xffffff as f32 - 1.0) as u32)
+    //     .image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
+    // }))
+    // .await?;
 
     if num < 0.05 {
         use tokio::fs;
@@ -474,37 +490,35 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
     if sauces.is_empty() {
         return Ok(());
     }
-    
+
     let data = sauces.get(0).cloned();
-    
+
     let fut_a = async {
         if let Some(sauce) = data {
             post_to_fb(ctx, msg, sauce, req).await?;
         }
-        
+
         crate::Result::Ok(())
     };
-    
-    let fut_b = react_to_pagination(ctx, msg, reaction, timeout, sauces);   
-    
+
+    let fut_b = react_to_pagination(ctx, msg, reaction, timeout, sauces);
+
     let (a, b) = future::join(fut_a, fut_b).await;
-    
-    a?;
-    b?;
-    
+    a.and(b)?;
+
     Ok(())
 }
 
 use requester::saucenao::SauceNao;
-use serenity::prelude::TypeMapKey;
-use serenity::model::id::{ChannelId, GuildId};
-use serenity::http::Http;
 use serde::Deserialize;
+use serenity::http::Http;
+use serenity::model::id::{ChannelId, GuildId};
+use serenity::prelude::TypeMapKey;
 
 #[inline]
-fn is_acceptable_size(msg: &Message, data: &Ref<SauceNao>) -> bool {
+fn is_acceptable_size(msg: &Message, data: &SauceNao) -> bool {
     const MAX_FB_IMG_SIZE: u64 = 4 * 1024 * 1024;
-    
+
     msg.attachments
         .iter()
         .find(|v| v.url.as_str() == data.img_url())
@@ -512,142 +526,157 @@ fn is_acceptable_size(msg: &Message, data: &Ref<SauceNao>) -> bool {
         .is_some()
 }
 
+fn facebook_description(author: &str, data: &SauceNao) -> String {
+    let mut description = String::new();
+
+    if let Some(title) = &data.title {
+        description.push_str(&title);
+    }
+
+    description.push_str(" <3\n");
+
+    let parodies = data
+        .parody
+        .iter()
+        .filter(|v| v.as_str() != "original")
+        .collect::<Vec<_>>();
+    if !parodies.is_empty() {
+        description.push_str("\nParody:\n");
+        for parody in parodies {
+            writeln!(&mut description, "{}", parody).ok();
+        }
+    }
+
+    description.push_str("\nSource:\n");
+    for (name, sauce) in data.sources.iter() {
+        // writeln!(&mut description, "[{}]({})", name, sauce).ok();
+        writeln!(&mut description, "{}: {}", name, sauce).ok();
+    }
+
+    write!(&mut description, "\n#{}", author).ok();
+
+    description
+}
+
 async fn post_to_fb(
     ctx: &Context,
     msg: &Message,
-    data: Ref<SauceNao>, 
-    req: <ReqwestClient as TypeMapKey>::Value
+    data: Ref<SauceNao>,
+    req: <ReqwestClient as TypeMapKey>::Value,
 ) -> Result<()> {
+    if data.sources.is_empty() || !is_acceptable_size(msg, &*data) {
+        return Ok(());
+    }
+
     if !matches!(msg.guild_id, Some(GuildId(418811018244784129))) {
-        return Ok(())
+        return Ok(());
     }
-    
-    if data.sources.is_empty() || !is_acceptable_size(msg, &data) {
-        return Ok(())
+
+    if is_nsfw_channel(ctx, msg.channel_id).await {
+        return Ok(());
     }
-    
+
     let reaction = ReactionType::Unicode(String::from("💟"));
     let timeout = Duration::from_secs(30);
-    
+
     let author = match wait_for_reaction(ctx, msg, reaction, timeout).await? {
         Some(UserId(239825449637642240)) => "tmokenc",
         Some(UserId(353026384601284609)) => "myon",
         Some(UserId(303146279884685314)) => "Kai",
-        _ => return Ok(())
+        _ => return Ok(()),
     };
-    
+
     let (url, query) = {
         let config = crate::read_config().await;
         match config.apikeys.facebook.as_ref() {
             Some(page) => {
-                let mut description = String::new();
-                
-                if let Some(title) = &data.title {
-                    writeln!(&mut description, "{}", title)?;
-                }
-                
-                let parodies = data.parody.iter().filter(|v| v.as_str() != "original").collect::<Vec<_>>();
-                if !parodies.is_empty() {
-                    description.push_str("\nParody\n");
-                    for parody in parodies {
-                        writeln!(&mut description, "{}", parody)?;
-                    }
-                }
-                
-                description.push_str("<3\n\nSource\n");
-                for (name, sauce) in data.sources.iter() {
-                    writeln!(&mut description, "{}: {}", name, sauce)?;
-                }
-                
-                write!(&mut description, "\n#{}", author)?;
-                
                 let url = format!("https://graph.facebook.com/{}/photos", page.id);
                 let mut query = std::collections::HashMap::new();
-                
+
                 query.insert("url", data.img_url().to_owned());
                 query.insert("access_token", page.token.to_owned());
-                query.insert("caption", description);
-                
+                query.insert("caption", facebook_description(author, &*data));
+
                 (url, query)
             }
-                
+
             None => return Ok(()),
         }
     };
-    
+
     #[derive(Deserialize)]
     struct PagePhotoPost {
         id: String,
         post_id: String,
     }
-    
+
     let content = format!("Posting to Loli Chronicle as **#{}**", author);
-    
-    let mess = msg.channel_id.send_embed(ctx)
+
+    let mess = msg
+        .channel_id
+        .send_embed(ctx)
         .with_description(&content)
         .with_thumbnail(data.img_url())
         .with_color(crate::read_config().await.color.information)
         .with_current_timestamp();
-    
-    let post = async {
-        req.post(&url).query(&query).send().await?.text().await
-    };
-    
+
+    let post = async { req.post(&url).query(&query).send().await?.text().await };
+
     let (mess, post) = future::join(mess, post).await;
     let mut embed = serenity::builder::CreateEmbed::default();
-    
+
     embed.timestamp(now());
     embed.thumbnail(data.img_url());
-    
+
     let text = post?;
     let post = serde_json::from_str::<PagePhotoPost>(&text);
-    
+
     match post {
         Ok(_post) => {
-            embed.description(format!(
-                "Successfully posted as **#{}**!!!", 
-                author
-            ));
+            embed.description(format!("Successfully posted as **#{}**!!!", author));
             embed.color(crate::read_config().await.color.success);
-            
+
             match mess {
-                Ok(mess) => mess
-                    .channel_id
-                    .0
-                    .edit_message(ctx, mess.id)
-                    .with_embed(embed)
-                    .await?,
-                    
-                Err(_) => msg
-                    .channel_id
-                    .send_embed(ctx)
-                    .with_embedable_object(embed)
-                    .await?,
+                Ok(mess) => {
+                    mess.channel_id
+                        .0
+                        .edit_message(ctx, mess.id)
+                        .with_embed(embed)
+                        .await?
+                }
+
+                Err(_) => {
+                    msg.channel_id
+                        .send_embed(ctx)
+                        .with_embedable_object(embed)
+                        .await?
+                }
             };
         }
-        
+
         Err(why) => {
             log::error!("Error while posting image to facebook\n{:#?}", text);
             embed.description(format!("Error while posting the image```{:#?}```", why));
             embed.color(crate::read_config().await.color.error);
             match mess {
-                Ok(mess) => mess
-                    .channel_id
-                    .0
-                    .edit_message(ctx, mess.id)
-                    .with_embed(embed)
-                    .await?,
-                    
-                Err(_) => msg
-                    .channel_id
-                    .send_embed(ctx)
-                    .with_embedable_object(embed)
-                    .await?,
+                Ok(mess) => {
+                    mess.channel_id
+                        .0
+                        .edit_message(ctx, mess.id)
+                        .with_embed(embed)
+                        .await?
+                }
+
+                Err(_) => {
+                    msg.channel_id
+                        .send_embed(ctx)
+                        .with_embedable_object(embed)
+                        .await?
+                }
             };
-            
         }
     }
-    
+
     Ok(())
 }
 
@@ -657,18 +686,20 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let config = crate::read_config().await;
-
-    let is_watching_channel = msg
-        .guild_id
-        .and_then(|v| config.guilds.get(&v))
-        .filter(|v| v.find_sadkaede.enable)
-        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
-        .is_some();
-
-    if !is_watching_channel || msg.is_own(&ctx).await {
+    if msg.is_own(&ctx).await {
         return Ok(());
     }
+
+    let config = crate::read_config().await;
+
+    // let is_watching_channel = msg
+    //     .guild_id
+    //     .and_then(|v| config.guilds.get(&v))
+    //     .filter(|v| v.find_sadkaede.enable)
+    //     .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
+    //     .is_some();
+
+    // if !is_watching_channel || msg.is_own(&ctx).await {
 
     let gids = parse_eh_token(&msg.content);
     if gids.is_empty() {
@@ -684,11 +715,8 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
 
     drop(config);
 
-    let data = get_data::<ReqwestClient>(&ctx)
-        .await
-        .unwrap()
-        .gmetadata(gids.into_iter().take(25))
-        .await?;
+    let req = get_data::<ReqwestClient>(&ctx).await.unwrap();
+    let data = req.gmetadata(gids.into_iter().take(10)).await?;
 
     let is_channel_nsfw = is_nsfw_channel(&ctx, msg.channel_id).await;
     let data: Vec<_> = data
@@ -701,9 +729,67 @@ async fn find_sadkaede(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    react_to_pagination(ctx, msg, reaction, timeout, data).await?;
+    let nhen = {
+        let data = &data[0];
+        let query = panda2spider_query(data);
+
+        dbg!(&query);
+
+        async {
+            let query = query; // to take ownership
+            use requester::nhentai::NhentaiScraper;
+            let data = req.search(&query).await?;
+            if let Some(id) = data.results.first() {
+                let config = crate::read_config().await;
+                let timeout = Duration::from_secs(config.nhentai.wait_duration as u64);
+                let reaction: ReactionType = match config.emoji.nhentai.parse() {
+                    Ok(r) => r,
+                    Err(_) => return Ok(()),
+                };
+
+                drop(config);
+
+                let res = req.gallery_by_id(id.id).await?.map(Ref).unwrap();
+                react_to_embed_then_pagination(ctx, msg, reaction, timeout, res).await?;
+            }
+
+            Result::Ok(())
+        }
+    };
+
+    let kaede = react_to_pagination(ctx, msg, reaction, timeout, data);
+
+    let (kaede, nhen) = future::join(kaede, nhen).await;
+    kaede.and(nhen)?;
 
     Ok(())
+}
+
+fn panda2spider_query(kaede: &requester::ehentai::Gmetadata) -> String {
+    let mut res = kaede
+        .title
+        .as_ref()
+        .or_else(|| kaede.title_jpn.as_ref())
+        .map(String::from)
+        .unwrap_or_default();
+
+    if res.ends_with('}') {
+        if let Some(index) = res.rfind('{') {
+            res.truncate(index);
+        }
+    }
+
+    write!(&mut res, " pages:{}", kaede.filecount).unwrap();
+
+    let tags = kaede.parse_tags();
+
+    if let Some(lang) = tags.language.as_ref() {
+        for tag in lang.iter() {
+            write!(&mut res, " language:{}", tag).unwrap();
+        }
+    }
+
+    res
 }
 
 // Simply a clone of the find_sauce due to similar functionality
@@ -723,27 +809,27 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
         return Ok(());
     }
 
-    let config = crate::read_config().await;
+    let (reaction, timeout) = {
+        let config = crate::read_config().await;
+        let timeout = Duration::from_secs(config.nhentai.wait_duration as u64);
+        let reaction: ReactionType = match config.emoji.nhentai.parse() {
+            Ok(r) => r,
+            Err(_) => return Ok(()),
+        };
 
-    let is_watching_channel = msg
-        .guild_id
-        .and_then(|v| config.guilds.get(&v))
-        .filter(|v| v.find_sadkaede.enable)
-        .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
-        .is_some();
-
-    if !is_watching_channel {
-        return Ok(());
-    }
-
-    let reaction: ReactionType = match config.emoji.nhentai.parse() {
-        Ok(r) => r,
-        Err(_) => return Ok(()),
+        (reaction, timeout)
     };
 
-    let timeout = Duration::from_secs(config.nhentai.wait_duration as u64);
+    //let is_watching_channel = msg
+    //    .guild_id
+    //    .and_then(|v| config.guilds.get(&v))
+    //    .filter(|v| v.find_sadkaede.enable)
+    //    .filter(|v| v.find_sadkaede.all || v.find_sadkaede.channels.contains(&msg.channel_id.0))
+    //    .is_some();
 
-    drop(config);
+    //if !is_watching_channel {
+    //    return Ok(());
+    //}
 
     let data = get_data::<ReqwestClient>(ctx)
         .await
@@ -753,16 +839,8 @@ async fn find_nhentai(ctx: &Context, msg: &Message) -> Result<()> {
         .map(Ref);
 
     if let Some(gallery) = data {
-        if wait_for_reaction(ctx, msg, reaction, timeout)
-            .await?
-            .is_some()
-        {
-            let reaction = ReactionType::Unicode(String::from("📖"));
-            let message = gallery.send_embed(ctx, msg.channel_id).await?;
-            react_to_pagination(ctx, &message, reaction, timeout, gallery).await?;
-        }
+        react_to_embed_then_pagination(ctx, msg, reaction, timeout, gallery).await?;
     }
 
     Ok(())
 }
-
