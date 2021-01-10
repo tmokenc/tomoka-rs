@@ -14,7 +14,6 @@ use serenity::model::misc::EmojiIdentifier;
 // use serenity::voice::{ffmpeg_optioned, AudioSource, Bitrate};
 use songbird::Bitrate;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -25,6 +24,7 @@ type TmqCollect = Mutex<HashMap<ChannelId, HashMap<UserId, TmqCollector>>>;
 lazy_static! {
     static ref TOUHOU_VERSION: HashMap<String, u64> = {
         futures::executor::block_on(async {
+            use std::fs::File;
             let config = crate::read_config().await;
             let file = File::open(&config.tmq.as_ref().unwrap().emoji).unwrap();
             drop(config);
@@ -100,7 +100,7 @@ async fn touhou_music_quiz(ctx: &Context, msg: &Message) -> CommandResult {
         handle_lock.lock().await.play_only_source(audio);
 
         let wair_for = Duration::from_secs_f32(duration - 2.0);
-        tokio::time::delay_for(wair_for).await;
+        tokio::time::sleep(wair_for).await;
 
         let (winners_list, loosers_list): (Vec<_>, Vec<_>) = TMQ_COLLECTOR
             .lock()
@@ -191,8 +191,8 @@ async fn get_audio(path: impl AsRef<Path>, duration: f32) -> Result<songbird::in
 
 async fn get_quiz() -> Result<(PathBuf, String)> {
     use std::io::{Error, ErrorKind};
-    use tokio::fs;
-    use tokio::stream::StreamExt;
+    use futures::stream::StreamExt;
+    use core::future;
 
     let config = crate::read_config().await;
     let tmq_config = config
@@ -205,9 +205,9 @@ async fn get_quiz() -> Result<(PathBuf, String)> {
 
     let dir = fs::read_dir(path)
         .await?
-        .filter_map(|v| v.ok())
+        .filter_map(|v| future::ready(v.ok()))
         .map(|v| v.path())
-        .filter(|v| v.is_dir())
+        .filter(|v| future::ready(v.is_dir()))
         .collect::<Vec<_>>()
         .await;
 
@@ -225,12 +225,13 @@ async fn get_quiz() -> Result<(PathBuf, String)> {
 
     let list = fs::read_dir(touhou)
         .await?
-        .filter_map(|v| v.ok())
-        .filter(|file| {
-            file.file_name()
-                .to_str()
-                .filter(|v| v.ends_with(".mp3") && !v.contains("Player Score"))
-                .is_some()
+        .filter_map(|v| async { 
+            v.ok().filter(|file| {
+                file.file_name()
+                    .to_str()
+                    .filter(|v| v.ends_with(".mp3") && !v.contains("Player Score"))
+                    .is_some()
+            }) 
         })
         .collect::<Vec<_>>()
         .await;

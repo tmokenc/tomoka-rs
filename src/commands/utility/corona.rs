@@ -6,7 +6,6 @@ use magic::traits::MagicIter;
 use serde::{Deserialize, Serialize};
 use serenity::builder::CreateEmbed;
 use smallstr::SmallString;
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const API: &str = "https://api.covid19api.com/summary";
@@ -138,11 +137,11 @@ impl Paginator for CoronaPagination {
 }
 
 #[command]
-#[aliases("corona", "top")]
+#[aliases("leaderboard", "top")]
 /// Get corona leaderboard
 /// Add limit number to limit the result
 /// `tomo>leaderboard 5` < this will only show 5 countries per page
-async fn leaderboard(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn corona(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = get_corona_data(&ctx).await?;
     let per_page = args
         .single::<usize>()

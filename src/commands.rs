@@ -14,5 +14,4 @@ pub_import_all! {
     rgb,
     utility,
     osu,
-    corona,
 }

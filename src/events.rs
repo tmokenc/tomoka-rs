@@ -158,11 +158,11 @@ impl EventHandler for Handler {
         process_deleted_message(&ctx, channel_id, msgs.into_iter().rev()).await
     }
 
-    async fn ready(&self, ctx: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, _ready: Ready) {
         let mess = {
             let resume = self.resume.load(Ordering::SeqCst);
             let count = self.ready.fetch_add(1, Ordering::SeqCst) + 1;
-            format!("tmokenc#0001 ({}/{})", resume, count)
+            format!("tmokenc#2067 ({}/{})", resume, count)
         };
 
         let activity = Activity::listening(&mess);
@@ -170,7 +170,7 @@ impl EventHandler for Handler {
 
         ctx.set_presence(Some(activity), status).await;
 
-        if !self.connected.load(Ordering::Relaxed) {
+        if !self.connected.load(Ordering::SeqCst) {
             self.connected.store(true, Ordering::SeqCst);
 
             {
@@ -193,7 +193,7 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn resume(&self, ctx: Context, resume: ResumedEvent) {
+    async fn resume(&self, ctx: Context, _resume: ResumedEvent) {
         let mess = {
             let count = self.resume.fetch_add(1, Ordering::SeqCst) + 1;
             let ready = self.ready.load(Ordering::SeqCst);
@@ -362,7 +362,7 @@ async fn reminder(ctx: Arc<Context>) {
                 info!("The next reminder is on {:?}", &duration);
 
                 tokio::select! {
-                    _ = time::delay_for(duration) => {
+                    _ = time::sleep(duration) => {
                         value.remind(&*ctx).await.ok();
 
                         if let Err(why) = db.remove(&timestamp) {
@@ -421,7 +421,7 @@ async fn process_input<'a>(
             };
             
             println!("Sending a message to channel {}\n> {}", channel, s);
-            time::delay_for(typing_time).await;
+            time::sleep(typing_time).await;
 
             let msg = channel.say(ctx, s).await?;
             data.messages.push((channel, msg.id));

@@ -9,9 +9,11 @@ import_all! {
     reminder,
     time,
     translate,
+    corona,
+    genshin,
 }
 
 #[group]
-#[commands(search, search_image, time, nhentai, translate)]
-#[sub_groups(Ehentai, reminder)]
+#[commands(search, search_image, time, nhentai, corona, translate)]
+#[sub_groups(Ehentai, reminder, genshin)]
 struct Utility;

@@ -4,11 +4,10 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use futures::future::{self, TryFutureExt};
+use futures::AsyncWriteExt;
 use lazy_static::lazy_static;
 use magic::number_to_rgb;
 use regex::Regex;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 
 use colorful::core::color_string::CString;
 use colorful::Colorful;
@@ -197,11 +196,11 @@ pub async fn get_file_bytes(url: impl AsRef<str>) -> Result<Bytes> {
 }
 
 pub async fn save_file<P: AsRef<Path>>(url: String, name: P) -> Result<()> {
-    let file = File::create(name).map_err(|_| magic::MagicError);
+    let file = fs::File::create(name).map_err(|_| magic::MagicError);
     let stream = requester::get(&url).map_err(|_| magic::MagicError);
 
     let (mut file, mut stream) = future::try_join(file, stream).await?;
-
+    
     while let Some(data) = stream.chunk().await? {
         file.write_all(&data).await?;
     }

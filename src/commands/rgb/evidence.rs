@@ -1,8 +1,7 @@
 use crate::commands::prelude::*;
 use log::error;
 use rand::prelude::*;
-use tokio::fs;
-use tokio::stream::StreamExt;
+use futures::stream::StreamExt;
 
 #[command]
 #[aliases("evi")]
@@ -19,7 +18,7 @@ async fn evidence(ctx: &Context, msg: &Message) -> CommandResult {
 
     let evi = fs::read_dir(&rgb.evidence)
         .await?
-        .filter_map(|v| v.ok())
+        .filter_map(|v| async {v.ok()})
         .collect::<Vec<_>>()
         .await
         .into_iter()

@@ -7,7 +7,9 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1"
-bytes = "0.5.3"
+async-fs = "1"
+blocking = "1"
+bytes = "1"
 config = "0.10"
 chrono = "0.4"
 chrono-tz = "0.5"
@@ -29,7 +31,6 @@ serde_json = "1"
 smallstr = { version = "0.2", features = ["serde"] }
 sys-info = "0.5"
 tempdir = "0.3"
-blocking = "1"
 db = { path = "./db" }
 
 [dependencies.pokemon_core]
@@ -47,22 +48,24 @@ git = "https://gitlab.com/tmokenc/crappy-magic"
 package = "crappy_magic"
 features = ["full"]
 
+[dependencies.tomo-serenity-ext]
+# git = "https://gitlab.com/tmokenc/tomo-serenity-ext"
+path = "../tomo-serenity-ext"
+
 [dependencies.tokio]
-# version = "0.3"
-# features = ["fs", "sync", "signal", "rt", "rt-multi-thread", "io-util", "stream", "macros"]
-version = "0.2"
-features = ["fs", "sync", "signal", "rt-threaded", "macros"]
+version = "1"
+features = ["sync", "signal", "rt", "rt-multi-thread", "io-util", "macros"]
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
-branch = "current"
-# path = "../serenity"
+# git = "https://github.com/serenity-rs/serenity"
+# branch = "current"
+version = "0.10"
 features = ["collector", "rustls_backend", "voice"]
 
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/songbird"
 branch = "current"
 
-[dependencies.tomo-serenity-ext]
-# git = "https://gitlab.com/tmokenc/tomo-serenity-ext"
-path = "../tomo-serenity-ext"
+[patch.crates-io]
+serenity = { git = "https://github.com/serenity-rs/serenity", branch = "current" }
+

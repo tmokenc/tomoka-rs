@@ -351,13 +351,6 @@ fn styled_type(t: Type, emoji: Option<&PokemonEmoji>) -> String {
     }
 }
 
-fn write_type(s: &mut String, t: Type, emoji: Option<&PokemonEmoji>) {
-    match emoji.and_then(|v| v.get(&t.to_string())) {
-        Some(emoji) => write!(s, "{}   {}", emoji, t).unwrap(),
-        None => write!(s, "{}", t).unwrap(),
-    };
-}
-
 async fn process_types(ctx: &Context, msg: &Message, args: &str) -> Result<bool> {
     let mut types = Vec::new();
 

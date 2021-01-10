@@ -91,7 +91,7 @@ async fn set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         db.insert(&timestamp, &reminder)
     }).await??;
     
-    notify.notify();
+    notify.notify_one();
     
     msg.channel_id.send_message(ctx, move |m| m.embed(move |embed| {
         let formated_duration = format_duration(duration);

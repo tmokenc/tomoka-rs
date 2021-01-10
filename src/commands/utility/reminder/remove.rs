@@ -29,7 +29,7 @@ async fn remove(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             db.remove_many(keys)
         }).await??;
         
-        notify.notify();
+        notify.notify_one();
         
         msg.channel_id.say(ctx, "Removed all the reminders").await?;
         return Ok(())
@@ -54,7 +54,7 @@ async fn remove(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         Some(r) => {
             let mess = format!("Removed the reminder on **{}**", r.when.format("%F %T UTC"));
             
-            notify.notify();
+            notify.notify_one();
             msg.channel_id.say(ctx, mess).await?
         }
                 

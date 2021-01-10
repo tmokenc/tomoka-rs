@@ -9,8 +9,7 @@ use smallstr::SmallString;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tokio::fs;
-use tokio::io::AsyncWriteExt as _;
+use futures::AsyncWriteExt as _;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Database {

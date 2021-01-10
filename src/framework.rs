@@ -1,6 +1,7 @@
 #![allow(unstable_name_collisions)]
 
 use serenity::client::Context;
+use serenity::prelude::TypeMapKey;
 use serenity::framework::standard::macros::{help, hook};
 use serenity::framework::{
     standard::{help_commands, Args, CommandGroup, CommandResult, Configuration, HelpOptions},
@@ -8,19 +9,20 @@ use serenity::framework::{
 };
 use serenity::model::{
     channel::{Message, ReactionType},
-    id::{MessageId, UserId},
+    id::{GuildId, MessageId, UserId},
     misc::EmojiIdentifier,
 };
 
 use crate::{
     commands::*,
     storages::{AIStore, InforKey, ReqwestClient},
-    traits::{ChannelExt, Embedable},
+    traits::ChannelExt,
     types::Ref,
     utils::*,
     Result,
 };
 
+use serde::Deserialize;
 use chrono::{DateTime, Utc};
 use colorful::Colorful;
 use core::time::Duration;
@@ -29,6 +31,7 @@ use futures::future;
 use lazy_static::lazy_static;
 use magic::has_external_command;
 use requester::ehentai::EhentaiApi;
+use requester::saucenao::SauceNao;
 use smallstr::SmallString;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -84,7 +87,6 @@ pub fn get_framework() -> impl Framework {
         .group(&GENERAL_GROUP)
         .group(&GUILDMASTER_GROUP)
         .group(&ADMINISTRATION_GROUP)
-        .group(&CORONA_GROUP)
         .group(&GAME_GROUP)
         .group(&POKEMON_GROUP)
         .group(&OSU_GROUP)
@@ -405,7 +407,7 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
 
     msg.channel_id
         .send_embed(ctx)
-        .with_color((num * 0xffffff as f32 - 1.0) as u32)
+        .with_color((num * 0xffffff as f32 - 1f32) as u32)
         .with_image("https://cdn.discordapp.com/attachments/418811018698031107/661658331613495297/2019-09-15_220414.png")
         .await?;
         
@@ -419,14 +421,11 @@ async fn rgb_tu(ctx: &Context, msg: &Message) -> Result<()> {
     // .await?;
 
     if num < 0.05 {
-        use tokio::fs;
-        use tokio::stream::StreamExt;
+        use futures::stream::StreamExt;
 
-        let path = &rgb.evidence;
-
-        let evi = fs::read_dir(path)
+        let evi = fs::read_dir(&rgb.evidence)
             .await?
-            .filter_map(|v| v.ok())
+            .filter_map(|v| async { v.ok() })
             .collect::<Vec<_>>()
             .await
             .choose(&mut rng)
@@ -508,12 +507,6 @@ async fn find_sauce(ctx: &Context, msg: &Message) -> Result<()> {
 
     Ok(())
 }
-
-use requester::saucenao::SauceNao;
-use serde::Deserialize;
-use serenity::http::Http;
-use serenity::model::id::{ChannelId, GuildId};
-use serenity::prelude::TypeMapKey;
 
 #[inline]
 fn is_acceptable_size(msg: &Message, data: &SauceNao) -> bool {
@@ -627,56 +620,39 @@ async fn post_to_fb(
 
     embed.timestamp(now());
     embed.thumbnail(data.img_url());
-
+    
     let text = post?;
     let post = serde_json::from_str::<PagePhotoPost>(&text);
 
     match post {
-        Ok(_post) => {
+        Ok(post) => {
             embed.description(format!("Successfully posted as **#{}**!!!", author));
             embed.color(crate::read_config().await.color.success);
-
-            match mess {
-                Ok(mess) => {
-                    mess.channel_id
-                        .0
-                        .edit_message(ctx, mess.id)
-                        .with_embed(embed)
-                        .await?
-                }
-
-                Err(_) => {
-                    msg.channel_id
-                        .send_embed(ctx)
-                        .with_embedable_object(embed)
-                        .await?
-                }
-            };
+            embed.field("ID", &post.id, true);
+            embed.field("Post ID", &post.post_id, true);
         }
-
+        
         Err(why) => {
             log::error!("Error while posting image to facebook\n{:#?}", text);
             embed.description(format!("Error while posting the image```{:#?}```", why));
             embed.color(crate::read_config().await.color.error);
-            match mess {
-                Ok(mess) => {
-                    mess.channel_id
-                        .0
-                        .edit_message(ctx, mess.id)
-                        .with_embed(embed)
-                        .await?
-                }
-
-                Err(_) => {
-                    msg.channel_id
-                        .send_embed(ctx)
-                        .with_embedable_object(embed)
-                        .await?
-                }
-            };
         }
+        
     }
 
+    match mess {
+        Ok(mess) => mess.channel_id
+            .0
+            .edit_message(ctx, mess.id)
+            .with_embed(embed)
+            .await?,
+            
+        Err(_) => msg.channel_id
+            .send_embed(ctx)
+            .with_embedable_object(embed)
+            .await?,
+    };
+    
     Ok(())
 }
 

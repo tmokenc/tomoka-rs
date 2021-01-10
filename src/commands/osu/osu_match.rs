@@ -79,7 +79,7 @@ impl Embedable for OsuMatch {
 }
 
 impl Paginator for OsuMatch {
-    fn append_page(&self, page: core::num::NonZeroUsize, embed: &mut CreateEmbed) {}
+    fn append_page(&self, _page: core::num::NonZeroUsize, _embed: &mut CreateEmbed) {}
 
     fn total_pages(&self) -> Option<usize> {
         Some(self.games.len())

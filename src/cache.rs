@@ -8,7 +8,6 @@ use serenity::model::id::{AttachmentId, MessageId, UserId};
 
 use log::info;
 use tempdir::TempDir;
-use tokio::fs;
 use tokio::sync::Mutex;
 
 use crate::utils::save_file;

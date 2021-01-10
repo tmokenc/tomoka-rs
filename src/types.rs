@@ -366,28 +366,7 @@ impl GuildConfig {
             .remove(&channel.0)
             .then_some(channel)
     }
-
-    pub fn enable_find_sadkaede(&mut self) {
-        self.find_sadkaede.enable = true;
-    }
-
-    pub fn disable_find_sadkaede(&mut self) {
-        self.find_sadkaede.enable = false;
-    }
-
-    pub fn add_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) {
-        let channel = channel.into();
-        self.find_sadkaede.channels.insert(channel.0);
-    }
-
-    pub fn remove_sadkaede_channel<C: Into<ChannelId>>(&mut self, channel: C) -> Option<ChannelId> {
-        let channel = channel.into();
-        self.find_sadkaede
-            .channels
-            .remove(&channel.0)
-            .then_some(channel)
-    }
-
+    
     /// Add roles to RGB, return the count of added roles
     pub fn add_rgb<I>(&mut self, roles: I) -> u8
     where

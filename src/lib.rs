@@ -4,6 +4,7 @@
 extern crate log;
 
 extern crate config as lib_config;
+extern crate async_fs as fs;
 
 mod cache;
 mod commands;
@@ -17,6 +18,7 @@ mod traits;
 mod types;
 mod logger;
 mod utils;
+mod genshin;
 
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -34,21 +36,20 @@ use events::Handler;
 use storages::*;
 use types::*;
 
-use colorful::{Color, Colorful};
 use eliza::Eliza;
 use futures::future;
 use magic::dark_magic::has_external_command;
 use serenity::client::bridge::gateway::{GatewayIntents, ShardManager};
 use serenity::model::id::GuildId;
 use serenity::Client;
-use songbird::serenity::SerenityInit;
+use songbird::serenity::SongbirdKey;
 use tokio::runtime::Handle as TokioHandle;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 pub type Shard = Arc<serenity::prelude::Mutex<ShardManager>>;
 pub struct Instance {
-    db: DbInstance,
+    // db: DbInstance,
     rt: TokioHandle,
     task: Option<JoinHandle<serenity::Result<()>>>,
     shard: Option<Shard>,
@@ -57,7 +58,9 @@ pub struct Instance {
 impl Drop for Instance {
     fn drop(&mut self) {
         if let Some(shard) = self.shard.take() {
-            self.rt.block_on(async { shard.lock().await.shutdown_all().await })
+            self.rt.spawn(async move { 
+                shard.lock().await.shutdown_all().await 
+            });
         }
     }
 }
@@ -71,13 +74,13 @@ impl Instance {
         let framework = framework::get_framework();
 
         raw_handler.add("Logger", EventLogger::new()).await;
+        raw_handler.add("Genshin", genshin::GenshinEvent::new(&db)?).await;
 
         let mut client = Client::builder(token)
             .framework(framework)
             .event_handler(handler)
             .raw_event_handler(raw_handler_clone)
             .intents(intents())
-            .register_songbird()
             .await?;
 
         {
@@ -88,7 +91,7 @@ impl Instance {
             if let Err(why) = commands::pokemon::update_pokemon(&db, &req).await {
                 error!("\n{}", why);
             }
-
+            
             data.insert::<RawEventList>(raw_handler);
             data.insert::<DatabaseKey>(db.clone());
             data.insert::<InforKey>(Information::init(&client.cache_and_http.http).await?);
@@ -97,6 +100,7 @@ impl Instance {
             data.insert::<AIStore>(mutex_data(Eliza::from_file(&config.eliza_brain).unwrap()));
 
             if has_external_command("ffmpeg") {
+                data.insert::<SongbirdKey>(songbird::Songbird::serenity());
                 // data.insert::<MusicManager>(mutex_data(HashMap::new()));
             }
         }
@@ -105,7 +109,7 @@ impl Instance {
         let task = rt.spawn(async move { client.start().await });
 
         Ok(Self {
-            db: db,
+            // db: db,
             shard: Some(shard_manager),
             task: Some(task),
             rt,
